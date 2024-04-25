@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"net/http"
 
+	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/pkg/template"
 )
 
@@ -18,7 +19,7 @@ func createStaticHandler(statics fs.FS) func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func CreateMux() (*http.ServeMux, error) {
+func CreateMux(app *app.App) (*http.ServeMux, error) {
 
 	templatesFs, err := fs.Sub(resources, "resources/templates")
 	if err != nil {
@@ -40,7 +41,13 @@ func CreateMux() (*http.ServeMux, error) {
 		tmpls.Render("index", []string{"index.html.tmpl"}, w, nil)
 	})
 	mux.HandleFunc("GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) {
-		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, nil)
+		clients, err := app.Daos.Clients.GetClients()
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, clients)
 	})
 
 	return mux, nil
