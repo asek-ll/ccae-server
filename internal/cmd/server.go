@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"fmt"
+	"net/http"
 
+	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -12,6 +13,10 @@ type ServerCommand struct {
 }
 
 func (s ServerCommand) Execute(args []string) error {
-	fmt.Println("Hello")
-	return nil
+
+	mux, err := server.CreateMux()
+	if err != nil {
+		return err
+	}
+	return http.ListenAndServe(":3001", mux)
 }
