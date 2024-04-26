@@ -1,6 +1,7 @@
 package wsrpc
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/asek-ll/aecc-server/internal/app"
@@ -9,6 +10,23 @@ import (
 type LoginParams struct {
 	ID   string `json:"id"`
 	Role string `json:"role"`
+}
+
+func withInnerId[T any](mapper *IdMapper, f func(id string, params T) (any, error)) RpcMethod {
+	return func(clientId uint, params []byte) (any, error) {
+		id, e := mapper.ToInner(clientId)
+		if !e {
+			return nil, fmt.Errorf("Can't find mapping for outer id: %d", clientId)
+		}
+
+		var ps T
+		err := json.Unmarshal(params, &ps)
+		if err != nil {
+			return nil, err
+		}
+
+		return f(id, ps)
+	}
 }
 
 func SetupMethods(server *JsonRpcServer, app *app.App) {
@@ -40,5 +58,9 @@ func SetupMethods(server *JsonRpcServer, app *app.App) {
 		}
 		idMapper.Add(params.ID, clientId)
 		return "OK", nil
+	}))
+
+	server.AddMethod("myId", withInnerId(idMapper, func(innerId string, params LoginParams) (any, error) {
+		return innerId, nil
 	}))
 }
