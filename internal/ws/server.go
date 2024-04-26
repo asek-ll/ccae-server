@@ -3,6 +3,7 @@ package ws
 import (
 	"log"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/asek-ll/aecc-server/pkg/gopool"
@@ -11,25 +12,36 @@ import (
 )
 
 type Server struct {
-	addr      string
-	pool      *gopool.Pool
-	chat      *Clients
+	addr string
+	pool *gopool.Pool
+
+	clients    map[uint]*Client
+	clientsMu  sync.RWMutex
+	clientsSec uint
+
 	exit      chan struct{}
 	ioTimeout time.Duration
+
+	handler *delegateHandler
 }
 
-func NewServer(addr string, workers int, queue int, ioTimeout time.Duration, handler Handler) *Server {
+func NewServer(addr string, workers int, queue int, ioTimeout time.Duration) *Server {
 	pool := gopool.NewPool(workers, queue, 1)
-	chat := NewClients(pool, handler)
+	handler := delegateHandler{}
 	exit := make(chan struct{})
 
 	return &Server{
 		addr:      addr,
 		pool:      pool,
-		chat:      chat,
+		clients:   make(map[uint]*Client),
 		exit:      exit,
 		ioTimeout: ioTimeout,
+		handler:   &handler,
 	}
+}
+
+func (s *Server) SetHandler(handler Handler) {
+	s.handler.delegate = handler
 }
 
 func (s *Server) Start() error {
@@ -37,14 +49,7 @@ func (s *Server) Start() error {
 	if err != nil {
 		return err
 	}
-	// handle is a new incoming connection handler.
-	// It upgrades TCP connection to WebSocket, registers netpoll listener on
-	// it and stores it as a chat user in Chat instance.
-	//
-	// We will call it below within accept() loop.
 	handle := func(conn net.Conn) {
-		// NOTE: we wrap conn here to show that ws could work with any kind of
-		// io.ReadWriter.
 		safeConn := NewDeadliner(conn, s.ioTimeout)
 
 		// Zero-copy upgrade to WebSocket connection.
@@ -57,35 +62,22 @@ func (s *Server) Start() error {
 
 		log.Printf("%s: established websocket connection: %+v", nameConn(conn), hs)
 
-		// Register incoming user in chat.
-		user := s.chat.Register(safeConn)
+		client := s.register(safeConn)
 
-		// Create netpoll event descriptor for conn.
-		// We want to handle only read events of it.
 		desc := netpoll.Must(netpoll.HandleReadOnce(conn))
 
-		// Subscribe to events about conn.
 		poller.Start(desc, func(ev netpoll.Event) {
 			if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
-				// When ReadHup or Hup received, this mean that client has
-				// closed at least write end of the connection or connections
-				// itself. So we want to stop receive events about such conn
-				// and remove it from the chat registry.
 				poller.Stop(desc)
-				s.chat.Remove(user)
+				s.remove(client)
 				return
 			}
-			// Here we can read some new message from connection.
-			// We can not read it right here in callback, because then we will
-			// block the poller's inner loop.
-			// We do not want to spawn a new goroutine to read single message.
-			// But we want to reuse previously spawned goroutine.
 			s.pool.Schedule(func() {
-				if err := user.Receive(); err != nil {
+				if err := client.Receive(); err != nil {
 					// When receive failed, we can only disconnect broken
 					// connection and stop to receive events about it.
 					poller.Stop(desc)
-					s.chat.Remove(user)
+					s.remove(client)
 				} else {
 					poller.Resume(desc)
 				}
@@ -152,6 +144,39 @@ func (s *Server) Start() error {
 	<-s.exit
 
 	return nil
+}
+
+func (c *Server) register(conn net.Conn) *Client {
+	client := &Client{
+		conn:    conn,
+		handler: c.handler,
+	}
+	c.clientsMu.Lock()
+	{
+		client.id = c.clientsSec
+		c.clients[client.id] = client
+		c.clientsSec++
+	}
+	c.clientsMu.Unlock()
+
+	return client
+}
+
+func (c *Server) remove(client *Client) {
+	c.clientsMu.Lock()
+	if _, e := c.clients[client.id]; e {
+		delete(c.clients, client.id)
+	}
+	c.clientsMu.Unlock()
+
+	c.handler.HandleDisconnect(client)
+}
+
+func (c *Server) GetClient(id uint) (*Client, bool) {
+	c.clientsMu.RLock()
+	defer c.clientsMu.RUnlock()
+	client, e := c.clients[id]
+	return client, e
 }
 
 func nameConn(conn net.Conn) string {

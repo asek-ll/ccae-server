@@ -15,6 +15,11 @@ type Client struct {
 	id      uint
 	io      sync.Mutex
 	handler Handler
+	context any
+}
+
+func (c *Client) ID() uint {
+	return c.id
 }
 
 func (c *Client) Receive() error {
@@ -28,8 +33,9 @@ func (c *Client) Receive() error {
 		return nil
 	}
 
-	return c.handler.HandleMessage(msg, c.id)
+	return c.handler.HandleMessage(msg, c)
 }
+
 func (c *Client) readMessage() ([]byte, error) {
 	c.io.Lock()
 	defer c.io.Unlock()
@@ -50,7 +56,7 @@ func (c *Client) readMessage() ([]byte, error) {
 	return data, nil
 }
 
-func (c *Client) writeJSON(x interface{}) error {
+func (c *Client) WriteJSON(x interface{}) error {
 	w := wsutil.NewWriter(c.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
@@ -64,6 +70,19 @@ func (c *Client) writeJSON(x interface{}) error {
 	return w.Flush()
 }
 
+func (c *Client) WriteText(p []byte) error {
+	w := wsutil.NewWriter(c.conn, ws.StateServerSide, ws.OpText)
+	c.io.Lock()
+	defer c.io.Unlock()
+
+	_, err := w.Write(p)
+	if err != nil {
+		return err
+	}
+
+	return w.Flush()
+}
+
 func (c *Client) writeRaw(p []byte) error {
 	c.io.Lock()
 	defer c.io.Unlock()
@@ -71,4 +90,12 @@ func (c *Client) writeRaw(p []byte) error {
 	_, err := c.conn.Write(p)
 
 	return err
+}
+
+func (c *Client) GetContext() any {
+	return c.context
+}
+
+func (c *Client) SetContext(ctx any) {
+	c.context = ctx
 }

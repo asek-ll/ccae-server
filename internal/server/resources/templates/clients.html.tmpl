@@ -5,6 +5,15 @@
 
 {{define "content"}}
     <section>
-        content
+        <table>
+        {{range $index, $element := .}}
+            <tr>
+                <td>{{$element.Id}}</td>
+                <td>{{$element.Role}}</td>
+                <td>{{$element.Online}}</td>
+                <td>{{$element.LastLogin}}</td>
+            </tr>
+        {{end}}
+        </table>
     </section>
 {{end}}

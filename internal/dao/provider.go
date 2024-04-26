@@ -16,7 +16,14 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 	sqlStmt := `
-	create table if not exists clients (id string not null primary key);
+	CREATE TABLE IF NOT EXISTS clients (
+		id string NOT NULL PRIMARY KEY,
+		role string NOT NULL,
+		online bool NOT NULL,
+		last_login timestamp
+	);
+
+	UPDATE clients SET online = false;
 	`
 	_, err = db.Exec(sqlStmt)
 	if err != nil {

@@ -7,7 +7,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/asek-ll/aecc-server/internal/ws"
-	"github.com/asek-ll/aecc-server/internal/wshandler"
+	"github.com/asek-ll/aecc-server/internal/wsrpc"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -28,8 +28,10 @@ func (s ServerCommand) Execute(args []string) error {
 		return err
 	}
 
-	wshandler := &wshandler.Handler{}
-	server := ws.NewServer(":12526", 128, 1, time.Millisecond*1000, wshandler)
+	wsServer := ws.NewServer(":12526", 128, 1, time.Millisecond*1000)
+	rpcServer := wsrpc.NewServer(wsServer)
+
+	wsrpc.SetupMethods(rpcServer, app)
 
 	errors := make(chan error)
 	done := make(chan struct{})
@@ -44,7 +46,7 @@ func (s ServerCommand) Execute(args []string) error {
 	}()
 
 	go func() {
-		err := server.Start()
+		err := wsServer.Start()
 		if err != nil {
 			errors <- err
 		} else {
