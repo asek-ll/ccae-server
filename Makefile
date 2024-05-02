@@ -14,7 +14,6 @@ clean:
 target:
 	mkdir target
 
-
 .PHONY: build-amd64
 build-amd64: target
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -o target/aecc-server-amd64 cmd/main.go 
@@ -22,3 +21,16 @@ build-amd64: target
 .PHONY: build-arm64
 build-arm64: target
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -o target/aecc-server-arm64 cmd/main.go
+
+target/ccemux: target
+	mkdir target/ccemux
+
+target/ccemux-launcher.jar: target/ccemux
+	curl https://emux.cc/ccemux-launcher.jar -o target/ccemux-launcher.jar
+
+target/ccemux/ccemux.json: target/ccemux
+	cp test/ccemux/ccemux.json target/ccemux/ccemux.json
+
+.PHONY: launcher
+launcher: target/ccemux-launcher.jar target/ccemux/ccemux.json
+	java -jar target/ccemux-launcher.jar --start-dir ./test/ccemux/lua --data-dir ./target/ccemux
