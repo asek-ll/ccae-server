@@ -23,7 +23,7 @@ build-arm64: target
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -o target/aecc-server-arm64 cmd/main.go
 
 target/ccemux: target
-	mkdir target/ccemux
+	mkdir -p target/ccemux
 
 target/ccemux-launcher.jar: target/ccemux
 	curl https://emux.cc/ccemux-launcher.jar -o target/ccemux-launcher.jar
@@ -31,6 +31,10 @@ target/ccemux-launcher.jar: target/ccemux
 target/ccemux/ccemux.json: target/ccemux
 	cp test/ccemux/ccemux.json target/ccemux/ccemux.json
 
-.PHONY: launcher
-launcher: target/ccemux-launcher.jar target/ccemux/ccemux.json
+.PHONY: ccemux
+ccemux: target/ccemux-launcher.jar target/ccemux/ccemux.json
 	java -jar target/ccemux-launcher.jar --start-dir ./test/ccemux/lua --data-dir ./target/ccemux
+
+.PHONY: cos2
+cos2:
+	/Applications/CraftOS-PC.app/Contents/MacOS/craftos --start-dir ./test/ccemux/lua

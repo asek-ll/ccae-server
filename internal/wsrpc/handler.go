@@ -77,31 +77,33 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 			log.Printf("Unknown method: %s", *msg.Method)
 			return nil
 		}
-		res, err := m(client.ID(), msg.Params)
-		var response *Response
-		if err != nil {
-			response = &Response{
-				JsonRpc: "2.0",
-				ID:      msg.ID,
-				Error: &Error{
-					Code:    -1,
-					Message: err.Error(),
-				},
-			}
-		} else if res != nil {
-			response = &Response{
-				JsonRpc: "2.0",
-				ID:      msg.ID,
-				Result:  res,
-			}
-		}
-		if response != nil {
-			err := client.WriteJSON(*response)
+
+		h.pool.Schedule(func() {
+			res, err := m(client.ID(), msg.Params)
+			var response *Response
 			if err != nil {
-				log.Printf("Error on method handle: %s, %v", *msg.Method, err)
-				return nil
+				response = &Response{
+					JsonRpc: "2.0",
+					ID:      msg.ID,
+					Error: &Error{
+						Code:    -1,
+						Message: err.Error(),
+					},
+				}
+			} else if res != nil {
+				response = &Response{
+					JsonRpc: "2.0",
+					ID:      msg.ID,
+					Result:  res,
+				}
 			}
-		}
+			if response != nil {
+				err := client.WriteJSON(*response)
+				if err != nil {
+					log.Printf("Error on method handle: %s, %v", *msg.Method, err)
+				}
+			}
+		})
 		return nil
 	}
 

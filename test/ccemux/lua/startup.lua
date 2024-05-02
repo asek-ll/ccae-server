@@ -1,3 +1,10 @@
+periphemu.create("top", "modem")
+
+local mod = peripheral.wrap("top")
+print(mod)
+
+exit(1)
+
 local loginMessage = textutils.serializeJSON {
     jsonrpc = '2.0',
     id = 1,
@@ -10,7 +17,10 @@ local loginMessage = textutils.serializeJSON {
 
 local methods = {
     eval = function(body)
-        local f = load(body)
+        local f, msg = load(body)
+        if f == nil then
+            print(msg)
+        end
         return f()
     end,
 }
@@ -26,27 +36,30 @@ local function listen()
 
         if event == 'websocket_message' then
             print('Received message from ' .. eventData[2] .. ' with contents ' .. eventData[3])
-            local data = textutils.unserilizeJSON(eventData[3])
+            local data = textutils.unserializeJSON(eventData[3])
             local method = data['method']
             local params = data['params']
             if methods[method] ~= nil then
-                state, result = pcal(methods[method], params)
+                local state, result = pcall(methods[method], params)
+                local message
                 if state then
-                    ws.send(textutils.serializeJSON {
+                    message = textutils.serializeJSON {
+                        jsonrpc = '2.0',
+                        id = data['id'],
+                        result = result,
+                    }
+                else
+                    message = textutils.serializeJSON {
                         jsonrpc = '2.0',
                         id = data['id'],
                         error = {
                             code = -1,
                             message = result,
                         },
-                    })
-                else
-                    ws.send(textutils.serializeJSON {
-                        jsonrpc = '2.0',
-                        id = data['id'],
-                        result = result,
-                    })
+                    }
                 end
+                print('Send message', message)
+                ws.send(message)
             end
         end
 

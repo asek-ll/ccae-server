@@ -57,6 +57,16 @@ func SetupMethods(server *JsonRpcServer, app *app.App) {
 			return nil, err
 		}
 		idMapper.Add(params.ID, clientId)
+
+		// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+		// var res any
+		// err = server.SendRequestSync(ctx, clientId, "eval", "return 2+2", &res)
+		// if err != nil {
+		// 	fmt.Println("Error", err)
+		// } else {
+		// 	fmt.Println("SUCCESS", res)
+		// }
+
 		return "OK", nil
 	}))
 
