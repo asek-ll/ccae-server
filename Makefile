@@ -33,7 +33,7 @@ target/ccemux/ccemux.json: target/ccemux
 
 .PHONY: ccemux
 ccemux: target/ccemux-launcher.jar target/ccemux/ccemux.json
-	java -jar target/ccemux-launcher.jar --start-dir ./test/ccemux/lua --data-dir ./target/ccemux
+	java -jar target/CCEmuX-1.1.0-cct.jar --start-dir ./test/ccemux/lua --data-dir ./target/ccemux
 
 .PHONY: cos2
 cos2:
