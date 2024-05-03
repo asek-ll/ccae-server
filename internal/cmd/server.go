@@ -5,8 +5,11 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
+	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/ws"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 	"github.com/jessevdk/go-flags"
 )
@@ -18,12 +21,7 @@ type ServerCommand struct {
 
 func (s ServerCommand) Execute(args []string) error {
 
-	app, err := app.CreateApp()
-	if err != nil {
-		return err
-	}
-
-	mux, err := server.CreateMux(app)
+	daos, err := dao.NewDaoProvider()
 	if err != nil {
 		return err
 	}
@@ -31,7 +29,19 @@ func (s ServerCommand) Execute(args []string) error {
 	wsServer := ws.NewServer(":12526", 128, 1, time.Millisecond*1000)
 	rpcServer := wsrpc.NewServer(wsServer)
 
-	wsrpc.SetupMethods(rpcServer, app)
+	storageService := storage.NewStorage(rpcServer, daos)
+
+	app := &app.App{
+		Daos:    daos,
+		Storage: storageService,
+	}
+
+	mux, err := server.CreateMux(app)
+	if err != nil {
+		return err
+	}
+
+	wsmethods.SetupMethods(rpcServer, app)
 
 	errors := make(chan error)
 	done := make(chan struct{})

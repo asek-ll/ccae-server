@@ -1,10 +1,11 @@
-package wsrpc
+package wsmethods
 
 import (
 	"encoding/json"
 	"fmt"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
 
 type LoginParams struct {
@@ -12,7 +13,7 @@ type LoginParams struct {
 	Role string `json:"role"`
 }
 
-func withInnerId[T any](mapper *IdMapper, f func(id string, params T) (any, error)) RpcMethod {
+func withInnerId[T any](mapper *wsrpc.IdMapper, f func(id string, params T) (any, error)) wsrpc.RpcMethod {
 	return func(clientId uint, params []byte) (any, error) {
 		id, e := mapper.ToInner(clientId)
 		if !e {
@@ -29,9 +30,9 @@ func withInnerId[T any](mapper *IdMapper, f func(id string, params T) (any, erro
 	}
 }
 
-func SetupMethods(server *JsonRpcServer, app *app.App) {
+func SetupMethods(server *wsrpc.JsonRpcServer, app *app.App) {
 
-	idMapper := NewIdMapper()
+	idMapper := wsrpc.NewIdMapper()
 
 	server.SetDisconnectHandler(func(clientId uint) error {
 		id, e := idMapper.ToInner(clientId)
@@ -50,22 +51,19 @@ func SetupMethods(server *JsonRpcServer, app *app.App) {
 		return "pong", nil
 	})
 
-	server.AddMethod("login", Typed(func(clientId uint, params LoginParams) (any, error) {
+	server.AddMethod("login", wsrpc.Typed(func(clientId uint, params LoginParams) (any, error) {
 		fmt.Println("Login", params)
-		err := app.Daos.Clients.LoginClient(params.ID, params.Role)
+		err := app.Daos.Clients.LoginClient(params.ID, params.Role, clientId)
 		if err != nil {
 			return nil, err
 		}
 		idMapper.Add(params.ID, clientId)
 
-		// ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-		// var res any
-		// err = server.SendRequestSync(ctx, clientId, "eval", "return 2+2", &res)
-		// if err != nil {
-		// 	fmt.Println("Error", err)
-		// } else {
-		// 	fmt.Println("SUCCESS", res)
-		// }
+		url := fmt.Sprintf("http://localhost:3001/static/lua/%s.lua", params.Role)
+		_, err = server.SendRequest(clientId, "init", url)
+		if err != nil {
+			fmt.Println("Error", err)
+		}
 
 		return "OK", nil
 	}))

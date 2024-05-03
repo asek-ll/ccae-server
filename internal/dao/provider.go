@@ -8,6 +8,7 @@ import (
 
 type DaoProvider struct {
 	Clients *ClientsDao
+	Seqs    *SeqsDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -16,11 +17,20 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 	sqlStmt := `
+
+	CREATE TABLE IF NOT EXISTS seqs (
+		type string NOT NULL PRIMARY KEY,
+		value integer NOT NULL
+	);
+
+	INSERT OR IGNORE INTO seqs(type, value) VALUES('clientNo', 0);
+
 	CREATE TABLE IF NOT EXISTS clients (
 		id string NOT NULL PRIMARY KEY,
 		role string NOT NULL,
 		online bool NOT NULL,
-		last_login timestamp
+		last_login timestamp,
+		wsclient_id integer
 	);
 
 	UPDATE clients SET online = false;
@@ -32,5 +42,6 @@ func NewDaoProvider() (*DaoProvider, error) {
 
 	return &DaoProvider{
 		Clients: &ClientsDao{db: db},
+		Seqs:    &SeqsDao{db: db},
 	}, nil
 }

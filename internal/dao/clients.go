@@ -49,19 +49,32 @@ func (c *ClientsDao) GetClients() ([]Client, error) {
 	return result, nil
 }
 
-func (c *ClientsDao) LoginClient(clientId string, role string) error {
-	stmt, err := c.db.Prepare("INSERT OR REPLACE INTO clients (id, role, online, last_login) VALUES (?, ?, true, datetime())")
+func (c *ClientsDao) GetOnlineClientIdOfType(clientType string) (uint, error) {
+	row := c.db.QueryRow("SELECT wsclient_id FROM clients WHERE online = true AND role = ?", clientType)
+	err := row.Err()
+	if err != nil {
+		return 0, err
+	}
+
+	var id int
+	row.Scan(&id)
+
+	return uint(id), nil
+}
+
+func (c *ClientsDao) LoginClient(clientId string, role string, wsclientId uint) error {
+	stmt, err := c.db.Prepare("INSERT OR REPLACE INTO clients (id, role, online, last_login, wsclient_id) VALUES (?, ?, true, datetime(), ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(clientId, role)
+	_, err = stmt.Exec(clientId, role, wsclientId)
 	return err
 }
 
 func (c *ClientsDao) LogoutClient(clientId string) error {
-	stmt, err := c.db.Prepare("UPDATE clients SET online = false WHERE id = ?")
+	stmt, err := c.db.Prepare("UPDATE clients SET online = false, wsclient_id = NULL WHERE id = ?")
 	if err != nil {
 		return err
 	}

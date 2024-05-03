@@ -50,5 +50,31 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, clients)
 	})
 
+	mux.HandleFunc("GET /items/{$}", func(w http.ResponseWriter, r *http.Request) {
+		err := app.Storage.GetItems()
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, nil)
+	})
+
+	mux.HandleFunc("GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) {
+		role := r.PathValue("role")
+
+		id, err := app.Daos.Seqs.NextId("clientNo")
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("client.lua", []string{"client.lua.tmpl"}, w, map[string]any{
+			"role":  role,
+			"wsUrl": "ws://localhost:12526",
+			"id":    id,
+		})
+	})
+
 	return mux, nil
 }
