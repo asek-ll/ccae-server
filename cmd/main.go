@@ -9,7 +9,8 @@ import (
 )
 
 type Options struct {
-	ServerCmd cmd.ServerCommand `command:"server"`
+	ServerCmd cmd.ServerCommand    `command:"server"`
+	FillItems cmd.FillItemsCommand `command:"fill_items"`
 }
 
 func main() {

@@ -51,13 +51,13 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 	})
 
 	mux.HandleFunc("GET /items/{$}", func(w http.ResponseWriter, r *http.Request) {
-		err := app.Storage.GetItems()
+		items, err := app.Storage.GetItems()
 		if err != nil {
 			tmpls.RenderError(err, w)
 			return
 		}
 
-		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, nil)
+		tmpls.Render("clients", []string{"index.html.tmpl", "items.html.tmpl"}, w, items)
 	})
 
 	mux.HandleFunc("GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) {

@@ -18,19 +18,16 @@ local function getItems()
         if is_storage(m, storage_name) then
             local size = m.callRemote(storage_name, 'size')
 
-            local storage = { size = size, items = {} }
-
             local storage_items = {}
             local items = m.callRemote(storage_name, 'list')
             for slot in pairs(items) do
                 local details = m.callRemote(storage_name, 'getItemDetail', slot)
                 if details ~= nil then
-                    local cache_item = { item = details, storage_name = storage_name, slot = slot }
-                    storage_items[slot] = cache_item
+                    local cache_item = { item = details, slot = slot }
+                    table.insert(storage_items, cache_item)
                 end
             end
-            storage.items = storage_items
-            storages[storage_name] = storage
+            table.insert(storages, { name = storage_name, size = size, items = storage_items })
         end
     end
     return storages

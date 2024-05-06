@@ -5,13 +5,13 @@ local i1 = testnet.createInventory(1)
 local i2 = testnet.createInventory(1)
 
 testnet.setItem(i1, 1, {
-    name = 'apple',
+    name = 'minecraft:apple',
     count = 2,
     maxCount = 64,
 })
 
 testnet.setItem(i2, 2, {
-    name = 'pearl',
+    name = 'minecraft:ender_pearl',
     count = 3,
     maxCount = 16,
 })

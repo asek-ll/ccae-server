@@ -8,10 +8,13 @@
         <table>
         {{range $index, $element := .}}
             <tr>
-                <td>{{$element.Id}}</td>
-                <td>{{$element.Role}}</td>
-                <td>{{$element.Online}}</td>
-                <td>{{$element.LastLogin}}</td>
+                <td>{{$element.Item.ID}}</td>
+                <td>{{$element.Item.DisplayName}}</td>
+                <td>
+                    <img src="data:image/png;base64, {{$element.Image}}" />
+                </td>
+                <td>{{$element.Count}}</td>
+                </td>
             </tr>
         {{end}}
         </table>

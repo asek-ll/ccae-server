@@ -9,6 +9,7 @@ import (
 type DaoProvider struct {
 	Clients *ClientsDao
 	Seqs    *SeqsDao
+	Items   *ItemsDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -43,5 +44,6 @@ func NewDaoProvider() (*DaoProvider, error) {
 	return &DaoProvider{
 		Clients: &ClientsDao{db: db},
 		Seqs:    &SeqsDao{db: db},
+		Items:   &ItemsDao{db: db},
 	}, nil
 }

@@ -1,26 +1,24 @@
 package storage
 
+type StackId struct {
+	Name string `json:"name"`
+	NBT  string `json:"nbt"`
+}
+
+type Stack struct {
+	Name     string `json:"name"`
+	NBT      string `json:"nbt"`
+	Count    int    `json:"count"`
+	MaxCount int    `json:"maxCount"`
+}
+
+type StackWithSlot struct {
+	Item Stack `json:"item"`
+	Slot int   `json:"slot"`
+}
+
 type Inventory struct {
-	ID string
-}
-
-type InventorySlot struct {
-	InvetoryId string
-	SlotNumber int
-}
-
-type ItemStack struct {
-	InventorySlot
-	Name     string
-	NBT      string
-	Count    int
-	MaxCount int
-}
-
-type StorageItem struct {
-	Name     string
-	NBT      string
-	Count    int
-	MaxCount int
-	Stacks   []ItemStack
+	Name  string          `json:"name"`
+	Items []StackWithSlot `json:"items"`
+	Size  int             `json:"size"`
 }
