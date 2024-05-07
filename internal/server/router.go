@@ -86,5 +86,9 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl"}, w, recipes)
 	})
 
+	mux.HandleFunc("GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
+		tmpls.Render("recipes", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
+	})
+
 	return mux, nil
 }
