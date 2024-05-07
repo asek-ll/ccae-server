@@ -21,10 +21,6 @@ func NewStorage(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Storage 
 	}
 }
 
-func getId(s Stack) dao.ItemId {
-	return dao.ItemId{ID: s.Name, NBT: s.NBT}
-}
-
 func keys[K comparable, V any](m map[K]V) []K {
 	var keys []K
 	for k := range m {
@@ -52,11 +48,11 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		return nil, err
 	}
 
-	uniqueItems := make(map[dao.ItemId]Stack)
+	uniqueItems := make(map[string]Stack)
 
 	for _, inv := range res {
 		for _, item := range inv.Items {
-			id := getId(item.Item)
+			id := item.Item.GetUID()
 			stack, e := uniqueItems[id]
 			if !e {
 				uniqueItems[id] = item.Item
@@ -67,9 +63,9 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		}
 	}
 
-	ids := keys(uniqueItems)
+	uids := keys(uniqueItems)
 
-	items, err := s.daoProvider.Items.FindItemsByIds(ids)
+	items, err := s.daoProvider.Items.FindItemsByUids(uids)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +75,7 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 	for _, item := range items {
 		stacks = append(stacks, AggregateStacks{
 			Item:  item,
-			Count: uniqueItems[item.UniqID()].Count,
+			Count: uniqueItems[item.UID].Count,
 			Image: base64.StdEncoding.EncodeToString(item.Icon),
 		})
 	}

@@ -16,6 +16,28 @@ type ClientsDao struct {
 	db *sql.DB
 }
 
+func NewClientsDao(db *sql.DB) (*ClientsDao, error) {
+
+	sqlStmt := `
+
+	CREATE TABLE IF NOT EXISTS clients (
+		id string NOT NULL PRIMARY KEY,
+		role string NOT NULL,
+		online bool NOT NULL,
+		last_login timestamp,
+		wsclient_id integer
+	);
+
+	UPDATE clients SET online = false;
+	`
+	_, err := db.Exec(sqlStmt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ClientsDao{db: db}, nil
+}
+
 func (c *ClientsDao) GetClients() ([]Client, error) {
 	rows, err := c.db.Query("select id, role, online, last_login from clients")
 	if err != nil {

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/asek-ll/aecc-server/internal/dao"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/jessevdk/go-flags"
@@ -25,19 +26,13 @@ func (s FillItemsCommand) Execute(args []string) error {
 		return err
 	}
 
-	sqlStmt := `
+	_, err = db.Exec("DROP TABLE IF EXISTS item;")
 
-	DROP TABLE IF EXISTS item;
+	if err != nil {
+		return err
+	}
 
-	CREATE TABLE item (
-		id string NOT NULL PRIMARY KEY,
-		display_name string NOT NULL,
-		nbt string,
-		meta integer,
-		icon BLOB
-	);
-	`
-	_, err = db.Exec(sqlStmt)
+	items, err := dao.NewItemsDao(db)
 	if err != nil {
 		return err
 	}
@@ -56,25 +51,25 @@ func (s FillItemsCommand) Execute(args []string) error {
 	}
 
 	for _, d := range data {
-		id := d["id"].(string)
-		displayName := d["displayName"].(string)
-		var nbt *string
+		var item dao.Item
+
+		item.ID = d["id"].(string)
+		item.DisplayName = d["displayName"].(string)
 		if nbtRaw, ok := d["nbt"].(string); ok {
-			nbt = &nbtRaw
+			item.NBT = &nbtRaw
 		}
-		var meta *int
 		if metaRaw, ok := d["meta"].(float64); ok {
 			converted := int(metaRaw)
-			meta = &converted
+			item.Meta = &converted
 		}
 		iconEncoded := d["icon"].(string)
 
-		icon, err := base64.StdEncoding.DecodeString(iconEncoded)
+		item.Icon, err = base64.StdEncoding.DecodeString(iconEncoded)
 		if err != nil {
 			return err
 		}
 
-		_, err = db.Exec("INSERT INTO item VALUES(?, ?, ?, ?, ?)", id, displayName, nbt, meta, icon)
+		err = items.InsertItems([]dao.Item{item})
 		if err != nil {
 			return err
 		}

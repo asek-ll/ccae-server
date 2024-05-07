@@ -1,5 +1,7 @@
 package storage
 
+import "github.com/asek-ll/aecc-server/internal/common"
+
 type StackId struct {
 	Name string `json:"name"`
 	NBT  string `json:"nbt"`
@@ -10,6 +12,14 @@ type Stack struct {
 	NBT      string `json:"nbt"`
 	Count    int    `json:"count"`
 	MaxCount int    `json:"maxCount"`
+}
+
+func (s Stack) GetUID() string {
+	var nbt *string
+	if s.NBT != "" {
+		nbt = &s.NBT
+	}
+	return common.MakeUid(s.Name, nbt)
 }
 
 type StackWithSlot struct {

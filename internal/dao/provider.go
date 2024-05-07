@@ -10,6 +10,7 @@ type DaoProvider struct {
 	Clients *ClientsDao
 	Seqs    *SeqsDao
 	Items   *ItemsDao
+	Recipes *RecipesDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -17,33 +18,31 @@ func NewDaoProvider() (*DaoProvider, error) {
 	if err != nil {
 		return nil, err
 	}
-	sqlStmt := `
 
-	CREATE TABLE IF NOT EXISTS seqs (
-		type string NOT NULL PRIMARY KEY,
-		value integer NOT NULL
-	);
+	clientsDao, err := NewClientsDao(db)
+	if err != nil {
+		return nil, err
+	}
 
-	INSERT OR IGNORE INTO seqs(type, value) VALUES('clientNo', 0);
+	seqsDao, err := NewSeqsDao(db)
+	if err != nil {
+		return nil, err
+	}
 
-	CREATE TABLE IF NOT EXISTS clients (
-		id string NOT NULL PRIMARY KEY,
-		role string NOT NULL,
-		online bool NOT NULL,
-		last_login timestamp,
-		wsclient_id integer
-	);
+	itemsDao, err := NewItemsDao(db)
+	if err != nil {
+		return nil, err
+	}
 
-	UPDATE clients SET online = false;
-	`
-	_, err = db.Exec(sqlStmt)
+	recipesDao, err := NewRecipesDao(db)
 	if err != nil {
 		return nil, err
 	}
 
 	return &DaoProvider{
-		Clients: &ClientsDao{db: db},
-		Seqs:    &SeqsDao{db: db},
-		Items:   &ItemsDao{db: db},
+		Clients: clientsDao,
+		Seqs:    seqsDao,
+		Items:   itemsDao,
+		Recipes: recipesDao,
 	}, nil
 }
