@@ -7,3 +7,11 @@ func MapValues[K comparable, V any](m map[K]V) []V {
 	}
 	return values
 }
+
+func ToArgs[V any](s []V) []any {
+	args := make([]any, len(s))
+	for i, uid := range s {
+		args[i] = uid
+	}
+	return args
+}

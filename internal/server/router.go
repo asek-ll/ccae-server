@@ -76,5 +76,15 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		})
 	})
 
+	mux.HandleFunc("GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) {
+		recipes, err := app.Daos.Recipes.GetRecipesPage(0)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl"}, w, recipes)
+	})
+
 	return mux, nil
 }
