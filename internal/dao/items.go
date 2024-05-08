@@ -2,6 +2,7 @@ package dao
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -15,6 +16,10 @@ type Item struct {
 	NBT         *string
 	Meta        *int
 	Icon        []byte
+}
+
+func (i Item) Base64Icon() string {
+	return base64.StdEncoding.EncodeToString(i.Icon)
 }
 
 type ItemsDao struct {
@@ -66,6 +71,36 @@ func (d *ItemsDao) InsertItems(items []Item) error {
 	return err
 }
 
+func readItemRows(rows *sql.Rows) ([]Item, error) {
+	var result []Item
+	for rows.Next() {
+		var uid string
+		var id string
+		var displayName string
+		var nbt *string
+		var meta *int
+		var icon []byte
+
+		err := rows.Scan(&uid, &id, &displayName, &nbt, &meta, &icon)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, Item{
+			UID:         uid,
+			ID:          id,
+			DisplayName: displayName,
+			NBT:         nbt,
+			Meta:        meta,
+			Icon:        icon,
+		})
+	}
+	err := rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
 func (d *ItemsDao) FindItemsByUids(uids []string) ([]Item, error) {
 	if len(uids) == 0 {
 		return nil, nil
@@ -82,32 +117,16 @@ func (d *ItemsDao) FindItemsByUids(uids []string) ([]Item, error) {
 	}
 	defer rows.Close()
 
-	var result []Item
-	for rows.Next() {
-		var uid string
-		var id string
-		var displayName string
-		var nbt *string
-		var meta *int
-		var icon []byte
+	return readItemRows(rows)
+}
 
-		err = rows.Scan(&uid, &id, &displayName, &nbt, &meta, &icon)
-		if err != nil {
-			return nil, err
-		}
-		result = append(result, Item{
-			UID:         uid,
-			ID:          id,
-			DisplayName: displayName,
-			NBT:         nbt,
-			Meta:        meta,
-			Icon:        icon,
-		})
-	}
-	err = rows.Err()
+func (d *ItemsDao) FindByName(filter string) ([]Item, error) {
+
+	rows, err := d.db.Query("SELECT uid, id, display_name, nbt, meta, icon FROM item WHERE display_name LIKE ? LIMIT 14", "%"+filter+"%")
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return result, nil
+	return readItemRows(rows)
 }

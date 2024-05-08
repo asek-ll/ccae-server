@@ -90,5 +90,28 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		tmpls.Render("recipes", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
 	})
 
+	mux.HandleFunc("GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) {
+		tmpls.Render("item-popup", []string{"item-popup.html.tmpl"}, w, nil)
+	})
+
+	mux.HandleFunc("GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) {
+		filter := r.URL.Query().Get("filter")
+		items, err := app.Daos.Items.FindByName(filter)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+		tmpls.Render("item-popup-items", []string{"item-popup-items.html.tmpl"}, w, items)
+	})
+
+	mux.HandleFunc("GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		items, err := app.Daos.Items.FindItemsByUids([]string{r.PathValue("uid")})
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+		tmpls.Render("item-popup-result", []string{"item-popup-result.html.tmpl"}, w, items[0])
+	})
+
 	return mux, nil
 }

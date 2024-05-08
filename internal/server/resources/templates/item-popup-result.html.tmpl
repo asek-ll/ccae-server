@@ -1,0 +1,7 @@
+<fieldset role="group" id="group-{{.UID}}">
+    <input type="hidden" name="item" value="{{.UID}}"/>
+    <img src="data:image/png;base64, {{.Base64Icon}}" />
+    <input name="amount" placeholder="Amount" />
+    <button type="button" hx-on:click="document.getElementById('group-{{.UID}}').outerHTML = '';">Del</button>
+</fieldset>
+

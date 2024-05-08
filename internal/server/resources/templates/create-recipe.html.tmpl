@@ -24,19 +24,11 @@
         <div class="grid">
             <div>
                 <label>Ingredients</label>
-                <fieldset role="group">
-                    <input name="in_uid_1" placeholder="Item" />
-                    <input name="in_count_1" placeholder="Amount" />
-                </fieldset>
-                <button type="button">Add</button>
+                <button type="button" hx-get="/item-popup" hx-target="this" hx-swap="beforebegin">Add</button>
             </div>
             <div>
                 <label>Results</label>
-                <fieldset role="group">
-                    <input name="res_uid_1" placeholder="Item" />
-                    <input name="res_count_1" placeholder="Amount" />
-                </fieldset>
-                <button type="button">Add</button>
+                <button type="button" hx-get="/item-popup" hx-target="this" hx-swap="beforebegin">Add</button>
             </div>
         </div>
 

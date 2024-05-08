@@ -1,0 +1,22 @@
+<dialog open id="item-popup">
+    <article>
+        <h2>Items</h2>
+        <form>
+            <fieldset>
+                <label>
+                    Name
+                    <input name="filter" 
+                           hx-get="/item-popup/items"
+                           hx-trigger="keyup changed delay:500ms"
+                           hx-target="#item-popup-items"
+                           />
+                </label>
+            </fieldset>
+        </form>
+        <div id="item-popup-items">
+        </div>
+        <footer>
+            <button hx-on:click="document.getElementById('item-popup').outerHTML = '';">Cancel</button>
+        </footer>
+    </article>
+</dialog>

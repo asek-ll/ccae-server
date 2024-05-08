@@ -1,0 +1,17 @@
+<table>
+    {{range $index, $element := .}}
+        <tr data-tooltip="{{$element.UID}}">
+            <td>
+                <img src="data:image/png;base64, {{$element.Base64Icon}}" />
+            </td>
+            <td>{{$element.DisplayName}}</td>
+            <td>
+                <button
+                        hx-get="/item-popup/{{$element.UID}}"
+                        hx-target="#item-popup"
+                        hx-swap="outerHTML"
+                    >Select</button>
+            </td>
+        </tr>
+    {{end}}
+</table>
