@@ -2,15 +2,31 @@
     Recipes
 {{end}}
 
-
 {{define "content"}}
     <section>
         <table>
-        {{range $index, $element := .}}
-            <tr>
-                <td>{{$element.Name}}</td>
-            </tr>
-        {{end}}
+            {{$items := .items}}
+            {{ range $index, $element := .recipes }}
+                <tr>
+                    <td>{{ $element.Name }}</td>
+                    <td>
+                        <div class="grid">
+                            {{ range $index, $item := $element.Ingredients }}
+                                {{ $item := index $items $item.ItemUID }}
+                                {{ template "item-widget" $item }}
+                            {{ end }}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="grid">
+                            {{ range $index, $item := $element.Results }}
+                                {{ $item := index $items $item.ItemUID }}
+                                {{ template "item-widget" $item }}
+                            {{ end }}
+                        </div>
+                    </td>
+                </tr>
+            {{end}}
         </table>
     </section>
 {{end}}

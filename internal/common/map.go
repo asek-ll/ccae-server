@@ -1,5 +1,13 @@
 package common
 
+func MapKeys[K comparable, V any](m map[K]V) []K {
+	var values []K
+	for k, _ := range m {
+		values = append(values, k)
+	}
+	return values
+}
+
 func MapValues[K comparable, V any](m map[K]V) []V {
 	var values []V
 	for _, v := range m {

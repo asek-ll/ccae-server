@@ -130,3 +130,17 @@ func (d *ItemsDao) FindByName(filter string) ([]Item, error) {
 
 	return readItemRows(rows)
 }
+
+func (d *ItemsDao) FindItemsIndexed(itemsByUid map[string]*Item) error {
+	uids := common.MapKeys(itemsByUid)
+	items, err := d.FindItemsByUids(uids)
+	if err != nil {
+		return err
+	}
+
+	for _, i := range items {
+		itemsByUid[i.UID] = &i
+	}
+
+	return nil
+}

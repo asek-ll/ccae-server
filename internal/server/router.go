@@ -2,11 +2,14 @@ package server
 
 import (
 	"embed"
+	"fmt"
 	"io/fs"
 	"net/http"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/pkg/template"
+	"github.com/google/uuid"
 )
 
 //go:embed resources
@@ -83,15 +86,38 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 			return
 		}
 
-		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl"}, w, recipes)
+		itemsById := make(map[string]*dao.Item)
+		for _, r := range recipes {
+			fmt.Println(r)
+			for _, i := range r.Ingredients {
+				itemsById[i.ItemUID] = nil
+			}
+			for _, i := range r.Results {
+				itemsById[i.ItemUID] = nil
+			}
+		}
+
+		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
+			"recipes": recipes,
+			"items":   itemsById,
+		})
 	})
 
 	mux.HandleFunc("GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
-		tmpls.Render("recipes", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
+		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
 	})
 
 	mux.HandleFunc("GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) {
-		tmpls.Render("item-popup", []string{"item-popup.html.tmpl"}, w, nil)
+		slot := r.URL.Query().Get("slot")
+		tmpls.Render("item-popup", []string{"item-popup.html.tmpl"}, w, map[string]string{
+			"slot": slot,
+		})
 	})
 
 	mux.HandleFunc("GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) {
@@ -105,12 +131,17 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 	})
 
 	mux.HandleFunc("GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		slot := r.URL.Query().Get("slot")
 		items, err := app.Daos.Items.FindItemsByUids([]string{r.PathValue("uid")})
 		if err != nil {
 			tmpls.RenderError(err, w)
 			return
 		}
-		tmpls.Render("item-popup-result", []string{"item-popup-result.html.tmpl"}, w, items[0])
+		tmpls.Render("item-popup-result", []string{"item-popup-result.html.tmpl"}, w, map[string]any{
+			"id":   uuid.NewString(),
+			"item": items[0],
+			"slot": slot,
+		})
 	})
 
 	return mux, nil

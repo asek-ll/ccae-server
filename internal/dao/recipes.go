@@ -16,11 +16,11 @@ type RecipeItem struct {
 }
 
 type Recipe struct {
-	Id           int
-	Name         string
-	Type         string
-	Results      []RecipeItem
-	Ingeredients []RecipeItem
+	Id          int
+	Name        string
+	Type        string
+	Results     []RecipeItem
+	Ingredients []RecipeItem
 }
 
 type RecipesDao struct {
@@ -55,8 +55,9 @@ func NewRecipesDao(db *sql.DB) (*RecipesDao, error) {
 	return &RecipesDao{db: db}, nil
 }
 
-func readRows(rows *sql.Rows) ([]Recipe, error) {
-	recipes := make(map[int]Recipe)
+func readRows(rows *sql.Rows) ([]*Recipe, error) {
+	var recipes []*Recipe
+	recipes_by_id := make(map[int]int)
 	for rows.Next() {
 		var id int
 		var name string
@@ -69,15 +70,18 @@ func readRows(rows *sql.Rows) ([]Recipe, error) {
 		if err != nil {
 			return nil, err
 		}
-		recipe, ok := recipes[id]
+		recipe_idx, ok := recipes_by_id[id]
 		if !ok {
-			recipe = Recipe{
+			recipe := Recipe{
 				Id:   id,
 				Name: name,
 				Type: typ,
 			}
-			recipes[id] = recipe
+			recipe_idx = len(recipes)
+			recipes_by_id[id] = recipe_idx
+			recipes = append(recipes, &recipe)
 		}
+		recipe := recipes[recipe_idx]
 		if role == "result" {
 			recipe.Results = append(recipe.Results, RecipeItem{
 				ItemUID: item_uid,
@@ -85,7 +89,7 @@ func readRows(rows *sql.Rows) ([]Recipe, error) {
 				Slot:    slot,
 			})
 		} else if role == "ingredient" {
-			recipe.Ingeredients = append(recipe.Ingeredients, RecipeItem{
+			recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
 				ItemUID: item_uid,
 				Amount:  amount,
 				Slot:    slot,
@@ -98,10 +102,10 @@ func readRows(rows *sql.Rows) ([]Recipe, error) {
 		return nil, err
 	}
 
-	return common.MapValues(recipes), nil
+	return recipes, nil
 }
 
-func (r *RecipesDao) GetRecipesPage(fromId int) ([]Recipe, error) {
+func (r *RecipesDao) GetRecipesPage(fromId int) ([]*Recipe, error) {
 
 	query := `
 	SELECT r.id FROM recipes r
@@ -132,8 +136,6 @@ func (r *RecipesDao) GetRecipesPage(fromId int) ([]Recipe, error) {
 		return nil, err
 	}
 
-	fmt.Println(ids)
-
 	return r.GetRecipesById(ids)
 }
 
@@ -163,7 +165,7 @@ func (r *RecipesDao) InsertRecipe(recipe Recipe) error {
 		}
 	}
 
-	for _, item := range recipe.Ingeredients {
+	for _, item := range recipe.Ingredients {
 		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)", recipe.Id, item.ItemUID, item.Amount, "ingredient", item.Slot)
 		if err != nil {
 			return err
@@ -175,7 +177,7 @@ func (r *RecipesDao) InsertRecipe(recipe Recipe) error {
 	return err
 }
 
-func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]Recipe, error) {
+func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]*Recipe, error) {
 
 	query := `
 	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
@@ -194,7 +196,7 @@ func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]Recipe, error) {
 	return readRows(rows)
 }
 
-func (r *RecipesDao) GetRecipesById(ids []int) ([]Recipe, error) {
+func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 	if len(ids) == 0 {
 		return nil, nil
 	}

@@ -106,7 +106,7 @@ func (s FillRecipesCommand) Execute(args []string) error {
 				slot := i + 1
 				item.Slot = &slot
 			}
-			recipe.Ingeredients = append(recipe.Ingeredients, item)
+			recipe.Ingredients = append(recipe.Ingredients, item)
 		}
 
 		err = recipesDao.InsertRecipe(recipe)
