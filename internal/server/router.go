@@ -79,6 +79,37 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		})
 	})
 
+	formatIngredients := func(r *dao.Recipe) [][]*dao.RecipeItem {
+		var rows [][]*dao.RecipeItem
+		if r.Type == "" {
+			fmt.Println(r.Id)
+			rows = append(rows, make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3))
+			for _, ri := range r.Ingredients {
+				r := ((*ri.Slot) - 1) / 3
+				c := ((*ri.Slot) - 1) % 3
+				rows[r][c] = &ri
+			}
+		} else {
+			var currentRow []*dao.RecipeItem
+			for i, ri := range r.Ingredients {
+				if len(currentRow) == 0 {
+					currentRow = make([]*dao.RecipeItem, 3)
+					rows = append(rows, currentRow)
+				}
+
+				c := i % 3
+
+				currentRow[c] = &ri
+
+				if c == 2 {
+					currentRow = nil
+				}
+			}
+		}
+
+		return rows
+	}
+
 	mux.HandleFunc("GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) {
 		recipes, err := app.Daos.Recipes.GetRecipesPage(0)
 		if err != nil {
@@ -88,7 +119,6 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 
 		itemsById := make(map[string]*dao.Item)
 		for _, r := range recipes {
-			fmt.Println(r)
 			for _, i := range r.Ingredients {
 				itemsById[i.ItemUID] = nil
 			}
@@ -104,8 +134,9 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		}
 
 		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
-			"recipes": recipes,
-			"items":   itemsById,
+			"recipes":           recipes,
+			"items":             itemsById,
+			"formatIngredients": formatIngredients,
 		})
 	})
 

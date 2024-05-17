@@ -6,16 +6,26 @@
     <section>
         <table>
             {{$items := .items}}
+            {{$formatI := .formatIngredients }}
             {{ range $index, $element := .recipes }}
                 <tr>
                     <td>{{ $element.Name }}</td>
                     <td>
-                        <div class="grid">
-                            {{ range $index, $item := $element.Ingredients }}
-                                {{ $item := index $items $item.ItemUID }}
-                                {{ template "item-widget" $item }}
+                        <table>
+                            {{$rows := call $formatI $element}}
+                            {{ range $ri, $row := $rows }}
+                                <tr>
+                                    {{ range $ci, $item := $row }}
+                                        <td> 
+                                            {{ if $item }}
+                                                {{ $item := index $items $item.ItemUID }}
+                                                {{ template "item-widget" $item }}
+                                            {{ end }}
+                                        </td>
+                                    {{ end }}
+                                </tr>
                             {{ end }}
-                        </div>
+                        </table>
                     </td>
                     <td>
                         <div class="grid">
