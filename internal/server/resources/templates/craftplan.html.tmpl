@@ -1,0 +1,52 @@
+{{define "title"}}
+    CraftPlan for
+{{end}}
+
+
+{{define "content"}}
+    {{$items := .items}}
+    {{$formatI := .formatIngredients }}
+    <table>
+        {{range $index, $element := .plan.Steps}}
+            <tr>
+                <td>
+                    {{$element.Repeats}} X {{$element.Recipe.Name }}
+                </td>
+                <td>
+                    <div class="recipe">
+                        {{$rows := call $formatI $element.Recipe}}
+                        {{ range $ri, $row := $rows }}
+                            <div class="recipe-row" style="display: flex">
+                                {{ range $ci, $item := $row }}
+                                    <div class="recipe-slot" style="width: 32px"> 
+                                        {{ if $item }}
+                                            {{ $item := index $items $item.ItemUID }}
+                                            {{ template "item-widget" $item }}
+                                        {{ end }}
+                                    </div>
+                                {{ end }}
+                            </div>
+                        {{ end }}
+                    </div>
+                </td>
+            </tr>
+        {{end}}
+    </table>
+    <table>
+        {{range $index, $element := .plan.Related}}
+            <tr>
+                <td>
+                    {{ $item := index $items $element.ItemUID }}
+                    {{ template "item-widget" $item }}
+                </td>
+                <td>
+                {{$element.ResultAmount}}
+                </td>
+                <td>
+                {{$element.StorageAmount}}
+                </td>
+            </tr>
+        {{end}}
+    </table>
+{{end}}
+

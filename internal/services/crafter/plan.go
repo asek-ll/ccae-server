@@ -1,11 +1,21 @@
 package crafter
 
+import "github.com/asek-ll/aecc-server/internal/dao"
+
 type Step struct {
-	Recipe  Recipe
+	Recipe  *dao.Recipe
 	Repeats int
 }
 
+type Related struct {
+	ItemUID       string
+	ResultAmount  int
+	StorageAmount int
+}
+
 type Plan struct {
-	Steps []Step
-	Goals []Stack
+	Items   []string
+	Steps   []Step
+	Goals   []Stack
+	Related []Related
 }

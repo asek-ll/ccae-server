@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"encoding/base64"
+	"errors"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -32,10 +32,9 @@ func keys[K comparable, V any](m map[K]V) []K {
 type AggregateStacks struct {
 	Item  dao.Item
 	Count int
-	Image string
 }
 
-func (s *Storage) GetItems() ([]AggregateStacks, error) {
+func (s *Storage) GetItemsCount() (map[string]*Stack, error) {
 	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("storage")
 	if err != nil {
 		return nil, err
@@ -48,19 +47,28 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		return nil, err
 	}
 
-	uniqueItems := make(map[string]Stack)
+	uniqueItems := make(map[string]*Stack)
 
 	for _, inv := range res {
 		for _, item := range inv.Items {
 			id := item.Item.GetUID()
 			stack, e := uniqueItems[id]
 			if !e {
-				uniqueItems[id] = item.Item
+				uniqueItems[id] = &item.Item
 			} else {
 				stack.Count += item.Item.Count
 				stack.MaxCount += item.Item.MaxCount
 			}
 		}
+	}
+
+	return uniqueItems, nil
+}
+
+func (s *Storage) GetItems() ([]AggregateStacks, error) {
+	uniqueItems, err := s.GetItemsCount()
+	if err != nil {
+		return nil, err
 	}
 
 	uids := keys(uniqueItems)
@@ -76,9 +84,37 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		stacks = append(stacks, AggregateStacks{
 			Item:  item,
 			Count: uniqueItems[item.UID].Count,
-			Image: base64.StdEncoding.EncodeToString(item.Icon),
 		})
 	}
 
 	return stacks, nil
+}
+
+type RichItemInfo struct {
+	Item    dao.Item
+	Recipes []*dao.Recipe
+}
+
+func (s *Storage) GetItemCount(uid string) (int, error) {
+	return 0, nil
+}
+
+func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
+	items, err := s.daoProvider.Items.FindItemsByUids([]string{uid})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, errors.New("Item not found")
+	}
+
+	recipes, err := s.daoProvider.Recipes.GetRecipeByResult(uid)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RichItemInfo{
+		Item:    items[0],
+		Recipes: recipes,
+	}, nil
 }

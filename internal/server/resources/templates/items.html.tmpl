@@ -11,7 +11,7 @@
                 <td>{{$element.Item.ID}}</td>
                 <td>{{$element.Item.DisplayName}}</td>
                 <td>
-                    <img src="data:image/png;base64, {{$element.Image}}" />
+                    {{ template "item-widget" $element.Item }}
                 </td>
                 <td>{{$element.Count}}</td>
                 </td>

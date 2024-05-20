@@ -102,6 +102,8 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 		return nil, err
 	}
 
+	// fmt.Println("REC", recipes[0].Ingredients)
+
 	return recipes, nil
 }
 
@@ -194,6 +196,42 @@ func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]*Recipe, error) {
 	defer rows.Close()
 
 	return readRows(rows)
+}
+
+func (r *RecipesDao) GetRecipesByResults(itemUIDs []string) ([]*Recipe, error) {
+	if len(itemUIDs) == 0 {
+		return nil, nil
+	}
+
+	query := fmt.Sprintf(`
+	SELECT ri.recipe_id FROM recipe_items ri 
+	WHERE ri.item_uid IN (?%s) AND ri.role = 'result'
+	`, strings.Repeat(", ?", len(itemUIDs)-1))
+
+	rows, err := r.db.Query(query, common.ToArgs(itemUIDs)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println("Search", itemUIDs, "find", len(ids))
+
+	return r.GetRecipesById(ids)
 }
 
 func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {

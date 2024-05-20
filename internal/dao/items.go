@@ -3,6 +3,7 @@ package dao
 import (
 	"database/sql"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -129,6 +130,17 @@ func (d *ItemsDao) FindByName(filter string) ([]Item, error) {
 	defer rows.Close()
 
 	return readItemRows(rows)
+}
+
+func (d *ItemsDao) FindItemByUid(uid string) (*Item, error) {
+	items, err := d.FindItemsByUids([]string{uid})
+	if err != nil {
+		return nil, err
+	}
+	if len(items) == 0 {
+		return nil, errors.New("Item not found")
+	}
+	return &items[0], nil
 }
 
 func (d *ItemsDao) FindItemsIndexed(itemsByUid map[string]*Item) error {

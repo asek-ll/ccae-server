@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strconv"
 
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -60,7 +61,18 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 			return
 		}
 
-		tmpls.Render("clients", []string{"index.html.tmpl", "items.html.tmpl"}, w, items)
+		tmpls.Render("items", []string{"index.html.tmpl", "items.html.tmpl", "item-widget.html.tmpl"}, w, items)
+	})
+
+	mux.HandleFunc("GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		uid := r.PathValue("itemUid")
+		item, err := app.Storage.GetItem(uid)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("item", []string{"index.html.tmpl", "item.html.tmpl", "item-widget.html.tmpl"}, w, item)
 	})
 
 	mux.HandleFunc("GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) {
@@ -137,6 +149,37 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 			"recipes":           recipes,
 			"items":             itemsById,
 			"formatIngredients": formatIngredients,
+		})
+	})
+
+	mux.HandleFunc("GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		uid := r.PathValue("itemUid")
+		strCount := r.PathValue("count")
+		count, err := strconv.Atoi(strCount)
+		if err != nil {
+			count = 1
+		}
+		plan, err := app.Planner.GetPlanForItem(uid, count)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		itemsById := make(map[string]*dao.Item)
+		for _, id := range plan.Items {
+			itemsById[id] = nil
+		}
+
+		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		tmpls.Render("craft-plan", []string{"index.html.tmpl", "craftplan.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
+			"plan":              plan,
+			"formatIngredients": formatIngredients,
+			"items":             itemsById,
 		})
 	})
 

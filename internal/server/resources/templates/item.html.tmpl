@@ -1,0 +1,11 @@
+{{define "title"}}
+     {{ .Item.DisplayName }} ({{.Item.ID}})
+{{end}}
+
+{{define "content"}}
+    <section>
+        {{ template "item-widget" .Item }}
+        <a href="/craft-plan/item/{{.Item.UID}}/1/"
+    </section>
+{{end}}
+

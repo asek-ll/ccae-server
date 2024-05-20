@@ -7,6 +7,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
+	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
@@ -30,10 +31,12 @@ func (s ServerCommand) Execute(args []string) error {
 	rpcServer := wsrpc.NewServer(wsServer)
 
 	storageService := storage.NewStorage(rpcServer, daos)
+	plannerService := crafter.NewPlanner(daos, storageService)
 
 	app := &app.App{
 		Daos:    daos,
 		Storage: storageService,
+		Planner: plannerService,
 	}
 
 	mux, err := server.CreateMux(app)
