@@ -1,0 +1,45 @@
+package components
+
+templ Page(title string, content templ.Component) {
+	<!DOCTYPE html>
+	<html lang="en">
+		<head>
+			<meta charset="utf-8"/>
+			<meta name="viewport" content="width=device-width, initial-scale=1"/>
+			<meta name="color-scheme" content="light dark"/>
+			<title>AECC</title>
+			<meta name="description" content="A pure HTML example, without dependencies."/>
+			<link rel="stylesheet" href="/static/css/pico.min.css"/>
+		</head>
+		<body>
+			<!-- Header -->
+			<header class="container">
+				<nav>
+					<ul></ul>
+					<ul>
+						<li><a href="/">Home</a></li>
+						<li><a href="/clients">Clients</a></li>
+						<li><a href="/recipes">Recipes</a></li>
+						<li><a href="/items">Inventory</a></li>
+					</ul>
+				</nav>
+				<hgroup>
+					<h1>
+						{ title }
+					</h1>
+					<p>Descri</p>
+				</hgroup>
+			</header>
+			<!-- ./ Header -->
+			<main class="container">
+				@content
+			</main>
+			<!-- Footer -->
+			<footer class="container">
+				<small>build</small>
+			</footer>
+			<!-- ./ Footer -->
+			<script src="/static/js/htmx.min.js"></script>
+		</body>
+	</html>
+}

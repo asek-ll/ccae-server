@@ -60,8 +60,9 @@ local function listen(url, loginParams)
 
     methods['init'] = function(fileUrl)
         download(fileUrl, 'init.lua')
-        local m = require 'init'
-        m.init(methods, eventHandlers, wsClient)
+        local m = assert(loadfile 'init.lua')
+        local init = m()
+        return init(methods, eventHandlers, wsClient)
     end
 
     wsClient:sendMethod('login', loginParams)
@@ -78,7 +79,9 @@ local function listen(url, loginParams)
             if methods[method] ~= nil then
                 local state, result = pcall(methods[method], params)
                 if state then
-                    wsClient:sendResult(data['id'], result)
+                    if result ~= nil then
+                        wsClient:sendResult(data['id'], result)
+                    end
                 else
                     wsClient:sendError(data['id'], -1, result)
                 end

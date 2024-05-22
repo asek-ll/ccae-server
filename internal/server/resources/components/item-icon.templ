@@ -17,9 +17,9 @@ func ItemIconByUID(itemUid string) templ.Component {
 }
 
 templ ItemIcon(item *dao.Item) {
-	<div data-tooltip={ item.UID } style="width: 32px; height: 32px;">
+	<div data-tooltip={ item.UID } style="width: 48px; height: 48px;">
 		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
-			<img src={ "data:image/png;base64, " + item.Base64Icon() }/>
+			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
 		</a>
 	</div>
 }

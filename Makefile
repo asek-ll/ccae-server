@@ -5,8 +5,12 @@ run: build
 
 
 .PHONY: build
-build: target
+build: target templ
 	go build -o target/aecc-server cmd/main.go 
+
+.PHONY: templ
+templ: 
+	templ generate
 
 clean:
 	rm -rf target

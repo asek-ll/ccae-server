@@ -3,23 +3,55 @@ package components
 import (
 	"fmt"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"strconv"
 )
 
 func groupId(id string) string {
 	return fmt.Sprintf("group-%s", id)
 }
 
+script removeElement(id string) {
+    document.getElementById(id).outerHTML = ''
+}
+
 templ ItemInputs(id string, item dao.RecipeItem) {
-	<fieldset id={ groupId(id) }>
+	<fieldset id={ groupId(id) } class="grid">
 		<input type="hidden" name={ fmt.Sprintf("item_%s", id) } value={ item.ItemUID }/>
 		if item.Slot != nil {
-			<input type="hidden" name={ fmt.Sprintf("slot_%s", id) } value={ string(*item.Slot) }/>
+			<input type="hidden" name={ fmt.Sprintf("slot_%s", id) } value={ strconv.Itoa(*item.Slot) }/>
 		}
 		<input type="hidden" name={ fmt.Sprintf("role_%s", id) } value={ item.Role }/>
-		@ItemIconByUid(item.ItemUID)
-		<input name={ fmt.Sprintf("amount_%s", id) } placeholder="Amount" style="width: 5em" value={ item.Amount }/>
-		<button type="button" hx-on:click={ fmt.Sprintf("document.getElementById('%s').outerHTML = '';", groupId(id)) }>Del</button>
+		<input name={ fmt.Sprintf("amount_%s", id) } placeholder="Amount" style="width: 5em" value={ strconv.Itoa(item.Amount) }/>
+		@ItemIconByUID(item.ItemUID)
+		<button type="button" hx-on:click={ removeElement(groupId(id)) }>Del</button>
 	</fieldset>
+}
+
+templ shapedRecipeItem(slot int) {
+    <div id={ fmt.Sprintf("slot%ditem", slot) }>{ children... }</div>
+    <button type="button" 
+    hx-get={ fmt.Sprintf("/item-popup?slot=%d&role=ingredient", slot) }
+    hx-target={ fmt.Sprintf("#slot%ditem", slot) } 
+    hx-swap="innerHtml">Set</button>
+}
+
+func shapedRecipeItemWrap(items []dao.RecipeItem, slot int) templ.Component {
+    var itemInSlot *dao.RecipeItem
+    for _, item := range items {
+        if item.Slot != nil && *item.Slot == slot {
+            itemInSlot = &item
+            break
+        }
+    }
+    if itemInSlot == nil {
+        return shapedRecipeItem(slot)
+    }
+    id := fmt.Sprintf("is%d", slot)
+
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		withChildren := templ.WithChildren(ctx, ItemInputs(id, *itemInSlot))
+		return shapedRecipeItem(slot).Render(withChildren, w)
+	})
 }
 
 templ RecipeForm(recipe *dao.Recipe) {
@@ -39,69 +71,67 @@ templ RecipeForm(recipe *dao.Recipe) {
 				</select>
 			</label>
 		</fieldset>
-		<div class="grid">
+		<div>
 			<div>
-				<label>Ingredients</label>
-				<button type="button" hx-get="/item-popup?role=ingredient" hx-target="this" hx-swap="beforebegin">Add</button>
-                for i, recipeItem := range recipe.Ingredients {
-                    @ItemInputs(fmt.Sprintf("i%d", i), recipeItem)
-                }
+				<h2>Results</h2>
+				<button type="button" hx-get="/item-popup?role=result" hx-target="this" hx-swap="beforebegin">Add</button>
+				for i, recipeItem := range recipe.Results {
+					@ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
+				}
 			</div>
 			<div>
-				<label>Results</label>
-				<button type="button" hx-get="/item-popup?role=result" hx-target="this" hx-swap="beforebegin">Add</button>
-                for i, recipeItem := range recipe.Results {
-                    @ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
-                }
+				<h2>Ingredients</h2>
+				<div>
+					<h3>Shapeless</h3>
+					<button type="button" hx-get="/item-popup?role=ingredient" hx-target="this" hx-swap="beforebegin">Add</button>
+					for i, recipeItem := range recipe.Ingredients {
+                        if recipeItem.Slot == nil {
+                            @ItemInputs(fmt.Sprintf("i%d", i), recipeItem)
+                        }
+					}
+				</div>
+				<div>
+					<h3>Shaped</h3>
+					<table>
+						<tbody>
+							<tr>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 1)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 2)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 3)
+								</td>
+							</tr>
+							<tr>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 4)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 5)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 6)
+								</td>
+							</tr>
+							<tr>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 7)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 8)
+								</td>
+								<td>
+                                    @shapedRecipeItemWrap(recipe.Ingredients, 9)
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
 			</div>
 		</div>
-		<h3>Crafting</h3>
-		<table>
-			<tbody>
-				<tr>
-					<td>
-						<div id="slot1item"></div>
-						<button type="button" hx-get="/item-popup?slot=1" hx-target="#slot1item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot2item"></div>
-						<button type="button" hx-get="/item-popup?slot=i2" hx-target="#slot2item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot3item"></div>
-						<button type="button" hx-get="/item-popup?slot=i3" hx-target="#slot3item" hx-swap="innerHtml">Set</button>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<div id="slot4item"></div>
-						<button type="button" hx-get="/item-popup?slot=i4" hx-target="#slot4item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot5item"></div>
-						<button type="button" hx-get="/item-popup?slot=i5" hx-target="#slot5item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot6item"></div>
-						<button type="button" hx-get="/item-popup?slot=i6" hx-target="#slot6item" hx-swap="innerHtml">Set</button>
-					</td>
-				</tr>
-				<tr>
-					<td>
-						<div id="slot7item"></div>
-						<button type="button" hx-get="/item-popup?slot=i7" hx-target="#slot7item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot8item"></div>
-						<button type="button" hx-get="/item-popup?slot=i8" hx-target="#slot8item" hx-swap="innerHtml">Set</button>
-					</td>
-					<td>
-						<div id="slot9item"></div>
-						<button type="button" hx-get="/item-popup?slot=i9" hx-target="#slot9item" hx-swap="innerHtml">Set</button>
-					</td>
-				</tr>
-			</tbody>
-		</table>
 		<input type="submit" value="Create"/>
 	</form>
 }

@@ -124,7 +124,15 @@ func (m *RecipeManager) CreateRecipeFromParams(values url.Values) (*dao.Recipe, 
 	return m.CreateRecipe(params)
 }
 
-func (m *RecipeManager) CreateRecipe(params *CreateRecipeParams) (*dao.Recipe, error) {
+func (m *RecipeManager) ParseRecipeFromParams(values url.Values) (*dao.Recipe, error) {
+	params, err := parseCreateRecipeParams(values)
+	if err != nil {
+		return nil, err
+	}
+	return m.validateCreateParams(params)
+}
+
+func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.Recipe, error) {
 	var uids []string
 	for _, item := range params.Items {
 		uids = append(uids, item.ItemUID)
@@ -174,9 +182,20 @@ func (m *RecipeManager) CreateRecipe(params *CreateRecipeParams) (*dao.Recipe, e
 		Ingredients: ingredients,
 	}
 
+	return &recipe, nil
+}
+
+func (m *RecipeManager) CreateRecipe(params *CreateRecipeParams) (*dao.Recipe, error) {
+
+	recipe, err := m.validateCreateParams(params)
+
+	if err != nil {
+		return nil, err
+	}
+
 	err = m.daoProvider.Recipes.InsertRecipe(recipe)
 	if err != nil {
 		return nil, err
 	}
-	return &recipe, nil
+	return recipe, nil
 }

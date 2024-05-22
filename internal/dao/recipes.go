@@ -144,7 +144,7 @@ func (r *RecipesDao) GetRecipesPage(fromId int) ([]*Recipe, error) {
 	return r.GetRecipesById(ids)
 }
 
-func (r *RecipesDao) InsertRecipe(recipe Recipe) error {
+func (r *RecipesDao) InsertRecipe(recipe *Recipe) error {
 
 	tx, err := r.db.Begin()
 	if err != nil {

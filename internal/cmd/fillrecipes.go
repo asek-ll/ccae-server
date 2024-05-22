@@ -119,7 +119,7 @@ func (s FillRecipesCommand) Execute(args []string) error {
 			recipe.Ingredients = append(recipe.Ingredients, item)
 		}
 
-		err = recipesDao.InsertRecipe(recipe)
+		err = recipesDao.InsertRecipe(&recipe)
 		if err != nil {
 			return err
 		}
