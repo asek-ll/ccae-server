@@ -6,8 +6,10 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/google/uuid"
@@ -184,6 +186,37 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 	})
 
 	mux.HandleFunc("GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
+		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
+	})
+
+	mux.HandleFunc("POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
+		err := r.ParseForm()
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+
+		name := r.PostForm.Get("name")
+		recipeType := r.PostForm.Get("type")
+		items := make(map[string]map[string]string)
+		props := []string{"item", "slot", "amount"}
+	outer:
+		for k, v := range r.PostForm {
+			for _, prop := range props {
+				prefix := prop + "_"
+				if strings.HasPrefix(k, prefix) {
+					id := strings.TrimPrefix(k, prefix)
+					if i, e := items[id]; !e {
+						i = make(map[string]string)
+						items[id] = i
+					}
+					items[id][prop] = v[0]
+					continue outer
+				}
+			}
+		}
+
+		fmt.Println(common.MapValues(items), name, recipeType)
 		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
 	})
 

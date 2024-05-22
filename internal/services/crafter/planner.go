@@ -107,6 +107,7 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 				continue
 			}
 
+			fmt.Println(recipe.Results[0])
 			repeats := ceil(toCraft, recipe.Results[0].Amount)
 
 			for _, ing := range recipe.Ingredients {

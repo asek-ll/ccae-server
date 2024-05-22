@@ -88,9 +88,19 @@ func (s FillRecipesCommand) Execute(args []string) error {
 		}
 
 		recipe := dao.Recipe{}
-		recipe.Results = append(recipe.Results, *resultItem)
 		recipe.Type = d.Type
 		recipe.Name = key
+
+		for _, result := range d.Output {
+			recipeItem, err := toRecipeItem(result)
+			if err != nil {
+				return err
+			}
+			if recipeItem == nil {
+				continue
+			}
+			recipe.Results = append(recipe.Results, *recipeItem)
+		}
 
 		for i, input := range d.Input {
 			recipeItem, err := toRecipeItem(input)
