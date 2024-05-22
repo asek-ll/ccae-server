@@ -13,7 +13,7 @@
                 </label>
             </fieldset>
         </form>
-        <div id="item-popup-items" hx-vals='{"slot": "{{ .slot }}"}'>
+        <div id="item-popup-items" hx-vals='{"slot": "{{ .slot }}", "role": "{{ .role }}"}'>
         </div>
         <footer>
             <button hx-on:click="document.getElementById('item-popup').outerHTML = '';">Cancel</button>

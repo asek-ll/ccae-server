@@ -23,3 +23,13 @@ func ToArgs[V any](s []V) []any {
 	}
 	return args
 }
+
+func ToSet[K comparable](s []K) map[K]struct{} {
+	set := make(map[K]struct{})
+
+	for _, i := range s {
+		set[i] = struct{}{}
+	}
+
+	return set
+}

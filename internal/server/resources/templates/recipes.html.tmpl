@@ -10,7 +10,7 @@
             {{$formatI := .formatIngredients }}
             {{ range $index, $element := .recipes }}
                 <tr>
-                    <td>{{ $element.Name }}</td>
+                    <td><a href="/recipes/{{ $element.ID }}">{{ $element.Name }}</a></td>
                     <td>
                         <table>
                             {{$rows := call $formatI $element}}

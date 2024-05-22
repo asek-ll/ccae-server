@@ -40,7 +40,9 @@ func (s *Storage) GetItemsCount() (map[string]*Stack, error) {
 		return nil, err
 	}
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
 	var res []Inventory
 	err = s.ws.SendRequestSync(ctx, id, "getItems", nil, &res)
 	if err != nil {

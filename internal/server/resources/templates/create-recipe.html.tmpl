@@ -24,22 +24,28 @@
         <div class="grid">
             <div>
                 <label>Ingredients</label>
-                <button type="button" hx-get="/item-popup?type=i" hx-target="this" hx-swap="beforebegin">Add</button>
+                <button type="button" hx-get="/item-popup?role=ingredient" hx-target="this" hx-swap="beforebegin">Add</button>
             </div>
             <div>
                 <label>Results</label>
-                <button type="button" hx-get="/item-popup?type=r" hx-target="this" hx-swap="beforebegin">Add</button>
+                <button type="button" hx-get="/item-popup?role=result" hx-target="this" hx-swap="beforebegin">Add</button>
+
+                {{ range $i, $element := .results }}
+
+
+                {{ end }}
             </div>
         </div>
 
         <h3>Crafting</h3>
+
 
         <table>
             <tbody>
                 <tr>
                     <td>
                         <div id="slot1item"></div>
-                        <button type="button" hx-get="/item-popup?slot=i1" hx-target="#slot1item" hx-swap="innerHtml">Set</button>
+                        <button type="button" hx-get="/item-popup?slot=1" hx-target="#slot1item" hx-swap="innerHtml">Set</button>
                     </td>
                     <td>
                         <div id="slot2item"></div>

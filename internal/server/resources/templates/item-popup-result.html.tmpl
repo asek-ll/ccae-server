@@ -1,8 +1,12 @@
-<fieldset id="group-{{.id}}">
-    <input type="hidden" name="item_{{ .id }}" value="{{.item.UID}}"/>
-    <input type="hidden" name="slot_{{ .id }}" value="{{.slot}}"/>
-    <img src="data:image/png;base64, {{.item.Base64Icon}}" />
-    <input name="amount_{{ .id }}" placeholder="Amount" style="width: 5em" value="1"/>
-    <button type="button" hx-on:click="document.getElementById('group-{{.id}}').outerHTML = '';">Del</button>
-</fieldset>
+{{ block "item-inputs" . }}
+    <fieldset id="group-{{.id}}">
+        <input type="hidden" name="item_{{ .id }}" value="{{ .item.UID }}"/>
+        <input type="hidden" name="slot_{{ .id }}" value="{{ .slot }}"/>
+        <input type="hidden" name="role_{{ .id }}" value="{{ .role }}"/>
 
+        <img src="data:image/png;base64, {{ .item.Base64Icon }}" />
+
+        <input name="amount_{{ .id }}" placeholder="Amount" style="width: 5em" value="1"/>
+        <button type="button" hx-on:click="document.getElementById('group-{{ .id }}').outerHTML = '';">Del</button>
+    </fieldset>
+{{ end }}

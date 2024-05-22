@@ -1,0 +1,25 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+func getItem(ctx context.Context, uid string) *dao.Item {
+	return ctx.Value("items").(map[string]*dao.Item)[uid]
+}
+
+func ItemIconByUID(itemUid string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		item := getItem(ctx, itemUid)
+		return ItemIcon(item).Render(ctx, w)
+	})
+}
+
+templ ItemIcon(item *dao.Item) {
+	<div data-tooltip={ item.UID } style="width: 32px; height: 32px;">
+		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
+			<img src={ "data:image/png;base64, " + item.Base64Icon() }/>
+		</a>
+	</div>
+}

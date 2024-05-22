@@ -8,6 +8,9 @@ import (
 	"github.com/asek-ll/aecc-server/internal/common"
 )
 
+const RESULT_ROLE = "result"
+const INGREDIENT_ROLE = "ingredient"
+
 type RecipeItem struct {
 	ItemUID string
 	Amount  int
@@ -16,7 +19,7 @@ type RecipeItem struct {
 }
 
 type Recipe struct {
-	Id          int
+	ID          int
 	Name        string
 	Type        string
 	Results     []RecipeItem
@@ -73,7 +76,7 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 		recipe_idx, ok := recipes_by_id[id]
 		if !ok {
 			recipe := Recipe{
-				Id:   id,
+				ID:   id,
 				Name: name,
 				Type: typ,
 			}
@@ -82,13 +85,13 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 			recipes = append(recipes, &recipe)
 		}
 		recipe := recipes[recipe_idx]
-		if role == "result" {
+		if role == RESULT_ROLE {
 			recipe.Results = append(recipe.Results, RecipeItem{
 				ItemUID: item_uid,
 				Amount:  amount,
 				Slot:    slot,
 			})
-		} else if role == "ingredient" {
+		} else if role == INGREDIENT_ROLE {
 			recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
 				ItemUID: item_uid,
 				Amount:  amount,
@@ -158,17 +161,19 @@ func (r *RecipesDao) InsertRecipe(recipe Recipe) error {
 	if err != nil {
 		return err
 	}
-	recipe.Id = int(recipeId)
+	recipe.ID = int(recipeId)
 
 	for _, item := range recipe.Results {
-		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)", recipe.Id, item.ItemUID, item.Amount, "result", item.Slot)
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, RESULT_ROLE, item.Slot)
 		if err != nil {
 			return err
 		}
 	}
 
 	for _, item := range recipe.Ingredients {
-		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)", recipe.Id, item.ItemUID, item.Amount, "ingredient", item.Slot)
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, INGREDIENT_ROLE, item.Slot)
 		if err != nil {
 			return err
 		}

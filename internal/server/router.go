@@ -6,10 +6,8 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/app"
-	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/google/uuid"
@@ -96,7 +94,6 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 	formatIngredients := func(r *dao.Recipe) [][]*dao.RecipeItem {
 		var rows [][]*dao.RecipeItem
 		if r.Type == "" {
-			fmt.Println(r.Id)
 			rows = append(rows, make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3))
 			for _, ri := range r.Ingredients {
 				r := ((*ri.Slot) - 1) / 3
@@ -189,6 +186,26 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
 	})
 
+	mux.HandleFunc("GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) {
+		rawRecipeId := r.PathValue("recipeId")
+		recipeId, err := strconv.Atoi(rawRecipeId)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+		recipes, err := app.Daos.Recipes.GetRecipesById([]int{recipeId})
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
+		}
+		if len(recipes) == 0 {
+			tmpls.RenderError(fmt.Errorf("Recipe with id '%d' not found", recipeId), w)
+			return
+		}
+
+		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
+	})
+
 	mux.HandleFunc("POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseForm()
 		if err != nil {
@@ -196,27 +213,14 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 			return
 		}
 
-		name := r.PostForm.Get("name")
-		recipeType := r.PostForm.Get("type")
-		items := make(map[string]map[string]string)
-		props := []string{"item", "slot", "amount"}
-	outer:
-		for k, v := range r.PostForm {
-			for _, prop := range props {
-				prefix := prop + "_"
-				if strings.HasPrefix(k, prefix) {
-					id := strings.TrimPrefix(k, prefix)
-					if i, e := items[id]; !e {
-						i = make(map[string]string)
-						items[id] = i
-					}
-					items[id][prop] = v[0]
-					continue outer
-				}
-			}
+		recipe, err := app.RecipeManager.CreateRecipeFromParams(r.PostForm)
+		if err != nil {
+			tmpls.RenderError(err, w)
+			return
 		}
 
-		fmt.Println(common.MapValues(items), name, recipeType)
+		_ = recipe
+
 		tmpls.Render("recipes-new", []string{"index.html.tmpl", "create-recipe.html.tmpl"}, w, nil)
 	})
 
