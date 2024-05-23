@@ -5,6 +5,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
@@ -19,14 +20,6 @@ func NewStorage(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Storage 
 		ws:          ws,
 		daoProvider: daoProvider,
 	}
-}
-
-func keys[K comparable, V any](m map[K]V) []K {
-	var keys []K
-	for k := range m {
-		keys = append(keys, k)
-	}
-	return keys
 }
 
 type AggregateStacks struct {
@@ -73,7 +66,7 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		return nil, err
 	}
 
-	uids := keys(uniqueItems)
+	uids := common.MapKeys(uniqueItems)
 
 	items, err := s.daoProvider.Items.FindItemsByUids(uids)
 	if err != nil {

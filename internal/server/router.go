@@ -124,7 +124,10 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 	}
 
 	mux.HandleFunc("GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) {
-		recipes, err := app.Daos.Recipes.GetRecipesPage(0)
+		filter := r.URL.Query().Get("filter")
+		view := r.URL.Query().Get("view")
+
+		recipes, err := app.Daos.Recipes.GetRecipesPage(filter, 0)
 		if err != nil {
 			tmpls.RenderError(err, w)
 			return
@@ -146,11 +149,21 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 			return
 		}
 
-		tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
-			"recipes":           recipes,
-			"items":             itemsById,
-			"formatIngredients": formatIngredients,
-		})
+		ctx := context.WithValue(r.Context(), "items", itemsById)
+		// components.Page("Recipes list", components.RecipesList(recipes)).Render(ctx, w)
+
+		if view == "list" {
+			components.RecipesList(recipes).Render(ctx, w)
+
+		} else {
+			components.RecipesPage(filter, recipes).Render(ctx, w)
+		}
+
+		// tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
+		// 	"recipes":           recipes,
+		// 	"items":             itemsById,
+		// 	"formatIngredients": formatIngredients,
+		// })
 	})
 
 	mux.HandleFunc("GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) {

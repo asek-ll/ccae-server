@@ -110,16 +110,16 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 	return recipes, nil
 }
 
-func (r *RecipesDao) GetRecipesPage(fromId int) ([]*Recipe, error) {
+func (r *RecipesDao) GetRecipesPage(filter string, fromId int) ([]*Recipe, error) {
 
 	query := `
 	SELECT r.id FROM recipes r
-	WHERE r.id >= ?
+	WHERE r.id >= ? AND r.name LIKE ?
 	ORDER BY r.id
 	LIMIT 20
 	`
 
-	rows, err := r.db.Query(query, fromId)
+	rows, err := r.db.Query(query, fromId, "%"+filter+"%")
 	if err != nil {
 		return nil, err
 	}

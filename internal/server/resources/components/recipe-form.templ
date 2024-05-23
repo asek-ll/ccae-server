@@ -28,25 +28,29 @@ templ ItemInputs(id string, item dao.RecipeItem) {
 }
 
 templ shapedRecipeItem(slot int) {
-    <div id={ fmt.Sprintf("slot%ditem", slot) }>{ children... }</div>
-    <button type="button" 
-    hx-get={ fmt.Sprintf("/item-popup?slot=%d&role=ingredient", slot) }
-    hx-target={ fmt.Sprintf("#slot%ditem", slot) } 
-    hx-swap="innerHtml">Set</button>
+	<div id={ fmt.Sprintf("slot%ditem", slot) }>
+		{ children... }
+	</div>
+	<button
+		type="button"
+		hx-get={ fmt.Sprintf("/item-popup?slot=%d&role=ingredient", slot) }
+		hx-target={ fmt.Sprintf("#slot%ditem", slot) }
+		hx-swap="innerHtml"
+	>Set</button>
 }
 
 func shapedRecipeItemWrap(items []dao.RecipeItem, slot int) templ.Component {
-    var itemInSlot *dao.RecipeItem
-    for _, item := range items {
-        if item.Slot != nil && *item.Slot == slot {
-            itemInSlot = &item
-            break
-        }
-    }
-    if itemInSlot == nil {
-        return shapedRecipeItem(slot)
-    }
-    id := fmt.Sprintf("is%d", slot)
+	var itemInSlot *dao.RecipeItem
+	for _, item := range items {
+		if item.Slot != nil && *item.Slot == slot {
+			itemInSlot = &item
+			break
+		}
+	}
+	if itemInSlot == nil {
+		return shapedRecipeItem(slot)
+	}
+	id := fmt.Sprintf("is%d", slot)
 
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		withChildren := templ.WithChildren(ctx, ItemInputs(id, *itemInSlot))
@@ -85,9 +89,9 @@ templ RecipeForm(recipe *dao.Recipe) {
 					<h3>Shapeless</h3>
 					<button type="button" hx-get="/item-popup?role=ingredient" hx-target="this" hx-swap="beforebegin">Add</button>
 					for i, recipeItem := range recipe.Ingredients {
-                        if recipeItem.Slot == nil {
-                            @ItemInputs(fmt.Sprintf("i%d", i), recipeItem)
-                        }
+						if recipeItem.Slot == nil {
+							@ItemInputs(fmt.Sprintf("i%d", i), recipeItem)
+						}
 					}
 				</div>
 				<div>
@@ -96,35 +100,35 @@ templ RecipeForm(recipe *dao.Recipe) {
 						<tbody>
 							<tr>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 1)
+									@shapedRecipeItemWrap(recipe.Ingredients, 1)
 								</td>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 2)
+									@shapedRecipeItemWrap(recipe.Ingredients, 2)
 								</td>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 3)
-								</td>
-							</tr>
-							<tr>
-								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 4)
-								</td>
-								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 5)
-								</td>
-								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 6)
+									@shapedRecipeItemWrap(recipe.Ingredients, 3)
 								</td>
 							</tr>
 							<tr>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 7)
+									@shapedRecipeItemWrap(recipe.Ingredients, 4)
 								</td>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 8)
+									@shapedRecipeItemWrap(recipe.Ingredients, 5)
 								</td>
 								<td>
-                                    @shapedRecipeItemWrap(recipe.Ingredients, 9)
+									@shapedRecipeItemWrap(recipe.Ingredients, 6)
+								</td>
+							</tr>
+							<tr>
+								<td>
+									@shapedRecipeItemWrap(recipe.Ingredients, 7)
+								</td>
+								<td>
+									@shapedRecipeItemWrap(recipe.Ingredients, 8)
+								</td>
+								<td>
+									@shapedRecipeItemWrap(recipe.Ingredients, 9)
 								</td>
 							</tr>
 						</tbody>

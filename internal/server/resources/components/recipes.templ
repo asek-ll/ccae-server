@@ -1,0 +1,67 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ RecipesPage(filter string, recipes []*dao.Recipe) {
+	@Page("Recipes") {
+        <a href="/recipes/new">New recipe</a>
+		@RecipesFilter(filter)
+        <div id="recipes-result">
+            @RecipesList(recipes)
+        </div>
+	}
+}
+
+templ RecipesFilter(filter string) {
+	<div>
+		<label>
+			Filter
+			<input
+				id="filter"
+				name="filter"
+				value={ filter }
+				hx-get="/recipes?view=list"
+				hx-trigger="keyup changed delay:500ms"
+				hx-target="#recipes-result"
+				placeholder="Search..."
+			/>
+		</label>
+	</div>
+}
+
+templ RecipesList(recipes []*dao.Recipe) {
+	<section>
+		<table>
+			for _, recipe := range recipes {
+				<tr>
+					<td><a href={ templ.URL(fmt.Sprintf("/recipes/%d", recipe.ID)) }>{ recipe.Name }</a></td>
+					<td>
+						<table>
+							for _, row := range FormatIngredients(recipe) {
+								<tr>
+									for _, item := range row {
+										<td>
+											if item != nil {
+												@ItemIconByUID(item.ItemUID)
+											}
+										</td>
+									}
+								</tr>
+							}
+						</table>
+					</td>
+					<td>
+						<div class="grid">
+							for _, item := range recipe.Results {
+								@ItemIconByUID(item.ItemUID)
+							}
+						</div>
+					</td>
+				</tr>
+			}
+		</table>
+	</section>
+}

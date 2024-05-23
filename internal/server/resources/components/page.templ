@@ -1,6 +1,6 @@
 package components
 
-templ Page(title string, content templ.Component) {
+templ Page(title string, content ...templ.Component) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -32,7 +32,10 @@ templ Page(title string, content templ.Component) {
 			</header>
 			<!-- ./ Header -->
 			<main class="container">
-				@content
+				for _, c := range content {
+					@c
+				}
+				{ children... }
 			</main>
 			<!-- Footer -->
 			<footer class="container">
