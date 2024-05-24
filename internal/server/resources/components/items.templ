@@ -1,0 +1,25 @@
+package components
+
+import (
+	"strconv"
+	"github.com/asek-ll/aecc-server/internal/services/storage"
+)
+
+templ ItemsPage(stacks []storage.AggregateStacks) {
+	@Page("Items") {
+		<section>
+			<table>
+				for _, stack := range stacks {
+					<tr>
+						<td>{ stack.Item.ID }</td>
+						<td>{ stack.Item.DisplayName }</td>
+						<td>
+							@ItemIcon(&stack.Item)
+						</td>
+						<td>{ strconv.Itoa(stack.Count) }</td>
+					</tr>
+				}
+			</table>
+		</section>
+	}
+}

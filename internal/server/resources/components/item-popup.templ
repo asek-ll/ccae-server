@@ -1,0 +1,51 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ ItemPopup(slot string, role string) {
+	<dialog open id="item-popup">
+		<article>
+			<h2>Items</h2>
+			<form>
+				<fieldset>
+					<label>
+						Name
+						<input
+							name="filter"
+							hx-get="/item-popup/items"
+							hx-trigger="keyup changed delay:500ms"
+							hx-target="#item-popup-items"
+						/>
+					</label>
+				</fieldset>
+			</form>
+			<div id="item-popup-items" hx-vals={ fmt.Sprintf("{\"slot\": \"%s\", \"role\": \"%s\"}", slot, role) }></div>
+			<footer>
+				<button hx-on:click="document.getElementById('item-popup').outerHTML = '';">Cancel</button>
+			</footer>
+		</article>
+	</dialog>
+}
+
+templ ItemPopupItems(items []dao.Item) {
+	<table>
+		for _, item := range items {
+			<tr data-tooltip={ item.UID }>
+				<td>
+					@ItemIcon(&item)
+				</td>
+				<td>{ item.DisplayName }</td>
+				<td>
+					<button
+						hx-get={ fmt.Sprintf("/item-popup/%s", item.UID) }
+						hx-target="#item-popup"
+						hx-swap="outerHTML"
+					>Select</button>
+				</td>
+			</tr>
+		}
+	</table>
+}

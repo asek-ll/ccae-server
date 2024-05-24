@@ -1,7 +1,6 @@
 package template
 
 import (
-	"fmt"
 	"io"
 	"io/fs"
 	"text/template"
@@ -34,22 +33,10 @@ func (tmpls Templates) Get(name string, patterns []string) (*template.Template, 
 	return tmpl, nil
 }
 
-func (tmpls Templates) Render(name string, includes []string, out io.Writer, data any) {
+func (tmpls Templates) Render(name string, includes []string, out io.Writer, data any) error {
 	tmpl, err := tmpls.Get(name, includes)
 	if err != nil {
-		out.Write([]byte(fmt.Sprintf("Error: %v", err)))
-		return
+		return err
 	}
-	err = tmpl.Execute(out, data)
-	if err != nil {
-		out.Write([]byte(fmt.Sprintf("Error: %v", err)))
-		return
-	}
-}
-
-func (tmpls Templates) RenderError(err error, out io.Writer) {
-	if err != nil {
-		out.Write([]byte(fmt.Sprintf("Error: %v", err)))
-		return
-	}
+	return tmpl.Execute(out, data)
 }

@@ -156,3 +156,10 @@ func (d *ItemsDao) FindItemsIndexed(itemsByUid map[string]*Item) error {
 
 	return nil
 }
+
+func (d *ItemsDao) NewDeferedLoader() *ItemDeferedLoader {
+	return &ItemDeferedLoader{
+		items: make(map[string]*Item),
+		dao:   d,
+	}
+}

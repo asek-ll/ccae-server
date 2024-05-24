@@ -1,7 +1,6 @@
 package server
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -25,6 +24,16 @@ func createStaticHandler(statics fs.FS) func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
+func handleFuncWithError(mux *http.ServeMux, pattern string, handler func(w http.ResponseWriter, r *http.Request) error) {
+	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
+		err := handler(w, r)
+		if err != nil {
+			components.Page("ERROR", components.ErrorMessage(err.Error())).Render(r.Context(), w)
+			return
+		}
+	})
+}
+
 func CreateMux(app *app.App) (*http.ServeMux, error) {
 
 	templatesFs, err := fs.Sub(resources, "resources/templates")
@@ -43,100 +52,80 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 
 	mux.HandleFunc("GET /static/", createStaticHandler(staticsFs))
 
-	mux.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
-		tmpls.Render("index", []string{"index.html.tmpl"}, w, nil)
+	handleFuncWithError(mux, "GET /{$}", func(w http.ResponseWriter, r *http.Request) error {
+		return components.Page("INDEX").Render(r.Context(), w)
 	})
-	mux.HandleFunc("GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) {
+
+	handleFuncWithError(mux, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients, err := app.Daos.Clients.GetClients()
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		tmpls.Render("clients", []string{"index.html.tmpl", "clients.html.tmpl"}, w, clients)
+		return components.ClientsPage(clients).Render(r.Context(), w)
 	})
 
-	mux.HandleFunc("GET /items/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		items, err := app.Storage.GetItems()
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		tmpls.Render("items", []string{"index.html.tmpl", "items.html.tmpl", "item-widget.html.tmpl"}, w, items)
+		return components.ItemsPage(items).Render(r.Context(), w)
 	})
 
-	mux.HandleFunc("GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		item, err := app.Storage.GetItem(uid)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		tmpls.Render("item", []string{"index.html.tmpl", "item.html.tmpl", "item-widget.html.tmpl"}, w, item)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipes(item.Recipes).ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.ItemPage(item).Render(ctx, w)
 	})
 
-	mux.HandleFunc("GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) error {
 		role := r.PathValue("role")
 
 		id, err := app.Daos.Seqs.NextId("clientNo")
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		tmpls.Render("client.lua", []string{"client.lua.tmpl"}, w, map[string]any{
+		return tmpls.Render("client.lua", []string{"client.lua.tmpl"}, w, map[string]any{
 			"role":  role,
 			"wsUrl": "ws://localhost:12526",
 			"id":    id,
 		})
 	})
 
-	mux.HandleFunc("GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		view := r.URL.Query().Get("view")
 
 		recipes, err := app.Daos.Recipes.GetRecipesPage(filter, 0)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		itemsById := make(map[string]*dao.Item)
-		for _, r := range recipes {
-			for _, i := range r.Ingredients {
-				itemsById[i.ItemUID] = nil
-			}
-			for _, i := range r.Results {
-				itemsById[i.ItemUID] = nil
-			}
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipes(recipes).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
-
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-		// components.Page("Recipes list", components.RecipesList(recipes)).Render(ctx, w)
 
 		if view == "list" {
-			components.RecipesList(recipes).Render(ctx, w)
-
-		} else {
-			components.RecipesPage(filter, recipes).Render(ctx, w)
+			return components.RecipesList(recipes).Render(ctx, w)
 		}
 
-		// tmpls.Render("recipes", []string{"index.html.tmpl", "recipes.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
-		// 	"recipes":           recipes,
-		// 	"items":             itemsById,
-		// 	"formatIngredients": formatIngredients,
-		// })
+		return components.RecipesPage(filter, recipes).Render(ctx, w)
 	})
 
-	mux.HandleFunc("GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		strCount := r.PathValue("count")
 		count, err := strconv.Atoi(strCount)
@@ -145,231 +134,172 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		}
 		plan, err := app.Planner.GetPlanForItem(uid, count)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		itemsById := make(map[string]*dao.Item)
-		for _, id := range plan.Items {
-			itemsById[id] = nil
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().AddUids(plan.Items).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-		components.CraftingPlanPage(plan).Render(ctx, w)
-
-		// tmpls.Render("craft-plan", []string{"index.html.tmpl", "craftplan.html.tmpl", "item-widget.html.tmpl"}, w, map[string]any{
-		// 	"plan":              plan,
-		// 	"formatIngredients": formatIngredients,
-		// 	"items":             itemsById,
-		// })
+		return components.CraftingPlanPage(plan).Render(ctx, w)
 	})
 
-	mux.HandleFunc("GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		recipe, err := app.RecipeManager.ParseRecipeFromParams(r.URL.Query())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		itemsById := make(map[string]*dao.Item)
-		for _, i := range recipe.Ingredients {
-			itemsById[i.ItemUID] = nil
-		}
-		for _, i := range recipe.Results {
-			itemsById[i.ItemUID] = nil
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipe(recipe).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-		components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	mux.HandleFunc("GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 		recipes, err := app.Daos.Recipes.GetRecipesById([]int{recipeId})
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 		if len(recipes) == 0 {
-			tmpls.RenderError(fmt.Errorf("Recipe with id '%d' not found", recipeId), w)
-			return
+			return fmt.Errorf("Recipe with id '%d' not found", recipeId)
 		}
 
 		recipe := recipes[0]
 
-		itemsById := make(map[string]*dao.Item)
-		for _, i := range recipe.Ingredients {
-			itemsById[i.ItemUID] = nil
-		}
-		for _, i := range recipe.Results {
-			itemsById[i.ItemUID] = nil
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipe(recipe).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-
-		components.Page("Recipe!!!", components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page("Recipe!!!", components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	mux.HandleFunc("POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		err = r.ParseForm()
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		recipe, err := app.RecipeManager.ParseRecipeFromParams(r.PostForm)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		recipe.ID = recipeId
 
 		err = app.Daos.Recipes.UpdateRecipe(recipe)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		itemsById := make(map[string]*dao.Item)
-		for _, i := range recipe.Ingredients {
-			itemsById[i.ItemUID] = nil
-		}
-		for _, i := range recipe.Results {
-			itemsById[i.ItemUID] = nil
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipe(recipe).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
-
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-		components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	mux.HandleFunc("POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		err := r.ParseForm()
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		recipe, err := app.RecipeManager.CreateRecipeFromParams(r.PostForm)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		itemsById := make(map[string]*dao.Item)
-		for _, i := range recipe.Ingredients {
-			itemsById[i.ItemUID] = nil
-		}
-		for _, i := range recipe.Results {
-			itemsById[i.ItemUID] = nil
-		}
-
-		err = app.Daos.Items.FindItemsIndexed(itemsById)
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipe(recipe).ToContext(r.Context())
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
-		ctx := context.WithValue(r.Context(), "items", itemsById)
-		components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	mux.HandleFunc("DELETE /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "DELETE /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		recipes, err := app.Daos.Recipes.GetRecipesById([]int{recipeId})
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 		if len(recipes) == 0 {
-			tmpls.RenderError(fmt.Errorf("Recipe with id '%d' not found", recipeId), w)
-			return
+			return fmt.Errorf("Recipe with id '%d' not found", recipeId)
 		}
 
 		err = app.Daos.Recipes.DeleteRecipe(recipeId)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
 
 		w.Header().Add("HX-Location", "/recipes")
+		return nil
 	})
 
-	mux.HandleFunc("GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		slot := r.URL.Query().Get("slot")
 		role := r.URL.Query().Get("role")
-		tmpls.Render("item-popup", []string{"item-popup.html.tmpl"}, w, map[string]string{
-			"slot": slot,
-			"role": role,
-		})
+
+		return components.ItemPopup(slot, role).Render(r.Context(), w)
 	})
 
-	mux.HandleFunc("GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		items, err := app.Daos.Items.FindByName(filter)
 		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+			return err
 		}
-		tmpls.Render("item-popup-items", []string{"item-popup-items.html.tmpl"}, w, items)
+		return components.ItemPopupItems(items).Render(r.Context(), w)
 	})
 
-	mux.HandleFunc("GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) {
+	handleFuncWithError(mux, "GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		slot := r.URL.Query().Get("slot")
 		role := r.URL.Query().Get("role")
-		items, err := app.Daos.Items.FindItemsByUids([]string{r.PathValue("uid")})
-		if err != nil {
-			tmpls.RenderError(err, w)
-			return
+
+		var slotIdx *int
+
+		if slot != "" {
+			slotValue, err := strconv.Atoi(slot)
+			if err != nil {
+				return err
+			}
+			slotIdx = &slotValue
 		}
-		tmpls.Render("item-popup-result", []string{"item-popup-result.html.tmpl"}, w, map[string]any{
-			"id":   uuid.NewString(),
-			"item": items[0],
-			"slot": slot,
-			"role": role,
-		})
+
+		item := dao.RecipeItem{
+			ItemUID: r.PathValue("uid"),
+			Amount:  1,
+			Role:    role,
+			Slot:    slotIdx,
+		}
+
+		ctx, err := app.Daos.Items.NewDeferedLoader().AddUid(item.ItemUID).ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.ItemInputs(uuid.NewString(), item).Render(ctx, w)
 	})
 
 	return mux, nil

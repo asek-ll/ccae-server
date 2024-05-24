@@ -59,9 +59,9 @@ func shapedRecipeItemWrap(items []dao.RecipeItem, slot int) templ.Component {
 }
 
 templ RecipeForm(recipe *dao.Recipe) {
-    <button
-    hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
-    >Delete</button>
+	<button
+		hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
+	>Delete</button>
 	<form method="post">
 		<fieldset>
 			<label>

@@ -91,7 +91,7 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 }
 
 type RichItemInfo struct {
-	Item    dao.Item
+	Item    *dao.Item
 	Recipes []*dao.Recipe
 }
 
@@ -108,13 +108,13 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 		return nil, errors.New("Item not found")
 	}
 
-	recipes, err := s.daoProvider.Recipes.GetRecipeByResult(uid)
+	recipes, err := s.daoProvider.Recipes.GetRecipesByResults([]string{uid})
 	if err != nil {
 		return nil, err
 	}
 
 	return &RichItemInfo{
-		Item:    items[0],
+		Item:    &items[0],
 		Recipes: recipes,
 	}, nil
 }

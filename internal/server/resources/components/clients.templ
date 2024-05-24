@@ -1,0 +1,23 @@
+package components
+
+import (
+	"strconv"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ ClientsPage(clients []dao.Client) {
+	@Page("Clients") {
+		<section>
+			<table>
+				for _, client := range clients {
+					<tr>
+						<td>{ client.Id }</td>
+						<td>{ client.Role }</td>
+						<td>{ strconv.FormatBool(client.Online) }</td>
+						<td>{ client.LastLogin.String() }</td>
+					</tr>
+				}
+			</table>
+		</section>
+	}
+}

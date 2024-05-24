@@ -226,25 +226,6 @@ func (r *RecipesDao) UpdateRecipe(recipe *Recipe) error {
 	return err
 }
 
-func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]*Recipe, error) {
-
-	query := `
-	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
-	JOIN recipe_items ri ON r.id = ri.recipe_id 
-	WHERE ri.item_uid = ?
-	`
-
-	rows, err := r.db.Query(query, itemUID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	defer rows.Close()
-
-	return readRows(rows)
-}
-
 func (r *RecipesDao) GetRecipesByResults(itemUIDs []string) ([]*Recipe, error) {
 	if len(itemUIDs) == 0 {
 		return nil, nil
