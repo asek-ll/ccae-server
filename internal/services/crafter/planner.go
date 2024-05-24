@@ -2,7 +2,6 @@ package crafter
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -35,7 +34,6 @@ func (p *Planner) expandRecipes(itemIds []string) (*ExpandState, error) {
 	for len(layer) > 0 {
 		var recipesToLoad []string
 		for _, itemId := range layer {
-			fmt.Println("process", itemId)
 			if _, e := items[itemId]; !e {
 				recipesToLoad = append(recipesToLoad, itemId)
 				items[itemId] = struct{}{}
@@ -107,7 +105,6 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 				continue
 			}
 
-			fmt.Println(recipe.Results[0])
 			repeats := ceil(toCraft, recipe.Results[0].Amount)
 
 			for _, ing := range recipe.Ingredients {

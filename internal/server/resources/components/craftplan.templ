@@ -1,0 +1,42 @@
+package components
+
+import (
+    "strconv"
+	"github.com/asek-ll/aecc-server/internal/services/crafter"
+)
+
+templ CraftingPlanPage(plan *crafter.Plan) {
+	@Page("Craft Plan For") {
+		@CraftingPlan(plan)
+	}
+}
+
+templ CraftingPlan(plan *crafter.Plan) {
+	<table>
+		for _, step := range plan.Steps {
+			<tr>
+				<td>
+					{ strconv.Itoa(step.Repeats) } X { step.Recipe.Name }
+				</td>
+				<td>
+					@RecipesGrid(step.Recipe)
+				</td>
+			</tr>
+		}
+	</table>
+	<table>
+		for _, related := range plan.Related {
+			<tr>
+				<td>
+					@ItemIconByUID(related.ItemUID)
+				</td>
+				<td>
+					{ strconv.Itoa(related.ResultAmount) }
+				</td>
+				<td>
+					{ strconv.Itoa(related.StorageAmount) }
+				</td>
+			</tr>
+		}
+	</table>
+}

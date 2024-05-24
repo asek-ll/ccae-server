@@ -65,9 +65,9 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 		var id int
 		var name string
 		var typ string
-		var item_uid string
-		var amount int
-		var role string
+		var item_uid *string
+		var amount *int
+		var role *string
 		var slot *int
 		err := rows.Scan(&id, &name, &typ, &item_uid, &amount, &role, &slot)
 		if err != nil {
@@ -85,18 +85,22 @@ func readRows(rows *sql.Rows) ([]*Recipe, error) {
 			recipes = append(recipes, &recipe)
 		}
 		recipe := recipes[recipe_idx]
-		if role == RESULT_ROLE {
-			recipe.Results = append(recipe.Results, RecipeItem{
-				ItemUID: item_uid,
-				Amount:  amount,
-				Slot:    slot,
-			})
-		} else if role == INGREDIENT_ROLE {
-			recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
-				ItemUID: item_uid,
-				Amount:  amount,
-				Slot:    slot,
-			})
+		if role != nil {
+			if *role == RESULT_ROLE {
+				recipe.Results = append(recipe.Results, RecipeItem{
+					ItemUID: *item_uid,
+					Amount:  *amount,
+					Role:    *role,
+					Slot:    slot,
+				})
+			} else if *role == INGREDIENT_ROLE {
+				recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
+					ItemUID: *item_uid,
+					Amount:  *amount,
+					Role:    *role,
+					Slot:    slot,
+				})
+			}
 		}
 	}
 
@@ -184,6 +188,44 @@ func (r *RecipesDao) InsertRecipe(recipe *Recipe) error {
 	return err
 }
 
+func (r *RecipesDao) UpdateRecipe(recipe *Recipe) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("UPDATE recipes SET name = ?, type = ? WHERE id = ?", recipe.Name, recipe.Type, recipe.ID)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM recipe_items WHERE recipe_id = ?", recipe.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range recipe.Results {
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, RESULT_ROLE, item.Slot)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, item := range recipe.Ingredients {
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, INGREDIENT_ROLE, item.Slot)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+
+	return err
+}
+
 func (r *RecipesDao) GetRecipeByResult(itemUID string) ([]*Recipe, error) {
 
 	query := `
@@ -234,8 +276,6 @@ func (r *RecipesDao) GetRecipesByResults(itemUIDs []string) ([]*Recipe, error) {
 		return nil, err
 	}
 
-	fmt.Println("Search", itemUIDs, "find", len(ids))
-
 	return r.GetRecipesById(ids)
 }
 
@@ -246,7 +286,7 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 
 	query := fmt.Sprintf(`
 	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
-	JOIN recipe_items ri ON r.id = ri.recipe_id 
+	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id 
 	WHERE r.id IN (?%s)
 	`, strings.Repeat(", ?", len(ids)-1))
 
@@ -259,4 +299,26 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 	defer rows.Close()
 
 	return readRows(rows)
+}
+
+func (r *RecipesDao) DeleteRecipe(id int) error {
+	tx, err := r.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM recipes WHERE id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM recipe_items WHERE recipe_id = ?", id)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+
+	return err
 }

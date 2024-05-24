@@ -7,12 +7,28 @@ import (
 
 templ RecipesPage(filter string, recipes []*dao.Recipe) {
 	@Page("Recipes") {
-        <a href="/recipes/new">New recipe</a>
+		<a href="/recipes/new?name=New">New recipe</a>
 		@RecipesFilter(filter)
-        <div id="recipes-result">
-            @RecipesList(recipes)
-        </div>
+		<div id="recipes-result">
+			@RecipesList(recipes)
+		</div>
 	}
+}
+
+templ RecipesGrid(recipe *dao.Recipe) {
+	<div class="recipe">
+		for _, row := range FormatIngredients(recipe) {
+			<div class="recipe-row" style="display: flex">
+				for _, item := range row {
+					<div class="recipe-slot" style="width: 48px">
+						if item != nil {
+							@ItemIconByUID(item.ItemUID)
+						}
+					</div>
+				}
+			</div>
+		}
+	</div>
 }
 
 templ RecipesFilter(filter string) {
@@ -39,19 +55,7 @@ templ RecipesList(recipes []*dao.Recipe) {
 				<tr>
 					<td><a href={ templ.URL(fmt.Sprintf("/recipes/%d", recipe.ID)) }>{ recipe.Name }</a></td>
 					<td>
-						<div class="recipe">
-							for _, row := range FormatIngredients(recipe) {
-								<div class="recipe-row" style="display: flex">
-									for _, item := range row {
-										<div class="recipe-slot" style="width: 48px">
-											if item != nil {
-												@ItemIconByUID(item.ItemUID)
-											}
-										</div>
-									}
-								</div>
-							}
-						</div>
+						@RecipesGrid(recipe)
 					</td>
 					<td>
 						<div class="grid">

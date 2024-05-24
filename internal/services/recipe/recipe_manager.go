@@ -157,12 +157,26 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 	var results []dao.RecipeItem
 	var ingredients []dao.RecipeItem
 
+	isShapeless := -1
+
 	for _, item := range params.Items {
 		recipeItem := dao.RecipeItem{
 			ItemUID: item.ItemUID,
 			Amount:  item.Amount,
 			Role:    item.Role,
 			Slot:    item.Slot,
+		}
+		var itemShapeless int
+		if item.Slot == nil {
+			itemShapeless = 1
+		} else {
+			itemShapeless = 0
+		}
+
+		if isShapeless == -1 {
+			isShapeless = itemShapeless
+		} else if isShapeless != itemShapeless {
+			return nil, fmt.Errorf("Mixed shape!")
 		}
 
 		switch item.Role {
@@ -173,6 +187,10 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 		default:
 			return nil, fmt.Errorf("Unsupported role '%s'", item.Role)
 		}
+	}
+
+	if isShapeless == 1 && params.Type == "" {
+		params.Type = "shapeless"
 	}
 
 	recipe := dao.Recipe{
@@ -194,6 +212,23 @@ func (m *RecipeManager) CreateRecipe(params *CreateRecipeParams) (*dao.Recipe, e
 	}
 
 	err = m.daoProvider.Recipes.InsertRecipe(recipe)
+	if err != nil {
+		return nil, err
+	}
+	return recipe, nil
+}
+
+func (m *RecipeManager) UpdateRecipe(recipeId int, params *CreateRecipeParams) (*dao.Recipe, error) {
+
+	recipe, err := m.validateCreateParams(params)
+
+	if err != nil {
+		return nil, err
+	}
+
+	recipe.ID = recipeId
+
+	err = m.daoProvider.Recipes.UpdateRecipe(recipe)
 	if err != nil {
 		return nil, err
 	}

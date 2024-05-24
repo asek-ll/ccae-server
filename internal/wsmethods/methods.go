@@ -52,7 +52,6 @@ func SetupMethods(server *wsrpc.JsonRpcServer, app *app.App) {
 	})
 
 	server.AddMethod("login", wsrpc.Typed(func(clientId uint, params LoginParams) (any, error) {
-		fmt.Println("Login", params)
 		err := app.Daos.Clients.LoginClient(params.ID, params.Role, clientId)
 		if err != nil {
 			return nil, err
