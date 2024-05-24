@@ -39,19 +39,19 @@ templ RecipesList(recipes []*dao.Recipe) {
 				<tr>
 					<td><a href={ templ.URL(fmt.Sprintf("/recipes/%d", recipe.ID)) }>{ recipe.Name }</a></td>
 					<td>
-						<table>
+						<div class="recipe">
 							for _, row := range FormatIngredients(recipe) {
-								<tr>
+								<div class="recipe-row" style="display: flex">
 									for _, item := range row {
-										<td>
+										<div class="recipe-slot" style="width: 48px">
 											if item != nil {
 												@ItemIconByUID(item.ItemUID)
 											}
-										</td>
+										</div>
 									}
-								</tr>
+								</div>
 							}
-						</table>
+						</div>
 					</td>
 					<td>
 						<div class="grid">

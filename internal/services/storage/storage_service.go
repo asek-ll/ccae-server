@@ -3,6 +3,7 @@ package storage
 import (
 	"context"
 	"errors"
+	"sort"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/common"
@@ -33,7 +34,7 @@ func (s *Storage) GetItemsCount() (map[string]*Stack, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
 	var res []Inventory
@@ -81,6 +82,10 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 			Count: uniqueItems[item.UID].Count,
 		})
 	}
+
+	sort.Slice(stacks, func(a, b int) bool {
+		return stacks[a].Count > stacks[b].Count
+	})
 
 	return stacks, nil
 }
