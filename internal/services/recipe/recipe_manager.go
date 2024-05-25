@@ -166,21 +166,21 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 			Role:    item.Role,
 			Slot:    item.Slot,
 		}
-		var itemShapeless int
-		if item.Slot == nil {
-			itemShapeless = 1
-		} else {
-			itemShapeless = 0
-		}
-
-		if isShapeless == -1 {
-			isShapeless = itemShapeless
-		} else if isShapeless != itemShapeless {
-			return nil, fmt.Errorf("Mixed shape!")
-		}
 
 		switch item.Role {
 		case dao.INGREDIENT_ROLE:
+			var itemShapeless int
+			if item.Slot == nil {
+				itemShapeless = 1
+			} else {
+				itemShapeless = 0
+			}
+
+			if isShapeless == -1 {
+				isShapeless = itemShapeless
+			} else if isShapeless != itemShapeless {
+				return nil, fmt.Errorf("Mixed shape!")
+			}
 			ingredients = append(ingredients, recipeItem)
 		case dao.RESULT_ROLE:
 			results = append(results, recipeItem)
