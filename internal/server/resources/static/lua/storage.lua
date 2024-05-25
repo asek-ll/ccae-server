@@ -33,8 +33,19 @@ local function getItems()
     return storages
 end
 
+local function measureTime(func)
+    return function()
+        local start_time = os.epoch("local")
+        local result = func()
+        local end_time = os.epoch("local")
+        local elapsed_time = end_time - start_time
+        print(elapsed_time)
+        return result
+    end
+end
+
 return function(methods, handlers, wsclient)
-    methods['getItems'] = getItems
+    methods['getItems'] = measureTime(getItems)
     print(modem)
     print(7 * 2)
 end

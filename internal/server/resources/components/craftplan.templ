@@ -19,6 +19,9 @@ templ CraftingPlan(plan *crafter.Plan) {
 					{ strconv.Itoa(step.Repeats) } X { step.Recipe.Name }
 				</td>
 				<td>
+					{ step.Recipe.Type }
+				</td>
+				<td>
 					@RecipesGrid(step.Recipe)
 				</td>
 			</tr>
