@@ -5,10 +5,6 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
-func getItem(ctx context.Context, uid string) *dao.Item {
-	return ctx.Value("items").(map[string]*dao.Item)[uid]
-}
-
 func ItemIconByUID(itemUid string) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 		item := getItem(ctx, itemUid)

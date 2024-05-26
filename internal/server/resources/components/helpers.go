@@ -1,6 +1,21 @@
 package components
 
-import "github.com/asek-ll/aecc-server/internal/dao"
+import (
+	"context"
+
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+func getItem(ctx context.Context, uid string) *dao.Item {
+	items := ctx.Value("items").(map[string]*dao.Item)
+	if items[uid] == nil {
+		return &dao.Item{
+			UID:         uid,
+			DisplayName: uid,
+		}
+	}
+	return items[uid]
+}
 
 func FormatIngredients(r *dao.Recipe) [][]*dao.RecipeItem {
 	var rows [][]*dao.RecipeItem

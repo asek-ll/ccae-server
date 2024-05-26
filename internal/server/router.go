@@ -74,6 +74,54 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.ItemsPage(items).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(mux, "GET /playerItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		items, err := app.PlayerManager.GetItems()
+		if err != nil {
+			return err
+		}
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+		for _, item := range items {
+			itemLoader.AddUid(item.ItemID)
+		}
+
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		inv := components.Inventory(items, 4, 9)
+
+		return components.Page("Player", inv).Render(ctx, w)
+	})
+
+	handleFuncWithError(mux, "POST /playerItems/{slot}/drop/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		slotStr := r.PathValue("slot")
+		slot, err := strconv.Atoi(slotStr)
+		if err != nil {
+			return err
+		}
+		_, err = app.PlayerManager.RemoveItem(slot)
+		if err != nil {
+			return err
+		}
+
+		items, err := app.PlayerManager.GetItems()
+		if err != nil {
+			return err
+		}
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+		for _, item := range items {
+			itemLoader.AddUid(item.ItemID)
+		}
+
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.Inventory(items, 4, 9).Render(ctx, w)
+	})
+
 	handleFuncWithError(mux, "GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		item, err := app.Storage.GetItem(uid)

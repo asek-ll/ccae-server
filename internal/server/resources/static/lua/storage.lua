@@ -20,8 +20,16 @@ local function getItems()
 
             local storage_items = {}
             local items = m.callRemote(storage_name, 'list')
-            for slot in pairs(items) do
-                local details = m.callRemote(storage_name, 'getItemDetail', slot)
+            for slot, item in pairs(items) do
+                -- local details = m.callRemote(storage_name, 'getItemDetail', slot)
+
+                local details = {
+                    name = item['name'],
+                    nbt = item['nbt'],
+                    count = item['count'],
+                    maxCount = item['count'],
+                }
+
                 if details ~= nil then
                     local cache_item = { item = details, slot = slot }
                     table.insert(storage_items, cache_item)
@@ -35,9 +43,9 @@ end
 
 local function measureTime(func)
     return function()
-        local start_time = os.epoch("local")
+        local start_time = os.epoch 'local'
         local result = func()
-        local end_time = os.epoch("local")
+        local end_time = os.epoch 'local'
         local elapsed_time = end_time - start_time
         print(elapsed_time)
         return result

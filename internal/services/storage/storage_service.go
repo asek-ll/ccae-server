@@ -118,3 +118,13 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 		Recipes: recipes,
 	}, nil
 }
+
+func (s *Storage) ExportStack(params []ExportParams) error {
+
+	return nil
+}
+
+func (s *Storage) ImportStack(source SlotRef, amount int) error {
+
+	return nil
+}

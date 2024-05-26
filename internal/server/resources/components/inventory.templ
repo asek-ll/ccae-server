@@ -1,0 +1,34 @@
+package components
+
+import (
+	"fmt"
+
+	"github.com/asek-ll/aecc-server/internal/services/crafter"
+)
+
+templ Stack(stack *crafter.Stack) {
+	<div>
+		@ItemIconByUID(stack.ItemID)
+	</div>
+}
+
+templ Inventory(stacks map[int]*crafter.Stack, rows int, cols int) {
+	<table id="player-inventory">
+		for r := 0; r < rows; r += 1 {
+			<tr>
+				for c := 0; c < cols; c += 1 {
+					<td>
+						if _, e := stacks[r * cols + c]; e {
+							@Stack(stacks[r*cols+c])
+							<button
+								hx-post={ fmt.Sprintf("/playerItems/%d/drop/", r*cols+c) }
+								hx-swap="outerHTML"
+								hx-target="#player-inventory"
+							>Drop</button>
+						}
+					</td>
+				}
+			</tr>
+		}
+	</table>
+}
