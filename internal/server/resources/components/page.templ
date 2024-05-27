@@ -2,7 +2,7 @@ package components
 
 templ Page(title string, content ...templ.Component) {
 	<!DOCTYPE html>
-	<html lang="en">
+	<html lang="en" data-theme="light">
 		<head>
 			<meta charset="utf-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -20,7 +20,8 @@ templ Page(title string, content ...templ.Component) {
 						<li><a href="/">Home</a></li>
 						<li><a href="/clients">Clients</a></li>
 						<li><a href="/recipes">Recipes</a></li>
-						<li><a href="/items">Inventory</a></li>
+						<li><a href="/items">Storage</a></li>
+						<li><a href="/playerItems">Inventory</a></li>
 					</ul>
 				</nav>
 				<hgroup>

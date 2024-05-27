@@ -35,6 +35,9 @@ local function getItems()
                     table.insert(storage_items, cache_item)
                 end
             end
+            if table.getn(storage_items) == 0 then
+                storage_items = textutils.empty_json_array
+            end
             table.insert(storages, { name = storage_name, size = size, items = storage_items })
         end
     end
