@@ -25,10 +25,21 @@ type PlayerManager struct {
 }
 
 func NewPlayerManager(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *PlayerManager {
-	return &PlayerManager{
+	pm := &PlayerManager{
 		ws:          ws,
 		daoProvider: daoProvider,
 	}
+	go func() {
+		var slots []int
+		for i := 18; i < 36; i += 1 {
+			slots = append(slots, i)
+		}
+		for {
+			time.Sleep(30 * time.Second)
+			// pm.RemoveItems(slots)
+		}
+	}()
+	return pm
 }
 
 func (s *PlayerManager) GetItems() (map[int]*crafter.Stack, error) {
@@ -68,7 +79,22 @@ func (s *PlayerManager) RemoveItem(slot int) (int, error) {
 	defer cancel()
 
 	var res int
-	err = s.ws.SendRequestSync(ctx, id, "removeItemFromPlayer", slot, &res)
+	err = s.ws.SendRequestSync(ctx, id, "removeItemFromPlayer", []int{slot}, &res)
 
 	return res, err
+}
+
+func (s *PlayerManager) RemoveItems(slots []int) error {
+	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("player")
+	if err != nil {
+		return err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+
+	var res int
+	err = s.ws.SendRequestSync(ctx, id, "removeItemFromPlayer", slots, &res)
+
+	return err
 }

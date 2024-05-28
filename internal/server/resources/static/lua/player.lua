@@ -32,8 +32,13 @@ local function get_items()
     return items
 end
 
-local function remove_item_from_player(slot)
-    return im.removeItemFromPlayer(storage_direction, 64, slot)
+local function remove_item_from_player(slots)
+    local total_removed = 0
+    for _, slot in pairs(slots) do
+        local removed = im.removeItemFromPlayer(storage_direction, 64, slot)
+        total_removed = total_removed + removed
+    end
+    return total_removed
 end
 
 return function(methods, handlers, wsclient)
