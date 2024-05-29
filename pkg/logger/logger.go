@@ -5,25 +5,39 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
 )
 
 type Level struct {
-	value int16
-	name  [5]byte
+	Value int16
+	Name  [5]byte
 }
 
 func (l Level) Trim() string {
-	if l.name[4] == ' ' {
-		return string(l.name[:4])
+	if l.Name[4] == ' ' {
+		return string(l.Name[:4])
 	}
-	return string(l.name[:])
+	return string(l.Name[:])
 }
 
 func (l Level) Padded() string {
-	return string(l.name[:])
+	return string(l.Name[:])
+}
+
+func (l Level) Braced() string {
+	var buf [7]byte
+	buf[0] = '['
+	copy(buf[1:], l.Name[:])
+	if buf[5] == ' ' {
+		buf[5] = ']'
+		buf[6] = ' '
+	} else {
+		buf[6] = ']'
+	}
+	return string(buf[:])
 }
 
 var (
@@ -35,33 +49,69 @@ var (
 )
 
 const (
-	DefaultFormat = `{{.Time.Format "2006-01-02 15:04:05"}} {{.Level.Padded}} {{.Message}}`
+	DefaultFormat = `{{.Time.Format "2006-01-02 15:04:05"}} {{.Level}} {{.Message}}`
 )
 
+type Log interface {
+	Logf(lvl Level, format string, args ...any)
+}
+
+type writer struct {
+	Log
+}
+
+func (w *writer) Write(p []byte) (n int, err error) {
+	w.Logf(INFO, string(p))
+	return len(p), nil
+}
+
+func ToWriter(l Log) io.Writer {
+	return &writer{l}
+}
+
+func SetupStd(l Log) {
+	log.SetOutput(ToWriter(l))
+	log.SetPrefix("")
+	log.SetFlags(0)
+}
+
+type levelFormatFunc func(l Level) string
+
+var nop levelFormatFunc = func(l Level) string { return l.Padded() }
+
 type Logger struct {
-	lvl    Level
-	stdout io.Writer
-	templ  *template.Template
+	lvl         Level
+	stdout      io.Writer
+	tmpl        *template.Template
+	levelFormat levelFormatFunc
 }
 type templateParams struct {
 	Time    time.Time
-	Level   Level
+	Level   string
 	Message string
 }
 
-func New() *Logger {
-	log := Logger{
+func New(opts ...Option) *Logger {
+	log := &Logger{
 		lvl:    INFO,
 		stdout: os.Stdout,
-		templ:  template.Must(template.New("log").Parse(DefaultFormat)),
+	}
+	for _, opt := range opts {
+		opt(log)
+	}
+	if log.tmpl == nil {
+		log.tmpl = template.Must(template.New("log").Parse(DefaultFormat))
 	}
 
-	return &log
+	if log.levelFormat == nil {
+		log.levelFormat = nop
+	}
+
+	return log
 }
 
 func (log *Logger) Logf(lvl Level, format string, args ...any) {
-	if lvl.value < log.lvl.value {
-		fmt.Println(lvl)
+	if lvl.Value < log.lvl.Value {
 		return
 	}
 
@@ -74,12 +124,12 @@ func (log *Logger) Logf(lvl Level, format string, args ...any) {
 
 	params := templateParams{
 		Time:    time.Now(),
-		Level:   lvl,
+		Level:   log.levelFormat(lvl),
 		Message: strings.TrimSuffix(msg, "\n"),
 	}
 
 	buf := bytes.Buffer{}
-	err := log.templ.Execute(&buf, params)
+	err := log.tmpl.Execute(&buf, params)
 	if err != nil {
 		fmt.Printf("failed to execute template, %v\n", err) // should never happen
 	}

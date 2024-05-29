@@ -4,6 +4,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -11,7 +12,6 @@ import (
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
-	"github.com/asek-ll/aecc-server/pkg/logger"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -37,12 +37,12 @@ func handleFuncWithError(mux *MiddlewaresGroup, pattern string, handler func(w h
 	})
 }
 
-func loggingMiddleware(log *logger.Logger) func(http.Handler) http.Handler {
+func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			start := time.Now()
 			next.ServeHTTP(w, req)
-			log.Logf(logger.INFO, "%s %s %s",
+			log.Printf("[INFO] %s %s %s",
 				color.RedString(req.Method),
 				color.YellowString(req.RequestURI),
 				color.CyanString(time.Since(start).String()),
