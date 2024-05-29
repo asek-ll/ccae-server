@@ -4,6 +4,7 @@ go 1.22.2
 
 require (
 	github.com/a-h/templ v0.2.697
+	github.com/fatih/color v1.16.0
 	github.com/gobwas/ws v1.3.2
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
@@ -14,5 +15,7 @@ require (
 require (
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
 	golang.org/x/sys v0.19.0 // indirect
 )

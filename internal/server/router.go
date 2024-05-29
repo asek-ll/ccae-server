@@ -6,11 +6,14 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
+	"github.com/asek-ll/aecc-server/pkg/logger"
 	"github.com/asek-ll/aecc-server/pkg/template"
+	"github.com/fatih/color"
 	"github.com/google/uuid"
 )
 
@@ -24,7 +27,7 @@ func createStaticHandler(statics fs.FS) func(w http.ResponseWriter, r *http.Requ
 	}
 }
 
-func handleFuncWithError(mux *http.ServeMux, pattern string, handler func(w http.ResponseWriter, r *http.Request) error) {
+func handleFuncWithError(mux *MiddlewaresGroup, pattern string, handler func(w http.ResponseWriter, r *http.Request) error) {
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		err := handler(w, r)
 		if err != nil {
@@ -34,7 +37,58 @@ func handleFuncWithError(mux *http.ServeMux, pattern string, handler func(w http
 	})
 }
 
-func CreateMux(app *app.App) (*http.ServeMux, error) {
+func loggingMiddleware(log *logger.Logger) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			start := time.Now()
+			next.ServeHTTP(w, req)
+			log.Logf(logger.INFO, "%s %s %s",
+				color.RedString(req.Method),
+				color.YellowString(req.RequestURI),
+				color.CyanString(time.Since(start).String()),
+			)
+		})
+	}
+}
+
+type MiddlewaresGroup struct {
+	mux         *http.ServeMux
+	middlewares []func(http.Handler) http.Handler
+}
+
+func NewMiddlewareGroup(mux *http.ServeMux) *MiddlewaresGroup {
+	return &MiddlewaresGroup{
+		mux:         mux,
+		middlewares: nil,
+	}
+}
+
+func (mg *MiddlewaresGroup) wrap(handler http.Handler) http.Handler {
+	for i := range mg.middlewares {
+		handler = mg.middlewares[len(mg.middlewares)-1-i](handler)
+	}
+	return handler
+}
+
+func (mg *MiddlewaresGroup) HandleFunc(pattern string, handler http.HandlerFunc) {
+	mg.mux.Handle(pattern, mg.wrap(handler))
+}
+
+func (mg *MiddlewaresGroup) Group() *MiddlewaresGroup {
+	middlewares := make([]func(http.Handler) http.Handler, len(mg.middlewares))
+	copy(middlewares, mg.middlewares)
+	return &MiddlewaresGroup{
+		mux:         mg.mux,
+		middlewares: mg.middlewares,
+	}
+}
+
+func (mg *MiddlewaresGroup) Use(mw func(http.Handler) http.Handler) *MiddlewaresGroup {
+	mg.middlewares = append(mg.middlewares, mw)
+	return mg
+}
+
+func CreateMux(app *app.App) (http.Handler, error) {
 
 	templatesFs, err := fs.Sub(resources, "resources/templates")
 	if err != nil {
@@ -46,17 +100,21 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return nil, err
 	}
 
+	mux := http.NewServeMux()
+	root := NewMiddlewareGroup(mux)
+
 	tmpls := template.NewTemplates(templatesFs)
 
-	mux := http.NewServeMux()
+	static := root.Group()
+	common := root.Group().Use(loggingMiddleware(app.Logger))
 
-	mux.HandleFunc("GET /static/", createStaticHandler(staticsFs))
+	static.HandleFunc("GET /static/", createStaticHandler(staticsFs))
 
-	handleFuncWithError(mux, "GET /{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /{$}", func(w http.ResponseWriter, r *http.Request) error {
 		return components.Page("INDEX").Render(r.Context(), w)
 	})
 
-	handleFuncWithError(mux, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients, err := app.Daos.Clients.GetClients()
 		if err != nil {
 			return err
@@ -65,7 +123,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.ClientsPage(clients).Render(r.Context(), w)
 	})
 
-	handleFuncWithError(mux, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		items, err := app.Storage.GetItems()
 		if err != nil {
 			return err
@@ -74,7 +132,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.ItemsPage(items).Render(r.Context(), w)
 	})
 
-	handleFuncWithError(mux, "GET /playerItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /playerItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		items, err := app.PlayerManager.GetItems()
 		if err != nil {
 			return err
@@ -94,7 +152,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Page("Player", inv).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "POST /playerItems/{slot}/drop/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "POST /playerItems/{slot}/drop/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		slotStr := r.PathValue("slot")
 		slot, err := strconv.Atoi(slotStr)
 		if err != nil {
@@ -122,7 +180,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Inventory(items, 4, 9).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		item, err := app.Storage.GetItem(uid)
 		if err != nil {
@@ -137,7 +195,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.ItemPage(item).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) error {
 		role := r.PathValue("role")
 
 		id, err := app.Daos.Seqs.NextId("clientNo")
@@ -152,7 +210,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		})
 	})
 
-	handleFuncWithError(mux, "GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		view := r.URL.Query().Get("view")
 
@@ -173,7 +231,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.RecipesPage(filter, recipes).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		strCount := r.PathValue("count")
 		count, err := strconv.Atoi(strCount)
@@ -193,7 +251,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.CraftingPlanPage(plan).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		recipe, err := app.RecipeManager.ParseRecipeFromParams(r.URL.Query())
 		if err != nil {
 			return err
@@ -207,7 +265,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
@@ -231,7 +289,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Page("Recipe!!!", components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
@@ -262,7 +320,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		err := r.ParseForm()
 		if err != nil {
 			return err
@@ -281,7 +339,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
 	})
 
-	handleFuncWithError(mux, "DELETE /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "DELETE /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		rawRecipeId := r.PathValue("recipeId")
 		recipeId, err := strconv.Atoi(rawRecipeId)
 		if err != nil {
@@ -305,14 +363,14 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return nil
 	})
 
-	handleFuncWithError(mux, "GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		slot := r.URL.Query().Get("slot")
 		role := r.URL.Query().Get("role")
 
 		return components.ItemPopup(slot, role).Render(r.Context(), w)
 	})
 
-	handleFuncWithError(mux, "GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		items, err := app.Daos.Items.FindByName(filter)
 		if err != nil {
@@ -321,7 +379,7 @@ func CreateMux(app *app.App) (*http.ServeMux, error) {
 		return components.ItemPopupItems(items).Render(r.Context(), w)
 	})
 
-	handleFuncWithError(mux, "GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		slot := r.URL.Query().Get("slot")
 		role := r.URL.Query().Get("role")
 

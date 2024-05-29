@@ -14,6 +14,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
+	"github.com/asek-ll/aecc-server/pkg/logger"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -23,6 +24,8 @@ type ServerCommand struct {
 }
 
 func (s ServerCommand) Execute(args []string) error {
+
+	log := logger.New()
 
 	daos, err := dao.NewDaoProvider()
 	if err != nil {
@@ -43,6 +46,7 @@ func (s ServerCommand) Execute(args []string) error {
 		Planner:       plannerService,
 		RecipeManager: recipeManager,
 		PlayerManager: playerManager,
+		Logger:        log,
 	}
 
 	mux, err := server.CreateMux(app)
@@ -56,6 +60,7 @@ func (s ServerCommand) Execute(args []string) error {
 	done := make(chan struct{})
 
 	go func() {
+		log.Logf(logger.INFO, "Start http server")
 		err := http.ListenAndServe(":3001", mux)
 		if err != nil {
 			errors <- err
@@ -65,6 +70,7 @@ func (s ServerCommand) Execute(args []string) error {
 	}()
 
 	go func() {
+		log.Logf(logger.INFO, "Start websocket server")
 		err := wsServer.Start()
 		if err != nil {
 			errors <- err
