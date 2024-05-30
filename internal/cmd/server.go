@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"time"
@@ -16,8 +15,6 @@ import (
 	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
-	"github.com/asek-ll/aecc-server/pkg/logger"
-	"github.com/fatih/color"
 	"github.com/jessevdk/go-flags"
 )
 
@@ -28,26 +25,7 @@ type ServerCommand struct {
 
 func (s ServerCommand) Execute(args []string) error {
 
-	logfmt := logger.Format(
-		fmt.Sprintf("%s [{{.Level}}] {{.Message}}",
-			color.GreenString(`{{.Time.Format "2006-01-02T15:04:05"}}`),
-		),
-	)
-	l := logger.New(logfmt, logger.LevelFormat(func(l logger.Level) string {
-		if l.Value >= logger.ERROR.Value {
-			return color.RedString(l.Padded())
-		}
-		if l.Value >= logger.WARN.Value {
-			return color.HiRedString(l.Padded())
-		}
-		if l.Value >= logger.INFO.Value {
-			return l.Padded()
-		}
-		return color.GreenString(l.Padded())
-	}), logger.WithLevel(logger.TRACE),
-	)
-
-	logger.SetupStd(l)
+	l := setupLogger()
 
 	daos, err := dao.NewDaoProvider()
 	if err != nil {
@@ -78,17 +56,11 @@ func (s ServerCommand) Execute(args []string) error {
 
 	wsmethods.SetupMethods(rpcServer, app)
 
-	l.Logf(logger.TRACE, "Ready")
-	l.Logf(logger.DEBUG, "Steady")
-	l.Logf(logger.INFO, "Go")
-	l.Logf(logger.WARN, "!!!")
-	l.Logf(logger.ERROR, "Fail")
-
 	errors := make(chan error)
 	done := make(chan struct{})
 
 	go func() {
-		l.Logf(logger.INFO, "Start http server")
+		l.Println("INFO Start http server")
 		err := http.ListenAndServe(":3001", mux)
 		if err != nil {
 			errors <- err
@@ -98,7 +70,7 @@ func (s ServerCommand) Execute(args []string) error {
 	}()
 
 	go func() {
-		l.Logf(logger.INFO, "Start websocket server")
+		l.Println("INFO Start websocket server")
 		err := wsServer.Start()
 		if err != nil {
 			errors <- err

@@ -5,7 +5,6 @@ go 1.22.2
 require (
 	github.com/a-h/templ v0.2.697
 	github.com/fatih/color v1.16.0
-	github.com/go-pkgz/lgr v0.11.1
 	github.com/gobwas/ws v1.3.2
 	github.com/google/uuid v1.6.0
 	github.com/jessevdk/go-flags v1.5.0
