@@ -37,15 +37,27 @@ func handleFuncWithError(mux *MiddlewaresGroup, pattern string, handler func(w h
 	})
 }
 
+type rwWithStatus struct {
+	http.ResponseWriter
+	status int
+}
+
+func (w *rwWithStatus) WriteHeader(status int) {
+	w.status = status
+	w.ResponseWriter.WriteHeader(status)
+}
+
 func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			start := time.Now()
-			next.ServeHTTP(w, req)
-			log.Printf("[INFO] %s %s %s",
+			rw := &rwWithStatus{w, http.StatusOK}
+			next.ServeHTTP(rw, req)
+			log.Printf("[INFO] %s %s %s %s",
 				color.RedString(req.Method),
 				color.YellowString(req.RequestURI),
 				color.CyanString(time.Since(start).String()),
+				color.GreenString(strconv.Itoa(rw.status)),
 			)
 		})
 	}
@@ -369,6 +381,11 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		return components.ItemInputs(uuid.NewString(), item).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
+		w.WriteHeader(http.StatusNotFound)
+		return components.Page("Not found").Render(r.Context(), w)
 	})
 
 	return mux, nil

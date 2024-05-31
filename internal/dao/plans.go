@@ -2,16 +2,25 @@ package dao
 
 import "database/sql"
 
-// const RESULT_ROLE = "result"
-// const INGREDIENT_ROLE = "ingredient"
-
 type PlanItem struct {
 	ItemUID   string
-	Role      string
 	ToConsume int
 	Consumed  int
 	ToCraft   int
 	Crafted   int
+}
+
+type PlanStepItems struct {
+	ID       int
+	PlanID   int
+	RecipeID int
+	ItemUID  string
+
+	Required       int
+	Consumed       int
+	MinimumToCraft int
+
+	ToCraft int
 }
 
 type Plan struct {
@@ -27,4 +36,8 @@ type PlansDao struct {
 func NewPlansDao(db *sql.DB) *PlansDao {
 
 	return &PlansDao{db: db}
+}
+
+func (p *PlansDao) InsertPlan(plan *Plan) error {
+	return nil
 }
