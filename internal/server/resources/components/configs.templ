@@ -1,0 +1,32 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ OptionList(options []dao.ConfigOption) {
+	<table id="option-list">
+		for _, option := range options {
+			<tr>
+				<td>{ option.Key }</td>
+				<td>{ option.Value }</td>
+				<td>
+					if option.Value  == "true" {
+						<button
+							hx-put={ fmt.Sprintf("/configs/%s/false", option.Key) }
+							hx-swap="outerHTML"
+							hx-target="#option-list"
+						>OFF</button>
+					} else {
+						<button
+							hx-put={ fmt.Sprintf("/configs/%s/true", option.Key) }
+							hx-swap="outerHTML"
+							hx-target="#option-list"
+						>ON</button>
+					}
+				</td>
+			</tr>
+		}
+	</table>
+}

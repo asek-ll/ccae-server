@@ -31,6 +31,7 @@ func handleFuncWithError(mux *MiddlewaresGroup, pattern string, handler func(w h
 	mux.HandleFunc(pattern, func(w http.ResponseWriter, r *http.Request) {
 		err := handler(w, r)
 		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
 			components.Page("ERROR", components.ErrorMessage(err.Error())).Render(r.Context(), w)
 			return
 		}
@@ -381,6 +382,32 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		return components.ItemInputs(uuid.NewString(), item).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "PUT /configs/{key}/{value}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		key := r.PathValue("key")
+		value := r.PathValue("value")
+
+		err := app.Daos.Configs.SetConfig(key, value)
+		if err != nil {
+			return err
+		}
+
+		options, err := app.Daos.Configs.GetConfigOptions()
+		if err != nil {
+			return err
+		}
+
+		return components.OptionList(options).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /configs/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		options, err := app.Daos.Configs.GetConfigOptions()
+		if err != nil {
+			return err
+		}
+
+		return components.Page("Configs", components.OptionList(options)).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

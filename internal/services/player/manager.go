@@ -2,6 +2,7 @@ package player
 
 import (
 	"context"
+	"log"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -36,7 +37,14 @@ func NewPlayerManager(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Pl
 		}
 		for {
 			time.Sleep(30 * time.Second)
-			pm.RemoveItems(slots)
+			enabled, err := daoProvider.Configs.GetConfig("do-cleanup-inventory")
+			log.Printf("[DEBUG] Read cleanup: %s", enabled)
+			if err != nil {
+				log.Println("[ERROR] Can't load config 'do-cleanup-inventory")
+			} else if enabled == "true" {
+				log.Println("[INFO] Do cleanup player iventory")
+				pm.RemoveItems(slots)
+			}
 		}
 	}()
 	return pm
