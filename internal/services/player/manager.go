@@ -36,7 +36,7 @@ func NewPlayerManager(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Pl
 		}
 		for {
 			time.Sleep(30 * time.Second)
-			// pm.RemoveItems(slots)
+			pm.RemoveItems(slots)
 		}
 	}()
 	return pm
