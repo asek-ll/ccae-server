@@ -38,12 +38,14 @@ func (s ServerCommand) Execute(args []string) error {
 	storageService := storage.NewStorage(rpcServer, daos)
 	playerManager := player.NewPlayerManager(rpcServer, daos)
 	plannerService := crafter.NewPlanner(daos, storageService)
+	crafterService := crafter.NewCrafter(daos, plannerService)
 	recipeManager := recipe.NewRecipeManager(daos)
 
 	app := &app.App{
 		Daos:          daos,
 		Storage:       storageService,
 		Planner:       plannerService,
+		Crafter:       crafterService,
 		RecipeManager: recipeManager,
 		PlayerManager: playerManager,
 		Logger:        log.Default(),

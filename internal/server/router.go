@@ -32,6 +32,7 @@ func handleFuncWithError(mux *MiddlewaresGroup, pattern string, handler func(w h
 		err := handler(w, r)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[ERROR] %s", err)
 			components.Page("ERROR", components.ErrorMessage(err.Error())).Render(r.Context(), w)
 			return
 		}
@@ -224,7 +225,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.CraftingPlanPage(plan).Render(ctx, w)
+		return components.CraftingPlanPage(plan, uid, count).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -408,6 +409,72 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		return components.Page("Configs", components.OptionList(options)).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /craft-plans/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		plans, err := app.Daos.Plans.GetPlans()
+		if err != nil {
+			return err
+		}
+
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+
+		for _, plan := range plans {
+			itemLoader.AddUid(plan.GoalItemUID)
+		}
+
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.Page("Craft plans", components.PlanList(plans)).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "GET /craft-plans/{planId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		planIdStr := r.PathValue("planId")
+		planId, err := strconv.Atoi(planIdStr)
+		if err != nil {
+			return err
+		}
+		plan, err := app.Daos.Plans.GetPlanById(planId)
+		if err != nil {
+			return err
+		}
+
+		loader := app.Daos.Items.NewDeferedLoader().AddUid(plan.GoalItemUID)
+		for _, item := range plan.Items {
+			loader.AddUid(item.ItemUID)
+		}
+
+		ctx, err := loader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.Page("Craft plan", components.PlanDetail(plan)).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "POST /craft-plans/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		uid := r.PathValue("itemUid")
+		strCount := r.PathValue("count")
+		count, err := strconv.Atoi(strCount)
+		if err != nil {
+			count = 1
+		}
+		plan, err := app.Crafter.SchedulePlanForItem(uid, count)
+		if err != nil {
+			return err
+		}
+
+		// ctx, err := app.Daos.Items.NewDeferedLoader().AddUids(plan.Items).ToContext(r.Context())
+		// if err != nil {
+		// 	return err
+		// }
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/craft-plans/%d", plan.ID))
+		return nil
+		// return componens.Page("Craft plan", components.Plan(plan)).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

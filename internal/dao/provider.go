@@ -12,6 +12,8 @@ type DaoProvider struct {
 	Items   *ItemsDao
 	Recipes *RecipesDao
 	Configs *ConfigsDao
+	Plans   *PlansDao
+	Crafts  *CraftsDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -45,11 +47,17 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 
+	plansDao, err := NewPlansDao(db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DaoProvider{
 		Clients: clientsDao,
 		Seqs:    seqsDao,
 		Items:   itemsDao,
 		Recipes: recipesDao,
 		Configs: configsDao,
+		Plans:   plansDao,
 	}, nil
 }

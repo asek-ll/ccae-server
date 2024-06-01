@@ -95,7 +95,7 @@ local function listen(url, loginParams)
             ws.close()
             error(eventData[3])
         elseif eventHandlers[event] ~= nil then
-            eventHandlers(eventData)
+            eventHandlers[event](eventData)
         end
     end
 end

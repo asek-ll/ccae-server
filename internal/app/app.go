@@ -14,6 +14,7 @@ type App struct {
 	Daos          *dao.DaoProvider
 	Storage       *storage.Storage
 	Planner       *crafter.Planner
+	Crafter       *crafter.Crafter
 	RecipeManager *recipe.RecipeManager
 	PlayerManager *player.PlayerManager
 	Logger        *log.Logger

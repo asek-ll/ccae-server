@@ -1,0 +1,48 @@
+package components
+
+import (
+        "strconv"
+    "github.com/asek-ll/aecc-server/internal/dao"
+)
+
+
+templ PlanList(plans []*dao.PlanState) {
+    <table>
+    for _, plan := range plans {
+        <tr>
+            <td>
+                @ItemIconByUID(plan.GoalItemUID)    
+            </td>
+            <td>
+                { strconv.Itoa(plan.GoalAmount) } 
+            </td>
+        </tr>
+    }
+    </table>
+}
+
+templ PlanDetail(plan *dao.PlanState) {
+    <table>
+    <tr>
+        <td>
+            @ItemIconByUID(plan.GoalItemUID)    
+        </td>
+        <td>
+            { strconv.Itoa(plan.GoalAmount) } 
+        </td>
+    </tr>
+    </table>
+    <table>
+    for _, item := range plan.Items {
+    <tr>
+        <td>
+            @ItemIconByUID(item.ItemUID)    
+        </td>
+        <td>
+            { strconv.Itoa(item.Amount) } 
+        </td>
+        
+    </tr>
+    }
+    </table>
+}
