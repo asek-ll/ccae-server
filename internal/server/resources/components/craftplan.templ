@@ -1,15 +1,15 @@
 package components
 
 import (
-    "fmt"
+	"fmt"
 	"strconv"
 
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 )
 
 templ CraftingPlanPage(plan *crafter.Plan, uid string, count int) {
-    @Page("Craft Plan For") {
-        <button hx-post={fmt.Sprintf("/craft-plans/item/%s/%d/", uid, count)}>Process!</button>
+	@Page("Craft Plan For") {
+		<button hx-post={ fmt.Sprintf("/craft-plans/item/%s/%d/", uid, count) }>Process!</button>
 		@CraftingPlan(plan)
 	}
 }

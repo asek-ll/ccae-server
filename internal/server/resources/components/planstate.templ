@@ -1,48 +1,53 @@
 package components
 
 import (
-        "strconv"
-    "github.com/asek-ll/aecc-server/internal/dao"
+	"fmt"
+	"strconv"
+	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
-
 templ PlanList(plans []*dao.PlanState) {
-    <table>
-    for _, plan := range plans {
-        <tr>
-            <td>
-                @ItemIconByUID(plan.GoalItemUID)    
-            </td>
-            <td>
-                { strconv.Itoa(plan.GoalAmount) } 
-            </td>
-        </tr>
-    }
-    </table>
+	<table>
+		for _, plan := range plans {
+			<tr>
+				<td>
+					<a href={ templ.URL(fmt.Sprintf("/craft-plans/%d", plan.ID)) }>{ strconv.Itoa(plan.ID) }</a>
+				</td>
+				<td>
+					@ItemIconByUID(plan.GoalItemUID)
+				</td>
+				<td>
+					{ strconv.Itoa(plan.GoalAmount) }
+				</td>
+			</tr>
+		}
+	</table>
 }
 
 templ PlanDetail(plan *dao.PlanState) {
-    <table>
-    <tr>
-        <td>
-            @ItemIconByUID(plan.GoalItemUID)    
-        </td>
-        <td>
-            { strconv.Itoa(plan.GoalAmount) } 
-        </td>
-    </tr>
-    </table>
-    <table>
-    for _, item := range plan.Items {
-    <tr>
-        <td>
-            @ItemIconByUID(item.ItemUID)    
-        </td>
-        <td>
-            { strconv.Itoa(item.Amount) } 
-        </td>
-        
-    </tr>
-    }
-    </table>
+	<table>
+		<tr>
+			<td>
+				@ItemIconByUID(plan.GoalItemUID)
+			</td>
+			<td>
+				{ strconv.Itoa(plan.GoalAmount) }
+			</td>
+			<td>
+				<button hx-post={ fmt.Sprintf("/craft-plans/%d/ping/", plan.ID) }>PING</button>
+			</td>
+		</tr>
+	</table>
+	<table>
+		for _, item := range plan.Items {
+			<tr>
+				<td>
+					@ItemIconByUID(item.ItemUID)
+				</td>
+				<td>
+					{ strconv.Itoa(item.Amount) }
+				</td>
+			</tr>
+		}
+	</table>
 }

@@ -1,0 +1,28 @@
+package components
+
+import (
+	"strconv"
+	"fmt"
+)
+
+templ CraftList(crafts []CraftItem) {
+	<table>
+		for _, craft := range crafts {
+			<tr>
+				<td>
+					{ strconv.Itoa(craft.Craft.PlanID) } - 
+					{ strconv.Itoa(craft.Craft.RecipeID) }
+				</td>
+				<td>
+					{ strconv.Itoa(craft.Craft.Repeats) }
+				</td>
+				<td>
+					@RecipesGrid(craft.Recipe)
+				</td>
+				<td>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/%d/ping", craft.Craft.PlanID, craft.Craft.RecipeID) }>PING</button>
+				</td>
+			</tr>
+		}
+	</table>
+}

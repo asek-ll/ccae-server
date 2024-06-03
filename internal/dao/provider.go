@@ -52,6 +52,11 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 
+	craftsDao, err := NewCraftsDao(db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DaoProvider{
 		Clients: clientsDao,
 		Seqs:    seqsDao,
@@ -59,5 +64,6 @@ func NewDaoProvider() (*DaoProvider, error) {
 		Recipes: recipesDao,
 		Configs: configsDao,
 		Plans:   plansDao,
+		Crafts:  craftsDao,
 	}, nil
 }

@@ -25,8 +25,9 @@ local function gen_config()
     for _, name in pairs(peripheral.getNames()) do
         local no = get_placeholder_no(name)
         if no ~= nil then
+            print(name, no)
             local c = config['outer']
-            if name == 'top' or name == 'bottom' or name == 'front' then
+            if name == 'top' or name == 'bottom' or name == 'front' or name == 'back' then
                 c = config['inner']
             end
             if no == 1 then

@@ -76,13 +76,21 @@ func (d *PlansDao) GetPlanById(id int) (*PlanState, error) {
 		return nil, errors.New("Plan not found")
 	}
 
-	items, err := d.GetPlanItemState(states[0].ID)
+	plan := states[0]
+
+	items, err := d.GetPlanItemState(plan.ID)
 	if err != nil {
 		return nil, err
 	}
-	states[0].Items = items
+	plan.Items = items
 
-	return states[0], nil
+	steps, err := d.GetPlanStepState(plan.ID)
+	if err != nil {
+		return nil, err
+	}
+	plan.Steps = steps
+
+	return plan, nil
 }
 
 func readPlanState(rows *sql.Rows) ([]*PlanState, error) {
@@ -137,6 +145,33 @@ func readPlanItemState(rows *sql.Rows) ([]PlanItemState, error) {
 		return nil, err
 	}
 	return planItemState, nil
+}
+
+func (d *PlansDao) GetPlanStepState(planId int) ([]PlanStepState, error) {
+	rows, err := d.db.Query("SELECT recipe_id, repeats FROM plan_step_state WHERE plan_id = ?", planId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return readPlanStepState(rows)
+}
+
+func readPlanStepState(rows *sql.Rows) ([]PlanStepState, error) {
+	var planStepState []PlanStepState
+	for rows.Next() {
+		stepState := PlanStepState{}
+		err := rows.Scan(&stepState.RecipeID, &stepState.Repeats)
+		if err != nil {
+			return nil, err
+		}
+		planStepState = append(planStepState, stepState)
+	}
+	err := rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return planStepState, nil
 }
 
 func (d *PlansDao) InsertPlan(plan *PlanState) error {

@@ -2,6 +2,7 @@ package crafter
 
 import (
 	"errors"
+	"log"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
@@ -41,12 +42,13 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 
 	for _, step := range plan.Steps {
 		recipe := recipesById[step.RecipeID]
-		maxRepeats := step.Repeats
+		minRepeats := step.Repeats
 		for _, ing := range recipe.Ingredients {
-			maxRepeats = max(maxRepeats, store[ing.ItemUID]/ing.Amount)
+			minRepeats = min(minRepeats, store[ing.ItemUID]/ing.Amount)
 		}
-		if maxRepeats > 0 {
-			err = c.submitCrafting(plan, recipe, maxRepeats)
+		if minRepeats > 0 {
+			log.Printf("[INFO] Submit craft %v", recipe)
+			err = c.submitCrafting(plan, recipe, minRepeats)
 			if err != nil {
 				return err
 			}
@@ -57,6 +59,7 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 		}
 	}
 
+	log.Println("[INFO] done ping")
 	return nil
 }
 

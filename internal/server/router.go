@@ -477,6 +477,67 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		// return componens.Page("Craft plan", components.Plan(plan)).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(common, "POST /craft-plans/{planId}/ping/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		planIdStr := r.PathValue("planId")
+		planId, err := strconv.Atoi(planIdStr)
+		if err != nil {
+			return err
+		}
+		plan, err := app.Daos.Plans.GetPlanById(planId)
+		if err != nil {
+			return err
+		}
+
+		err = app.Crafter.CheckNextSteps(plan)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/craft-plans/%d", plan.ID))
+		return nil
+	})
+
+	handleFuncWithError(common, "GET /crafts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		crafts, err := app.Daos.Crafts.GetCrafts()
+		if err != nil {
+			return err
+		}
+
+		var recipesIds []int
+		for _, craft := range crafts {
+			recipesIds = append(recipesIds, craft.RecipeID)
+		}
+
+		recipes, err := app.Daos.Recipes.GetRecipesById(recipesIds)
+		if err != nil {
+			return err
+		}
+		recipesById := make(map[int]*dao.Recipe)
+		for _, recipe := range recipes {
+			recipesById[recipe.ID] = recipe
+		}
+
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+
+		var craftItems []components.CraftItem
+		for _, craft := range crafts {
+			recipe := recipesById[craft.RecipeID]
+			itemLoader.FromRecipe(recipe)
+
+			craftItems = append(craftItems, components.CraftItem{
+				Craft:  craft,
+				Recipe: recipe,
+			})
+		}
+
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.Page("Craft plans", components.CraftList(craftItems)).Render(ctx, w)
+	})
+
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)
 		return components.Page("Not found").Render(r.Context(), w)
