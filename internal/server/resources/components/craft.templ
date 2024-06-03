@@ -10,8 +10,7 @@ templ CraftList(crafts []CraftItem) {
 		for _, craft := range crafts {
 			<tr>
 				<td>
-					{ strconv.Itoa(craft.Craft.PlanID) } - 
-					{ strconv.Itoa(craft.Craft.RecipeID) }
+					{ strconv.Itoa(craft.Craft.ID) }
 				</td>
 				<td>
 					{ strconv.Itoa(craft.Craft.Repeats) }

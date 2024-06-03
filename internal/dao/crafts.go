@@ -44,7 +44,7 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 }
 
 func (d *CraftsDao) GetCrafts() ([]*Craft, error) {
-	rows, err := d.db.Query("SELECT plan_id, worker_id, status, created, recipe_id, repeats FROM craft LIMIT 50")
+	rows, err := d.db.Query("SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft LIMIT 50")
 	if err != nil {
 		return nil, err
 	}
@@ -58,7 +58,7 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	var craft []*Craft
 	for rows.Next() {
 		var c Craft
-		err := rows.Scan(&c.PlanID, &c.WorkerID, &c.Status, &c.Created, &c.RecipeID, &c.Repeats)
+		err := rows.Scan(&c.ID, &c.PlanID, &c.WorkerID, &c.Status, &c.Created, &c.RecipeID, &c.Repeats)
 		if err != nil {
 			return nil, err
 		}

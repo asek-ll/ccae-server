@@ -20,12 +20,23 @@ local function getItems()
 
             local storage_items = {}
             local items = m.callRemote(storage_name, 'list')
-            for slot in pairs(items) do
-                local details = m.callRemote(storage_name, 'getItemDetail', slot)
+            for slot, item in pairs(items) do
+                -- local details = m.callRemote(storage_name, 'getItemDetail', slot)
+
+                local details = {
+                    name = item['name'],
+                    nbt = item['nbt'],
+                    count = item['count'],
+                    maxCount = item['count'],
+                }
+
                 if details ~= nil then
                     local cache_item = { item = details, slot = slot }
                     table.insert(storage_items, cache_item)
                 end
+            end
+            if table.getn(storage_items) == 0 then
+                storage_items = textutils.empty_json_array
             end
             table.insert(storages, { name = storage_name, size = size, items = storage_items })
         end
@@ -33,8 +44,19 @@ local function getItems()
     return storages
 end
 
+local function measureTime(func)
+    return function()
+        local start_time = os.epoch 'local'
+        local result = func()
+        local end_time = os.epoch 'local'
+        local elapsed_time = end_time - start_time
+        print(elapsed_time)
+        return result
+    end
+end
+
 return function(methods, handlers, wsclient)
-    methods['getItems'] = getItems
+    methods['getItems'] = measureTime(getItems)
     print(modem)
     print(7 * 2)
 end

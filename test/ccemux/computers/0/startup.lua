@@ -1,5 +1,4 @@
 local m1 = testnet.createModem(1)
-testnet.attachPeripheral('top', m1)
 
 local i1 = testnet.createInventory(1)
 local i2 = testnet.createInventory(1)
@@ -28,5 +27,20 @@ testnet.setItem(i2, 5, {
     maxCount = 64,
 })
 
+testnet.setItem(i2, 6, {
+    name = 'minecraft:glass',
+    count = 64,
+    maxCount = 64,
+})
 
-require 'startup2'
+ccemux.openEmu(1)
+testnet.attachPeripheral('top', m1, 1)
+
+local crafter = 2
+local crafter_modem = testnet.createModem(1)
+local crafter_buffer = testnet.createInventory(1)
+ccemux.openEmu(crafter)
+testnet.attachPeripheral('top', crafter_buffer, crafter)
+testnet.attachPeripheral('left', crafter_modem, crafter)
+
+ccemux.closeEmu()
