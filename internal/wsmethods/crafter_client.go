@@ -1,33 +1,44 @@
 package wsmethods
 
-import "time"
+import (
+	"context"
+	"fmt"
+	"time"
 
-func RepeatUntil(period time.Duration, proc func(), end chan struct{}) {
-	for {
-		select {
-		case <-time.After(period):
-			proc()
-		case <-end:
-			return
-		}
-	}
-}
+	"github.com/asek-ll/aecc-server/internal/wsrpc"
+)
 
 type CrafterClient struct {
-	clientId int
-	end      chan struct{}
+	GenericClient
+	bufferName string
 }
 
-func (c *CrafterClient) process() {
-	//select craft
+func NewCrafterClient(ID string, WS wsrpc.ClientWrapper, props map[string]any) (*CrafterClient, error) {
+	bufferName, ok := props["buffer_name"].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid buffer_name: %v", props["buffer_name"])
+	}
+	return &CrafterClient{
+		GenericClient: GenericClient{
+			ID: ID,
+			WS: WS,
+		},
+		bufferName: bufferName,
+	}, nil
 }
 
-func (c *CrafterClient) Start() {
-	go RepeatUntil(10*time.Second, func() {
-		c.process()
-	}, c.end)
+func (c *CrafterClient) BufferName() string {
+	return c.bufferName
 }
 
-func (c *CrafterClient) Stop() {
-	c.end <- struct{}{}
+func (c *CrafterClient) Craft() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return c.WS.SendRequestSync(ctx, "craft", nil, nil)
+}
+
+func (c *CrafterClient) Cleanup() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	return c.WS.SendRequestSync(ctx, "cleanup", nil, nil)
 }

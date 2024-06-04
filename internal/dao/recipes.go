@@ -282,6 +282,17 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 	return readRows(rows)
 }
 
+func (r *RecipesDao) GetRecipeById(recipeId int) (*Recipe, error) {
+	recipes, err := r.GetRecipesById([]int{recipeId})
+	if err != nil {
+		return nil, err
+	}
+	if len(recipes) == 0 {
+		return nil, fmt.Errorf("Recipe with id %d not found", recipeId)
+	}
+	return recipes[0], nil
+}
+
 func (r *RecipesDao) DeleteRecipe(id int) error {
 	tx, err := r.db.Begin()
 	if err != nil {

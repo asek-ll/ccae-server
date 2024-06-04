@@ -8,14 +8,16 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type App struct {
-	Daos          *dao.DaoProvider
-	Storage       *storage.Storage
-	Planner       *crafter.Planner
-	Crafter       *crafter.Crafter
-	RecipeManager *recipe.RecipeManager
-	PlayerManager *player.PlayerManager
-	Logger        *log.Logger
+	Daos           *dao.DaoProvider
+	Storage        *storage.Storage
+	Planner        *crafter.Planner
+	Crafter        *crafter.Crafter
+	RecipeManager  *recipe.RecipeManager
+	PlayerManager  *player.PlayerManager
+	Logger         *log.Logger
+	ClientsManager *wsmethods.ClientsManager
 }

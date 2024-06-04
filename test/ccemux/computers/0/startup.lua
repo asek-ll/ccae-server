@@ -36,11 +36,11 @@ testnet.setItem(i2, 6, {
 ccemux.openEmu(1)
 testnet.attachPeripheral('top', m1, 1)
 
-local crafter = 2
-local crafter_modem = testnet.createModem(1)
-local crafter_buffer = testnet.createInventory(1)
-ccemux.openEmu(crafter)
-testnet.attachPeripheral('top', crafter_buffer, crafter)
-testnet.attachPeripheral('left', crafter_modem, crafter)
+-- local crafter = 2
+-- local crafter_modem = testnet.createModem(1)
+-- local crafter_buffer = testnet.createInventory(1)
+-- ccemux.openEmu(crafter)
+-- testnet.attachPeripheral('top', crafter_buffer, crafter)
+-- testnet.attachPeripheral('left', crafter_modem, crafter)
 
 ccemux.closeEmu()

@@ -67,6 +67,7 @@ func (h *JsonRpcServer) AddMethod(name string, method RpcMethod) {
 func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 	var msg Message
 	err := json.Unmarshal(content, &msg)
+	log.Println("[DEBUG] Received: ", msg)
 	if err != nil {
 		return nil
 	}
@@ -74,7 +75,7 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 	if msg.Method != nil && msg.Result == nil && msg.Error == nil {
 		m, e := h.methods[*msg.Method]
 		if !e {
-			log.Printf("Unknown method: %s", *msg.Method)
+			log.Printf("[WARN] Unknown method: %s", *msg.Method)
 			return nil
 		}
 
@@ -100,7 +101,7 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 			if response != nil {
 				err := client.WriteJSON(*response)
 				if err != nil {
-					log.Printf("Error on method handle: %s, %v", *msg.Method, err)
+					log.Printf("[ERROR] Error on method handle: %s, %v", *msg.Method, err)
 				}
 			}
 		})
@@ -110,7 +111,7 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 	if msg.Method == nil && (msg.Result != nil || msg.Error != nil) {
 		done, e := h.pending[msg.ID]
 		if !e {
-			log.Printf("Not found pendition for request id: %d", msg.ID)
+			log.Printf("[ERROR] Not found pendition for request id: %d", msg.ID)
 			return nil
 		}
 		h.pool.Schedule(func() {

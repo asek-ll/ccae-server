@@ -2,20 +2,24 @@ package crafter
 
 import (
 	"errors"
+	"fmt"
 	"log"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type Crafter struct {
-	planner     *Planner
-	daoProvider *dao.DaoProvider
+	planner       *Planner
+	daoProvider   *dao.DaoProvider
+	clientManager *wsmethods.ClientsManager
 }
 
-func NewCrafter(daoProvider *dao.DaoProvider, planner *Planner) *Crafter {
+func NewCrafter(daoProvider *dao.DaoProvider, planner *Planner, clientManager *wsmethods.ClientsManager) *Crafter {
 	return &Crafter{
-		daoProvider: daoProvider,
-		planner:     planner,
+		daoProvider:   daoProvider,
+		planner:       planner,
+		clientManager: clientManager,
 	}
 }
 
@@ -114,4 +118,45 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 	}
 
 	return &planState, nil
+}
+
+func (c *Crafter) getWorkerForType(recipeType string) (Worker, error) {
+	if recipeType == "" {
+		storage, err := c.clientManager.GetStorage()
+		if err != nil {
+			return nil, err
+		}
+		if storage == nil {
+			return nil, fmt.Errorf("Storage not found")
+		}
+
+		crafter, err := c.clientManager.GetCrafter()
+		if err != nil {
+			return nil, err
+		}
+		if crafter == nil {
+			return nil, fmt.Errorf("Crafter not found")
+		}
+
+		return NewShapedCrafter(storage, crafter), nil
+	}
+	return nil, fmt.Errorf("Worker for type %s not found", recipeType)
+}
+
+func (c *Crafter) Craft(craftId int) error {
+	craft, err := c.daoProvider.Crafts.FindById(craftId)
+	if err != nil {
+		return err
+	}
+	recipe, err := c.daoProvider.Recipes.GetRecipeById(craft.RecipeID)
+	if err != nil {
+		return err
+	}
+
+	worker, err := c.getWorkerForType(recipe.Type)
+	if err != nil {
+		return err
+	}
+
+	return worker.Craft(recipe, craft.Repeats)
 }

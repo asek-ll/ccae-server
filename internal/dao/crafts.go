@@ -3,6 +3,7 @@ package dao
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -113,4 +114,23 @@ func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
 	}
 
 	return tx.Commit()
+}
+
+func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
+	rows, err := d.db.Query("SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft WHERE id = ? LIMIT 1", craftId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	crafts, err := readCrafts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(crafts) == 0 {
+		return nil, fmt.Errorf("Craft with id %d not found", craftId)
+	}
+
+	return crafts[0], nil
 }

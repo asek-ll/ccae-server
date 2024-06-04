@@ -1,6 +1,8 @@
 package storage
 
-import "github.com/asek-ll/aecc-server/internal/common"
+import (
+	"github.com/asek-ll/aecc-server/internal/common"
+)
 
 type ItemRef struct {
 	Name string `json:"name"`
@@ -31,15 +33,4 @@ type Inventory struct {
 	Name  string          `json:"name"`
 	Items []StackWithSlot `json:"items"`
 	Size  int             `json:"size"`
-}
-
-type SlotRef struct {
-	InventoryName string
-	Slot          int
-}
-
-type ExportParams struct {
-	Item   ItemRef
-	Target SlotRef
-	Amount int
 }

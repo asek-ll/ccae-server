@@ -59,4 +59,5 @@ return function(methods, handlers, wsclient)
     methods['getItems'] = measureTime(getItems)
     print(modem)
     print(7 * 2)
+    return {}
 end

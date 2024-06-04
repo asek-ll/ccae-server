@@ -19,7 +19,7 @@ templ CraftList(crafts []CraftItem) {
 					@RecipesGrid(craft.Recipe)
 				</td>
 				<td>
-					<button hx-post={ fmt.Sprintf("/crafts/%d/%d/ping", craft.Craft.PlanID, craft.Craft.RecipeID) }>PING</button>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/ping/", craft.Craft.ID) }>PING</button>
 				</td>
 			</tr>
 		}
