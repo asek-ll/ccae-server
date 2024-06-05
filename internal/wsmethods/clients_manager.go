@@ -123,15 +123,13 @@ func (c *ClientsManager) RemoveClient(id uint) error {
 }
 
 func GetClientForType[T interface{}](c *ClientsManager) (T, error) {
-	var empty T
-	log.Printf("[INFO] empty is %v", empty)
 	for _, client := range c.clients {
-		log.Printf("[INFO] check client %v", client)
 		convertedClient, ok := client.(T)
 		if ok {
 			return convertedClient, nil
 		}
 	}
+	var empty T
 	return empty, errors.New("Client not found")
 }
 

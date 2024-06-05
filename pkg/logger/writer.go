@@ -26,7 +26,7 @@ var reTrace = regexp.MustCompile(`.*/log/log\.go.*\n`)
 type templateParams struct {
 	Time    time.Time
 	Level   string
-	Message string
+	Message template.HTML
 }
 
 func extractLevel(p []byte) (Level, string) {
@@ -96,7 +96,6 @@ func newWriter(opts ...Option) io.Writer {
 }
 
 func (w *logWriter) Write(p []byte) (int, error) {
-
 	lvl, msg := extractLevel(p)
 
 	if lvl.Value < w.lvl.Value {
@@ -106,7 +105,7 @@ func (w *logWriter) Write(p []byte) (int, error) {
 	params := templateParams{
 		Time:    time.Now(),
 		Level:   w.levelFormat(lvl),
-		Message: strings.TrimSuffix(msg, "\n"),
+		Message: template.HTML(strings.TrimSuffix(msg, "\n")),
 	}
 
 	buf := bytes.Buffer{}
