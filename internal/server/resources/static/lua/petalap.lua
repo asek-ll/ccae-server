@@ -57,4 +57,6 @@ return function(_, handlers, _)
             timerId = os.startTimer(timerDuration)
         end
     end
+
+    return {}
 end

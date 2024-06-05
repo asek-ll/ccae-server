@@ -44,4 +44,5 @@ end
 return function(methods, handlers, wsclient)
     methods['getItems'] = get_items
     methods['removeItemFromPlayer'] = remove_item_from_player
+    return {}
 end
