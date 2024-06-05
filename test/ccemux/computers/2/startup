@@ -1,0 +1,116 @@
+local WsClient = {}
+
+function WsClient:new(ws)
+    local o = {
+        methodCounter = 1,
+        ws = ws,
+    }
+    setmetatable(o, { __index = self })
+    return o
+end
+
+function WsClient:send(data)
+    data['jsonrpc'] = '2.0'
+    local message = textutils.serializeJSON(data)
+    self.ws.send(message)
+    print('Send message', message)
+end
+
+function WsClient:sendMethod(method, params)
+    local id = self.methodCounter
+    self.methodCounter = id + 1
+
+    self:send { id = id, method = method, params = params }
+    return id
+end
+
+function WsClient:sendResult(id, result)
+    self:send { id = id, result = result }
+end
+
+function WsClient:sendError(id, code, message)
+    self:send { id = id, error = { code = code, message = message } }
+end
+
+function download(url, file)
+    local content = http.get(url).readAll()
+    if not content then
+        error 'Could not connect to website'
+    end
+    f = fs.open(file, 'w')
+    f.write(content)
+    f.close()
+end
+
+local eventHandlers = {}
+local methods = {
+    eval = function(body)
+        local f, msg = load(body)
+        if f == nil then
+            print(msg)
+        end
+        return f()
+    end,
+}
+
+local function listen(url, loginParams)
+    local ws = assert(http.websocket(url))
+
+    local wsClient = WsClient:new(ws)
+
+    methods['init'] = function(fileUrl)
+        download(fileUrl, 'init.lua')
+        local m = assert(loadfile 'init.lua')
+        local init = m()
+        return init(methods, eventHandlers, wsClient)
+    end
+
+    wsClient:sendMethod('login', loginParams)
+
+    while true do
+        local eventData = { os.pullEvent() }
+        local event = eventData[1]
+
+        if event == 'websocket_message' and eventData[2] == url then
+            print('Received message from ' .. eventData[2] .. ' with contents ' .. eventData[3])
+            local data = textutils.unserializeJSON(eventData[3])
+            local method = data['method']
+            local params = data['params']
+            if methods[method] ~= nil then
+                local state, result = pcall(methods[method], params)
+                if state then
+                    if result ~= nil then
+                        wsClient:sendResult(data['id'], result)
+                    end
+                else
+                    wsClient:sendError(data['id'], -1, result)
+                end
+            end
+        elseif event == 'websocket_failure' and eventData[2] == url then
+            print('Websocket failure from ' .. eventData[2] .. ' with contents ' .. eventData[3])
+            ws.close()
+            error(eventData[3])
+        elseif event == 'websocket_closed' and eventData[2] == url then
+            print('Websocket closed from ' .. eventData[2])
+            ws.close()
+            error(eventData[3])
+        elseif eventHandlers[event] ~= nil then
+            eventHandlers[event](eventData)
+        end
+    end
+end
+
+local function run(server, id, role)
+    while true do
+        local status, err = pcall(listen, server, {
+            id = id,
+            role = role,
+        })
+        if not status then
+            print('Got error' .. err)
+            os.sleep(10)
+        end
+    end
+end
+
+run('ws://localhost:12526', '1', 'crafter')

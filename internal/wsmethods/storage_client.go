@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/asek-ll/aecc-server/internal/wsrpc"
+	"github.com/asek-ll/aecc-server/internal/common"
 )
 
 type StorageClient struct {
@@ -33,6 +33,32 @@ type ImportParams struct {
 	Amount int     `json:"amount"`
 }
 
+type Stack struct {
+	Name     string `json:"name"`
+	NBT      string `json:"nbt"`
+	Count    int    `json:"count"`
+	MaxCount int    `json:"maxCount"`
+}
+
+func (s Stack) GetUID() string {
+	var nbt *string
+	if s.NBT != "" {
+		nbt = &s.NBT
+	}
+	return common.MakeUid(s.Name, nbt)
+}
+
+type StackWithSlot struct {
+	Item Stack `json:"item"`
+	Slot int   `json:"slot"`
+}
+
+type Inventory struct {
+	Name  string          `json:"name"`
+	Items []StackWithSlot `json:"items"`
+	Size  int             `json:"size"`
+}
+
 func ItemRefFromUid(uid string) ItemRef {
 	parts := strings.Split(uid, ":")
 	if len(parts) == 3 && len(parts[2]) == 32 {
@@ -43,12 +69,9 @@ func ItemRefFromUid(uid string) ItemRef {
 	return ItemRef{Name: uid}
 }
 
-func NewStorageClient(ID string, WS wsrpc.ClientWrapper) *StorageClient {
+func NewStorageClient(base GenericClient) *StorageClient {
 	return &StorageClient{
-		GenericClient: GenericClient{
-			ID: ID,
-			WS: WS,
-		},
+		GenericClient: base,
 	}
 }
 
@@ -62,4 +85,16 @@ func (s *StorageClient) ImportStack(params []ImportParams) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	return s.WS.SendRequestSync(ctx, "importStack", params, nil)
+}
+
+func (s *StorageClient) GetItems() ([]Inventory, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	var res []Inventory
+	err := s.WS.SendRequestSync(ctx, "getItems", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }

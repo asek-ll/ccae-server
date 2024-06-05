@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"time"
-
-	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
 
 type CrafterClient struct {
@@ -13,17 +11,14 @@ type CrafterClient struct {
 	bufferName string
 }
 
-func NewCrafterClient(ID string, WS wsrpc.ClientWrapper, props map[string]any) (*CrafterClient, error) {
-	bufferName, ok := props["buffer_name"].(string)
+func NewCrafterClient(base GenericClient) (*CrafterClient, error) {
+	bufferName, ok := base.Props["buffer_name"].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid buffer_name: %v", props["buffer_name"])
+		return nil, fmt.Errorf("invalid buffer_name: %v", base.Props["buffer_name"])
 	}
 	return &CrafterClient{
-		GenericClient: GenericClient{
-			ID: ID,
-			WS: WS,
-		},
-		bufferName: bufferName,
+		GenericClient: base,
+		bufferName:    bufferName,
 	}, nil
 }
 

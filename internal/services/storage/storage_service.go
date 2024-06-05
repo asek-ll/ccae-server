@@ -1,25 +1,24 @@
 package storage
 
 import (
-	"context"
 	"errors"
+	"log"
 	"sort"
-	"time"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
-	"github.com/asek-ll/aecc-server/internal/wsrpc"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type Storage struct {
-	ws          *wsrpc.JsonRpcServer
-	daoProvider *dao.DaoProvider
+	daoProvider    *dao.DaoProvider
+	clientsManager *wsmethods.ClientsManager
 }
 
-func NewStorage(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Storage {
+func NewStorage(daoProvider *dao.DaoProvider, clientsManager *wsmethods.ClientsManager) *Storage {
 	return &Storage{
-		ws:          ws,
-		daoProvider: daoProvider,
+		daoProvider:    daoProvider,
+		clientsManager: clientsManager,
 	}
 }
 
@@ -28,22 +27,19 @@ type AggregateStacks struct {
 	Count int
 }
 
-func (s *Storage) GetItemsCount() (map[string]*Stack, error) {
-	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("storage")
+func (s *Storage) GetItemsCount() (map[string]*wsmethods.Stack, error) {
+
+	storageClient, err := wsmethods.GetClientForType[*wsmethods.StorageClient](s.clientsManager)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-	defer cancel()
-
-	var res []Inventory
-	err = s.ws.SendRequestSync(ctx, id, "getItems", nil, &res)
+	res, err := storageClient.GetItems()
 	if err != nil {
 		return nil, err
 	}
 
-	uniqueItems := make(map[string]*Stack)
+	uniqueItems := make(map[string]*wsmethods.Stack)
 
 	for _, inv := range res {
 		for _, item := range inv.Items {
@@ -62,6 +58,7 @@ func (s *Storage) GetItemsCount() (map[string]*Stack, error) {
 }
 
 func (s *Storage) GetItems() ([]AggregateStacks, error) {
+	log.Println("[INFO] GEt items")
 	uniqueItems, err := s.GetItemsCount()
 	if err != nil {
 		return nil, err

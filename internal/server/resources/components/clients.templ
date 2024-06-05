@@ -1,20 +1,24 @@
 package components
 
 import (
-	"strconv"
-	"github.com/asek-ll/aecc-server/internal/dao"
+    "fmt"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
-templ ClientsPage(clients []dao.Client) {
+templ ClientsPage(clients []wsmethods.Client) {
 	@Page("Clients") {
 		<section>
 			<table>
 				for _, client := range clients {
 					<tr>
-						<td>{ client.Id }</td>
-						<td>{ client.Role }</td>
-						<td>{ strconv.FormatBool(client.Online) }</td>
-						<td>{ client.LastLogin.String() }</td>
+						<td>{ client.GetID() }</td>
+						<td>{ client.GetRole() }</td>
+						<td>{ client.GetJoinTime().String() }</td>
+						<td>
+                            for k, v := range client.GetProps() {
+                                <div>`{ k }` = `{ fmt.Sprintf("%v", v) }`</div>
+                            }
+                        </td>
 					</tr>
 				}
 			</table>

@@ -1,34 +1,23 @@
 package player
 
 import (
-	"context"
 	"log"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
-	"github.com/asek-ll/aecc-server/internal/wsrpc"
+	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
-type ItemStack struct {
-	Name         string `json:"name"`
-	Count        int    `json:"count"`
-	MaxStackSize int    `json:"maxStackSize"`
-	// Slot         int    `json:"slot"`
-	// DisplayName  string `json:"displayName"`
-	// tags: table 	A list of item tags
-	// nbt: table 	The item's nbt data
-}
-
 type PlayerManager struct {
-	ws          *wsrpc.JsonRpcServer
-	daoProvider *dao.DaoProvider
+	daoProvider    *dao.DaoProvider
+	clientsManager *wsmethods.ClientsManager
 }
 
-func NewPlayerManager(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *PlayerManager {
+func NewPlayerManager(daoProvider *dao.DaoProvider, clientsManager *wsmethods.ClientsManager) *PlayerManager {
 	pm := &PlayerManager{
-		ws:          ws,
-		daoProvider: daoProvider,
+		daoProvider:    daoProvider,
+		clientsManager: clientsManager,
 	}
 	go func() {
 		var slots []int
@@ -51,16 +40,13 @@ func NewPlayerManager(ws *wsrpc.JsonRpcServer, daoProvider *dao.DaoProvider) *Pl
 }
 
 func (s *PlayerManager) GetItems() (map[int]*crafter.Stack, error) {
-	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("player")
+
+	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	var res map[int]ItemStack
-	err = s.ws.SendRequestSync(ctx, id, "getItems", nil, &res)
+	res, err := playerClient.GetItems()
 	if err != nil {
 		return nil, err
 	}
@@ -78,31 +64,19 @@ func (s *PlayerManager) GetItems() (map[int]*crafter.Stack, error) {
 }
 
 func (s *PlayerManager) RemoveItem(slot int) (int, error) {
-	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("player")
+	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return 0, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	var res int
-	err = s.ws.SendRequestSync(ctx, id, "removeItemFromPlayer", []int{slot}, &res)
-
-	return res, err
+	return playerClient.RemoveItem(slot)
 }
 
 func (s *PlayerManager) RemoveItems(slots []int) error {
-	id, err := s.daoProvider.Clients.GetOnlineClientIdOfType("player")
+	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-
-	var res int
-	err = s.ws.SendRequestSync(ctx, id, "removeItemFromPlayer", slots, &res)
-
-	return err
+	return playerClient.RemoveItems(slots)
 }

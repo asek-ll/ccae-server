@@ -122,7 +122,7 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 
 func (c *Crafter) getWorkerForType(recipeType string) (Worker, error) {
 	if recipeType == "" {
-		storage, err := c.clientManager.GetStorage()
+		storage, err := wsmethods.GetClientForType[*wsmethods.StorageClient](c.clientManager)
 		if err != nil {
 			return nil, err
 		}
@@ -130,7 +130,7 @@ func (c *Crafter) getWorkerForType(recipeType string) (Worker, error) {
 			return nil, fmt.Errorf("Storage not found")
 		}
 
-		crafter, err := c.clientManager.GetCrafter()
+		crafter, err := wsmethods.GetClientForType[*wsmethods.CrafterClient](c.clientManager)
 		if err != nil {
 			return nil, err
 		}

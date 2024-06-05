@@ -92,11 +92,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		clients, err := app.Daos.Clients.GetClients()
-		if err != nil {
-			return err
-		}
-
+		clients := app.ClientsManager.GetClients()
 		return components.ClientsPage(clients).Render(r.Context(), w)
 	})
 

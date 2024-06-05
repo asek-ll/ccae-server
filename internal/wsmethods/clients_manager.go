@@ -2,10 +2,12 @@ package wsmethods
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
@@ -14,16 +16,34 @@ const CLIENT_ROLE_STORAGE = "storage"
 const CLIENT_ROLE_CRAFTER = "crafter"
 
 type Client interface {
-	GetId() string
+	GetID() string
+	GetRole() string
+	GetJoinTime() time.Time
+	GetProps() map[string]any
 }
 
 type GenericClient struct {
-	ID string
-	WS wsrpc.ClientWrapper
+	ID       string
+	Role     string
+	JoinTime time.Time
+	Props    map[string]any
+	WS       wsrpc.ClientWrapper
 }
 
-func (c *GenericClient) GetId() string {
+func (c *GenericClient) GetID() string {
 	return c.ID
+}
+
+func (c *GenericClient) GetRole() string {
+	return c.Role
+}
+
+func (c *GenericClient) GetJoinTime() time.Time {
+	return c.JoinTime
+}
+
+func (c *GenericClient) GetProps() map[string]any {
+	return c.Props
 }
 
 type ClientsManager struct {
@@ -38,8 +58,6 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) 
 		clientsDao: clientsDao,
 		clients:    make(map[uint]Client),
 	}
-
-	// SetupMethods(server, clientsDao)
 
 	server.SetDisconnectHandler(func(clientId uint) error {
 		return clientsManager.RemoveClient(clientId)
@@ -73,19 +91,26 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 
 	ws := wsrpc.NewClientWrapper(c.server, webscoketClientId)
 
+	genericClient := GenericClient{
+		ID:       id,
+		Role:     role,
+		JoinTime: time.Now(),
+		Props:    props,
+		WS:       ws,
+	}
 	var client Client
 
 	switch role {
 	case CLIENT_ROLE_STORAGE:
-		client = NewStorageClient(id, ws)
+		client = NewStorageClient(genericClient)
 	case CLIENT_ROLE_CRAFTER:
 		var err error
-		client, err = NewCrafterClient(id, ws, props)
+		client, err = NewCrafterClient(genericClient)
 		if err != nil {
 			return err
 		}
 	default:
-		client = &GenericClient{ID: id, WS: ws}
+		client = &genericClient
 	}
 
 	c.clients[webscoketClientId] = client
@@ -97,22 +122,19 @@ func (c *ClientsManager) RemoveClient(id uint) error {
 	return nil
 }
 
-func (c *ClientsManager) GetStorage() (*StorageClient, error) {
+func GetClientForType[T interface{}](c *ClientsManager) (T, error) {
+	var empty T
+	log.Printf("[INFO] empty is %v", empty)
 	for _, client := range c.clients {
-		storageClient, ok := client.(*StorageClient)
-		if ok {
-			return storageClient, nil
-		}
-	}
-	return nil, nil
-}
-
-func (c *ClientsManager) GetCrafter() (*CrafterClient, error) {
-	for _, client := range c.clients {
-		convertedClient, ok := client.(*CrafterClient)
+		log.Printf("[INFO] check client %v", client)
+		convertedClient, ok := client.(T)
 		if ok {
 			return convertedClient, nil
 		}
 	}
-	return nil, nil
+	return empty, errors.New("Client not found")
+}
+
+func (c *ClientsManager) GetClients() []Client {
+	return common.MapValues(c.clients)
 }
