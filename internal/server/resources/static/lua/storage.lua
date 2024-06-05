@@ -1,14 +1,19 @@
-local m = peripheral.find 'modem'
+local m = peripheral.find 'modem' --[[@as ccTweaked.peripherals.WiredModem]]
 
+---@param modem ccTweaked.peripherals.WiredModem
+---@param storage_name string
+---@return boolean
 local function is_storage(modem, storage_name)
     local methods = modem.getMethodsRemote(storage_name)
-    local has_get_item_details = false
+    if methods == nil then
+        return false
+    end
     for _, method in pairs(methods) do
         if method == 'getItemDetail' then
-            has_get_item_details = true
+            return true
         end
     end
-    return has_get_item_details
+    return false
 end
 
 local function getItems()
@@ -35,7 +40,7 @@ local function getItems()
                     table.insert(storage_items, cache_item)
                 end
             end
-            if table.getn(storage_items) == 0 then
+            if #storage_items == 0 then
                 storage_items = textutils.empty_json_array
             end
             table.insert(storages, { name = storage_name, size = size, items = storage_items })
@@ -55,9 +60,7 @@ local function measureTime(func)
     end
 end
 
-return function(methods, handlers, wsclient)
+return function(methods, _, _)
     methods['getItems'] = measureTime(getItems)
-    print(modem)
-    print(7 * 2)
     return {}
 end

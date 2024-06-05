@@ -1,5 +1,5 @@
-local input = peripheral.wrap 'right'
-local output = peripheral.wrap 'left'
+local input = peripheral.wrap 'right' --[[@as ccTweaked.peripherals.Inventory]]
+local output = peripheral.wrap 'left' --[[@as ccTweaked.peripherals.Inventory]]
 local buf = 'top'
 
 local function has_input()
@@ -18,6 +18,9 @@ local function craft()
 
     turtle.select(1)
     local b = turtle.getItemDetail()
+    if b == nil then
+        return false
+    end
     if b['name'] ~= 'minecraft:water_bucket' then
         turtle.placeDown()
     end
@@ -41,7 +44,8 @@ local function craft()
     return true
 end
 
-return function(methods, handlers, wsclient)
+---@param handlers table<string,fun(eventData:table)>
+return function(_, handlers, _)
     local timerDuration = 30
     local timerId = os.startTimer(timerDuration)
 
