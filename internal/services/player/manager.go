@@ -40,8 +40,7 @@ func NewPlayerManager(daoProvider *dao.DaoProvider, clientsManager *wsmethods.Cl
 }
 
 func (s *PlayerManager) GetItems() (map[int]*crafter.Stack, error) {
-
-	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
+	playerClient, err := wsmethods.GetClientForType[*wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +63,7 @@ func (s *PlayerManager) GetItems() (map[int]*crafter.Stack, error) {
 }
 
 func (s *PlayerManager) RemoveItem(slot int) (int, error) {
-	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
+	playerClient, err := wsmethods.GetClientForType[*wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return 0, err
 	}
@@ -73,7 +72,7 @@ func (s *PlayerManager) RemoveItem(slot int) (int, error) {
 }
 
 func (s *PlayerManager) RemoveItems(slots []int) error {
-	playerClient, err := wsmethods.GetClientForType[wsmethods.PlayerClient](s.clientsManager)
+	playerClient, err := wsmethods.GetClientForType[*wsmethods.PlayerClient](s.clientsManager)
 	if err != nil {
 		return err
 	}
