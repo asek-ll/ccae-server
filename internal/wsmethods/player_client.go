@@ -15,8 +15,8 @@ type PlayerClient struct {
 	GenericClient
 }
 
-func NewPlayerClient(base GenericClient) *StorageClient {
-	return &StorageClient{
+func NewPlayerClient(base GenericClient) *PlayerClient {
+	return &PlayerClient{
 		GenericClient: base,
 	}
 }

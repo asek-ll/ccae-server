@@ -1,5 +1,18 @@
 local m = peripheral.find 'modem' --[[@as ccTweaked.peripherals.WiredModem]]
 
+
+---@param inventory string
+local function pull_all(inventory) 
+    local items = m.callRemote(inventory, 'list')
+    for slot, item in pairs(items) do
+    end
+end
+
+local function import_stacks(params)
+
+end
+
+
 ---@param modem ccTweaked.peripherals.WiredModem
 ---@param storage_name string
 ---@return boolean
