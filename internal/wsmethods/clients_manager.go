@@ -136,6 +136,15 @@ func GetClientForType[T interface{}](c *ClientsManager) (T, error) {
 	return empty, errors.New("Client not found")
 }
 
+func CallWithClientForType[T any, V any](c *ClientsManager, fn func(client T) (V, error)) (V, error) {
+	client, err := GetClientForType[T](c)
+	if err != nil {
+		var empty V
+		return empty, err
+	}
+	return fn(client)
+}
+
 func (c *ClientsManager) GetClients() []Client {
 	return common.MapValues(c.clients)
 }

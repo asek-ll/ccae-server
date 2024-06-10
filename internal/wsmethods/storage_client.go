@@ -40,6 +40,13 @@ type Stack struct {
 	MaxCount int    `json:"maxCount"`
 }
 
+type StackDetail struct {
+	Name     string `json:"name"`
+	NBT      string `json:"nbt"`
+	Count    int    `json:"count"`
+	MaxCount int    `json:"maxCount"`
+}
+
 func (s Stack) GetUID() string {
 	var nbt *string
 	if s.NBT != "" {
@@ -73,6 +80,17 @@ func NewStorageClient(base GenericClient) *StorageClient {
 	return &StorageClient{
 		GenericClient: base,
 	}
+}
+
+func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	var detail StackDetail
+	err := s.WS.SendRequestSync(ctx, "getItemDetail", slotRef, &detail)
+	if err != nil {
+		return nil, err
+	}
+	return &detail, nil
 }
 
 func (s *StorageClient) ExportStack(params []ExportParams) error {

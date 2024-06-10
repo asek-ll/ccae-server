@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"sort"
+	"sync"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -29,12 +30,11 @@ type AggregateStacks struct {
 
 func (s *Storage) GetItemsCount() (map[string]*wsmethods.Stack, error) {
 
-	storageClient, err := wsmethods.GetClientForType[*wsmethods.StorageClient](s.clientsManager)
-	if err != nil {
-		return nil, err
-	}
+	res, err := wsmethods.CallWithClientForType(s.clientsManager,
+		func(client *wsmethods.StorageClient) ([]wsmethods.Inventory, error) {
+			return client.GetItems()
+		})
 
-	res, err := storageClient.GetItems()
 	if err != nil {
 		return nil, err
 	}
@@ -114,4 +114,69 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 		Item:    &items[0],
 		Recipes: recipes,
 	}, nil
+}
+
+type MultipleChestsStore struct {
+	StacksByUID    map[string][]StoreStack
+	Inventories    map[string][]StoreInventory
+	MaxSizeByUID   map[string]int
+	mu             sync.RWMutex
+	clientsManager *wsmethods.ClientsManager
+}
+
+func (s *MultipleChestsStore) GetMaxSize(UID string, inventory string, slot int) (int, error) {
+	s.mu.RLock()
+	size, e := s.MaxSizeByUID[UID]
+	s.mu.RUnlock()
+	if e {
+		return size, nil
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	size, e = s.MaxSizeByUID[UID]
+	if e {
+		return size, nil
+	}
+
+	res, err := wsmethods.CallWithClientForType(s.clientsManager,
+		func(client *wsmethods.StorageClient) (*wsmethods.StackDetail, error) {
+			return client.GetStackDetail(wsmethods.SlotRef{InventoryName: inventory, Slot: slot})
+		})
+	if err != nil {
+		return 0, err
+	}
+
+	s.MaxSizeByUID[UID] = res.MaxCount
+	return res.MaxCount, nil
+}
+
+func (s *MultipleChestsStore) ImportStack(UID string, slot int, inventory string, amount int) error {
+	stacks := s.StacksByUID[UID]
+	maxCount, err := s.GetMaxSize(UID, inventory, slot)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+type ManagedStore struct {
+	StacksByUID map[string]StoreStack
+}
+
+type StoreStack struct {
+	Invenory string
+	Slot     int
+	Size     int
+}
+type StoreInventory struct {
+	Name    string
+	Stacks  map[int]wsmethods.Stack
+	Size    int
+	Managed bool
+}
+type Store struct {
+	StacksByUID map[string][]StoreStack
+	Inventories map[string][]StoreInventory
 }
