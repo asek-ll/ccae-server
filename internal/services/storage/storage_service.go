@@ -116,9 +116,14 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 	}, nil
 }
 
+type ItemStore interface {
+	ImportStack(uid string, slot int, inventory string, amount int) (int, error)
+	ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error)
+}
+
 type MultipleChestsStore struct {
 	StacksByUID    map[string][]StoreStack
-	Inventories    map[string][]StoreInventory
+	Inventories    map[string]StoreInventory
 	MaxSizeByUID   map[string]int
 	mu             sync.RWMutex
 	clientsManager *wsmethods.ClientsManager
@@ -151,14 +156,129 @@ func (s *MultipleChestsStore) GetMaxSize(UID string, inventory string, slot int)
 	return res.MaxCount, nil
 }
 
-func (s *MultipleChestsStore) ImportStack(UID string, slot int, inventory string, amount int) error {
-	stacks := s.StacksByUID[UID]
-	maxCount, err := s.GetMaxSize(UID, inventory, slot)
-	if err != nil {
-		return err
+func (s *MultipleChestsStore) MoveStack(fromInventory string, fromSlot int, toInventory string, toSlot int, amount int) (int, error) {
+	return wsmethods.CallWithClientForType(s.clientsManager, func(client *wsmethods.StorageClient) (int, error) {
+		return client.MoveStack(fromInventory, fromSlot, toInventory, toSlot, amount)
+	})
+}
+
+func (s *MultipleChestsStore) setStackSize(uid string, inventory string, slot int, amount int) {
+	stacks := s.StacksByUID[uid]
+	i := 0
+	for ; i < len(stacks); i += 1 {
+		stack := stacks[i]
+		if stack.Inventory == inventory && stack.Slot == slot {
+			break
+		}
+	}
+	if amount == 0 {
+		inv := s.Inventories[inventory]
+		delete(inv.Stacks, slot)
+		if i < len(stacks) {
+			if len(stacks) == 0 {
+				s.StacksByUID[uid] = nil
+			} else {
+				stacks[i] = stacks[len(stacks)-1]
+				s.StacksByUID[uid] = stacks[0 : len(stacks)-1]
+			}
+		}
+		return
+	}
+	s.Inventories[inventory].Stacks[slot] = Stack{
+		UID:   uid,
+		Count: amount,
 	}
 
-	return nil
+	stack := StoreStack{
+		Inventory: inventory,
+		Slot:      slot,
+		Size:      amount,
+	}
+
+	if i < len(stacks) {
+		stacks[i] = stack
+	} else {
+		s.StacksByUID[uid] = append(stacks, stack)
+	}
+}
+
+func (s *MultipleChestsStore) ImportToEmptySlot(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
+	for name, inv := range s.Inventories {
+		if inv.Size > len(inv.Stacks) {
+			for i := 1; i <= inv.Size; i += 1 {
+				if _, e := inv.Stacks[i]; !e {
+					moved, err := s.MoveStack(fromInventory, fromSlot, name, i, amount)
+					if err != nil {
+						return 0, err
+					}
+
+					s.setStackSize(uid, name, i, amount)
+					return moved, nil
+				}
+			}
+
+		}
+	}
+	return 0, nil
+}
+
+func (s *MultipleChestsStore) ImportStack(uid string, slot int, inventory string, amount int) (int, error) {
+	stacks := s.StacksByUID[uid]
+	if len(stacks) == 0 {
+		return s.ImportToEmptySlot(uid, inventory, slot, amount)
+	}
+	maxCount, err := s.GetMaxSize(uid, inventory, slot)
+	if err != nil {
+		return 0, err
+	}
+
+	remain := amount
+
+	for _, stack := range stacks {
+		toTransfer := min(maxCount-stack.Size, remain)
+		if toTransfer > 0 {
+			moved, err := s.MoveStack(inventory, slot, stack.Inventory, stack.Slot, toTransfer)
+			if err != nil {
+				return 0, err
+			}
+			s.setStackSize(uid, stack.Inventory, stack.Slot, stack.Size+moved)
+			remain -= moved
+			if remain == 0 {
+				break
+			}
+		}
+	}
+	if remain > 0 {
+		moved, err := s.ImportToEmptySlot(uid, inventory, slot, remain)
+		if err != nil {
+			return 0, err
+		}
+		remain -= moved
+	}
+
+	return amount - remain, nil
+}
+
+func (s *MultipleChestsStore) ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error) {
+	stacks := s.StacksByUID[uid]
+
+	remain := amount
+	for _, stack := range stacks {
+		toTransfer := min(stack.Size, remain)
+		if toTransfer > 0 {
+			moved, err := s.MoveStack(stack.Inventory, stack.Slot, toInventory, toSlot, toTransfer)
+			if err != nil {
+				return 0, err
+			}
+			s.setStackSize(uid, stack.Inventory, stack.Slot, stack.Size-moved)
+			remain -= moved
+			if remain == 0 {
+				break
+			}
+		}
+	}
+
+	return amount - remain, nil
 }
 
 type ManagedStore struct {
@@ -166,17 +286,19 @@ type ManagedStore struct {
 }
 
 type StoreStack struct {
-	Invenory string
-	Slot     int
-	Size     int
+	Inventory string
+	Slot      int
+	Size      int
 }
+
+type Stack struct {
+	UID   string
+	Count int
+}
+
 type StoreInventory struct {
 	Name    string
-	Stacks  map[int]wsmethods.Stack
+	Stacks  map[int]Stack
 	Size    int
 	Managed bool
-}
-type Store struct {
-	StacksByUID map[string][]StoreStack
-	Inventories map[string][]StoreInventory
 }

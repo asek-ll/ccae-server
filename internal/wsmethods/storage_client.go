@@ -82,6 +82,27 @@ func NewStorageClient(base GenericClient) *StorageClient {
 	}
 }
 
+type MoveStackParams struct {
+	From   SlotRef
+	To     SlotRef
+	Amount int
+}
+
+func (s *StorageClient) MoveStack(fromInventory string, fromSlot int, toInventory string, toSlot int, amount int) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	var moved int
+	err := s.WS.SendRequestSync(ctx, "moveStack", MoveStackParams{
+		From:   SlotRef{InventoryName: fromInventory, Slot: fromSlot},
+		To:     SlotRef{InventoryName: toInventory, Slot: toSlot},
+		Amount: amount,
+	}, &moved)
+	if err != nil {
+		return 0, err
+	}
+	return moved, nil
+}
+
 func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
