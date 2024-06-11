@@ -89,8 +89,8 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 	state := make(map[string]int)
 
 	for _, item := range expandState.Items {
-		if sc, e := storageCounts[item]; e {
-			state[item] = sc.Count
+		if count, e := storageCounts[item]; e {
+			state[item] = count
 		}
 	}
 	state[uid] = -count
@@ -128,8 +128,8 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 
 	for _, item := range expandState.Items {
 		var storageCount int
-		if s, e := storageCounts[item]; e {
-			storageCount = s.Count
+		if count, e := storageCounts[item]; e {
+			storageCount = count
 		}
 		resultCount := state[item]
 		if storageCount == resultCount {

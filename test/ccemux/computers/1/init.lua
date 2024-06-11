@@ -1,21 +1,40 @@
-local m = peripheral.find 'modem'
+local m = peripheral.find 'modem' --[[@as ccTweaked.peripherals.WiredModem]]
 
+---@param modem ccTweaked.peripherals.WiredModem
+---@param storage_name string
+---@return boolean
 local function is_storage(modem, storage_name)
     local methods = modem.getMethodsRemote(storage_name)
-    local has_get_item_details = false
+    if methods == nil then
+        return false
+    end
     for _, method in pairs(methods) do
         if method == 'getItemDetail' then
-            has_get_item_details = true
+            return true
         end
     end
-    return has_get_item_details
+    return false
 end
 
-local function getItems()
+local function json_list(table)
+    if #table == 0 then
+        return textutils.empty_json_array
+    end
+    return table
+end
+
+local function getItems(storage_prefixes)
     local storages = {}
 
     for _, storage_name in pairs(m.getNamesRemote()) do
-        if is_storage(m, storage_name) then
+        local valid = false
+        for _, prefix in pairs(storage_prefixes) do
+            if string.sub(storage_name, 1, string.len(prefix)) == prefix then
+                valid = true
+                break
+            end
+        end
+        if valid and is_storage(m, storage_name) then
             local size = m.callRemote(storage_name, 'size')
 
             local storage_items = {}
@@ -35,19 +54,16 @@ local function getItems()
                     table.insert(storage_items, cache_item)
                 end
             end
-            if table.getn(storage_items) == 0 then
-                storage_items = textutils.empty_json_array
-            end
-            table.insert(storages, { name = storage_name, size = size, items = storage_items })
+            table.insert(storages, { name = storage_name, size = size, items = json_list(storage_items) })
         end
     end
-    return storages
+    return json_list(storages)
 end
 
 local function measureTime(func)
-    return function()
+    return function(...)
         local start_time = os.epoch 'local'
-        local result = func()
+        local result = func(...)
         local end_time = os.epoch 'local'
         local elapsed_time = end_time - start_time
         print(elapsed_time)
@@ -55,9 +71,7 @@ local function measureTime(func)
     end
 end
 
-return function(methods, handlers, wsclient)
+return function(methods, _, _)
     methods['getItems'] = measureTime(getItems)
-    print(modem)
-    print(7 * 2)
     return {}
 end

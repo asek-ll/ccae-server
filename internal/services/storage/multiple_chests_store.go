@@ -6,17 +6,6 @@ import (
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
-type StoreStack struct {
-	Inventory string
-	Slot      int
-	Size      int
-}
-
-type Stack struct {
-	UID   string
-	Count int
-}
-
 type StoreInventory struct {
 	FreeSlots int
 	Size      int

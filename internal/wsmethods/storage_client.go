@@ -126,12 +126,12 @@ func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
 // 	return s.WS.SendRequestSync(ctx, "importStack", params, nil)
 // }
 
-func (s *StorageClient) GetItems() ([]Inventory, error) {
+func (s *StorageClient) GetItems(prefixes []string) ([]Inventory, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
 	var res []Inventory
-	err := s.WS.SendRequestSync(ctx, "getItems", nil, &res)
+	err := s.WS.SendRequestSync(ctx, "getItems", prefixes, &res)
 	if err != nil {
 		return nil, err
 	}

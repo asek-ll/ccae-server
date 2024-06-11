@@ -16,7 +16,10 @@ type CombinedStore struct {
 	warmStorage    *MultipleChestsStore
 	loadedAt       time.Time
 	storageAdapter *wsmethods.StorageAdapter
-	mu             sync.RWMutex
+
+	itemStats map[string]int
+
+	mu sync.RWMutex
 }
 
 func NewCombinedStore(
@@ -34,19 +37,26 @@ func NewCombinedStore(
 func (s *CombinedStore) sync() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	items, err := s.storageAdapter.GetItems()
+	items, err := s.storageAdapter.GetItems([]string{s.coldStoragePrefix, s.warmStoragePrefix})
 	if err != nil {
 		return err
 	}
+
+	s.itemStats = make(map[string]int)
 
 	s.warmStorage.Clear()
 	for _, inventory := range items {
 		if strings.HasPrefix(inventory.Name, s.coldStoragePrefix) {
 			s.coldStorage.Sync(&inventory)
+		} else if strings.HasPrefix(inventory.Name, s.warmStoragePrefix) {
+			s.warmStorage.Add(&inventory)
+		} else {
+			continue
 		}
 
-		if strings.HasPrefix(inventory.Name, s.warmStoragePrefix) {
-			s.warmStorage.Add(&inventory)
+		for _, item := range inventory.Items {
+			id := item.Item.GetUID()
+			s.itemStats[id] += item.Item.Count
 		}
 	}
 	s.loadedAt = time.Now()
@@ -105,4 +115,15 @@ func (s *CombinedStore) ExportStack(uid string, toInventory string, toSlot int, 
 	}
 
 	return movedCold, nil
+}
+
+func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
+	err := s.checkSync()
+	if err != nil {
+		return nil, err
+	}
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.itemStats, nil
 }

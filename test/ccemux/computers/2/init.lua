@@ -1,10 +1,22 @@
-local m = peripheral.find 'modem'
+local m = peripheral.find 'modem' --[[@as ccTweaked.peripherals.WiredModem]]
 
 local config = {}
 
+local function dump_out()
+    for i = 1, 16 do
+        local cnt = turtle.getItemCount(i)
+        if cnt > 0 then
+            turtle.select(i)
+            turtle.dropUp(cnt)
+        end
+    end
+end
+
 local function get_placeholder_no(name)
     local methods = m.getMethodsRemote(name)
-    print('check ' .. name)
+    if methods == nil then
+        return nil
+    end
     for _, method in pairs(methods) do
         if method == 'getItemDetail' then
             local first_slot = m.callRemote(name, 'getItemDetail', 1)
@@ -17,7 +29,7 @@ local function get_placeholder_no(name)
 end
 
 local function gen_config()
-    local config = {
+    local cfg = {
         buffer_side = 'top',
     }
 
@@ -26,31 +38,34 @@ local function gen_config()
         if no ~= nil then
             print(name, no)
             if no == 1 then
-                config['buffer_name'] = name
+                cfg['buffer_name'] = name
             end
         end
     end
 
-    if config['buffer_name'] == nil then
+    if cfg['buffer_name'] == nil then
         error 'wrong config'
     end
 
-    return config
+    return cfg
 end
 
 local function setup()
-    local config = loadfile 'config.lua'
-    if config == nil then
-        config = gen_config()
+    local cfg_load = loadfile 'config.lua'
+    if cfg_load == nil then
+        local cfg = gen_config()
 
         local f = fs.open('config.lua', 'w')
+        if f == nil then
+            error "can't open config"
+        end
         f.write 'return '
         f.write(textutils.serialize(config))
         f.close()
 
-        return config
+        return cfg
     end
-    return config()
+    return cfg_load()
 end
 
 return function(methods, handlers, wsclient)

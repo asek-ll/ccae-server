@@ -10,6 +10,12 @@ import (
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
+type ItemStore interface {
+	ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error)
+	ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error)
+	GetItemsCount() (map[string]int, error)
+}
+
 type Storage struct {
 	daoProvider    *dao.DaoProvider
 	storageAdapter *wsmethods.StorageAdapter
@@ -30,35 +36,13 @@ type AggregateStacks struct {
 	Count int
 }
 
-func (s *Storage) GetItemsCount() (map[string]*wsmethods.Stack, error) {
-
-	res, err := s.storageAdapter.GetItems()
-
-	if err != nil {
-		return nil, err
-	}
-
-	uniqueItems := make(map[string]*wsmethods.Stack)
-
-	for _, inv := range res {
-		for _, item := range inv.Items {
-			id := item.Item.GetUID()
-			stack, e := uniqueItems[id]
-			if !e {
-				uniqueItems[id] = &item.Item
-			} else {
-				stack.Count += item.Item.Count
-				stack.MaxCount += item.Item.MaxCount
-			}
-		}
-	}
-
-	return uniqueItems, nil
+func (s *Storage) GetItemsCount() (map[string]int, error) {
+	return s.combinedStore.GetItemsCount()
 }
 
 func (s *Storage) GetItems() ([]AggregateStacks, error) {
-	log.Println("[INFO] GEt items")
-	uniqueItems, err := s.GetItemsCount()
+	log.Println("[INFO] Get items")
+	uniqueItems, err := s.combinedStore.GetItemsCount()
 	if err != nil {
 		return nil, err
 	}
@@ -75,7 +59,7 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 	for _, item := range items {
 		stacks = append(stacks, AggregateStacks{
 			Item:  item,
-			Count: uniqueItems[item.UID].Count,
+			Count: uniqueItems[item.UID],
 		})
 	}
 
@@ -123,14 +107,14 @@ func (s *Storage) ExportStack(uid string, toInventory string, toSlot int, amount
 	return s.combinedStore.ExportStack(uid, toInventory, toSlot, amount)
 }
 
-type ItemStore interface {
-	ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error)
-	ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error)
-}
-
 type SlotRef struct {
 	Inventory string
 	Slot      int
+}
+
+type Stack struct {
+	UID   string
+	Count int
 }
 
 type IndexedInventory map[string]map[SlotRef]int

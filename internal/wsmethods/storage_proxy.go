@@ -22,8 +22,8 @@ func (s *StorageAdapter) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
 	})
 }
 
-func (s *StorageAdapter) GetItems() ([]Inventory, error) {
+func (s *StorageAdapter) GetItems(prefixes []string) ([]Inventory, error) {
 	return CallWithClientForType(s.clientsManager, func(client *StorageClient) ([]Inventory, error) {
-		return client.GetItems()
+		return client.GetItems(prefixes)
 	})
 }
