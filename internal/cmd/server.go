@@ -40,7 +40,7 @@ func (s ServerCommand) Execute(args []string) error {
 	storageService := storage.NewStorage(daos, clientsManager)
 	playerManager := player.NewPlayerManager(daos, clientsManager)
 	plannerService := crafter.NewPlanner(daos, storageService)
-	crafterService := crafter.NewCrafter(daos, plannerService, clientsManager)
+	crafterService := crafter.NewCrafter(daos, plannerService, clientsManager, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)
 
 	app := &app.App{

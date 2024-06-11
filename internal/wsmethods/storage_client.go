@@ -114,17 +114,17 @@ func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
 	return &detail, nil
 }
 
-func (s *StorageClient) ExportStack(params []ExportParams) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	return s.WS.SendRequestSync(ctx, "exportStack", params, nil)
-}
+// func (s *StorageClient) ExportStack(params []ExportParams) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+// 	defer cancel()
+// 	return s.WS.SendRequestSync(ctx, "exportStack", params, nil)
+// }
 
-func (s *StorageClient) ImportStack(params []ImportParams) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-	defer cancel()
-	return s.WS.SendRequestSync(ctx, "importStack", params, nil)
-}
+// func (s *StorageClient) ImportStack(params []ImportParams) error {
+// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+// 	defer cancel()
+// 	return s.WS.SendRequestSync(ctx, "importStack", params, nil)
+// }
 
 func (s *StorageClient) GetItems() ([]Inventory, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)

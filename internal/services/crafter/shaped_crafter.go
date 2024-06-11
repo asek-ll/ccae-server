@@ -2,15 +2,16 @@ package crafter
 
 import (
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type ShapedCrafter struct {
-	storage *wsmethods.StorageClient
+	storage storage.ItemStore
 	crafter *wsmethods.CrafterClient
 }
 
-func NewShapedCrafter(storage *wsmethods.StorageClient, crafter *wsmethods.CrafterClient) *ShapedCrafter {
+func NewShapedCrafter(storage storage.ItemStore, crafter *wsmethods.CrafterClient) *ShapedCrafter {
 	return &ShapedCrafter{
 		storage: storage,
 		crafter: crafter,
@@ -23,13 +24,7 @@ func (c *ShapedCrafter) Craft(recipe *dao.Recipe, repeats int) error {
 		return err
 	}
 	for _, ing := range recipe.Ingredients {
-		slot := wsmethods.SlotRef{
-			InventoryName: c.crafter.BufferName(),
-			Slot:          *ing.Slot,
-		}
-		err := c.storage.ExportStack([]wsmethods.ExportParams{
-			{Item: wsmethods.ItemRefFromUid(ing.ItemUID), Target: slot, Amount: ing.Amount * repeats},
-		})
+		_, err := c.storage.ExportStack(ing.ItemUID, c.crafter.BufferName(), *ing.Slot, ing.Amount*repeats)
 		if err != nil {
 			c.crafter.Cleanup()
 			return err

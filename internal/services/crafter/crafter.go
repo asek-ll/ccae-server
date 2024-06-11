@@ -6,6 +6,7 @@ import (
 	"log"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
@@ -13,13 +14,20 @@ type Crafter struct {
 	planner       *Planner
 	daoProvider   *dao.DaoProvider
 	clientManager *wsmethods.ClientsManager
+	storage       *storage.Storage
 }
 
-func NewCrafter(daoProvider *dao.DaoProvider, planner *Planner, clientManager *wsmethods.ClientsManager) *Crafter {
+func NewCrafter(
+	daoProvider *dao.DaoProvider,
+	planner *Planner,
+	clientManager *wsmethods.ClientsManager,
+	storage *storage.Storage,
+) *Crafter {
 	return &Crafter{
 		daoProvider:   daoProvider,
 		planner:       planner,
 		clientManager: clientManager,
+		storage:       storage,
 	}
 }
 
@@ -122,14 +130,6 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 
 func (c *Crafter) getWorkerForType(recipeType string) (Worker, error) {
 	if recipeType == "" {
-		storage, err := wsmethods.GetClientForType[*wsmethods.StorageClient](c.clientManager)
-		if err != nil {
-			return nil, err
-		}
-		if storage == nil {
-			return nil, fmt.Errorf("Storage not found")
-		}
-
 		crafter, err := wsmethods.GetClientForType[*wsmethods.CrafterClient](c.clientManager)
 		if err != nil {
 			return nil, err
@@ -138,7 +138,7 @@ func (c *Crafter) getWorkerForType(recipeType string) (Worker, error) {
 			return nil, fmt.Errorf("Crafter not found")
 		}
 
-		return NewShapedCrafter(storage, crafter), nil
+		return NewShapedCrafter(c.storage, crafter), nil
 	}
 	return nil, fmt.Errorf("Worker for type %s not found", recipeType)
 }
