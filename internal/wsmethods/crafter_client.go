@@ -12,7 +12,7 @@ type CrafterClient struct {
 }
 
 func NewCrafterClient(base GenericClient) (*CrafterClient, error) {
-	bufferName, ok := base.Props["buffer_name"].(string)
+	bufferName, ok := base.Props["buffer_name"]
 	if !ok {
 		return nil, fmt.Errorf("invalid buffer_name: %v", base.Props["buffer_name"])
 	}
@@ -26,14 +26,24 @@ func (c *CrafterClient) BufferName() string {
 	return c.bufferName
 }
 
-func (c *CrafterClient) Craft() error {
+func (c *CrafterClient) Craft() (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	return c.WS.SendRequestSync(ctx, "craft", nil, nil)
+	var res bool
+	err := c.WS.SendRequestSync(ctx, "craft", nil, &res)
+	if err != nil {
+		return false, err
+	}
+	return res, nil
 }
 
-func (c *CrafterClient) Cleanup() error {
+func (c *CrafterClient) DumpOut() (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
-	return c.WS.SendRequestSync(ctx, "cleanup", nil, nil)
+	var res bool
+	err := c.WS.SendRequestSync(ctx, "dumpOut", nil, &res)
+	if err != nil {
+		return false, err
+	}
+	return res, nil
 }

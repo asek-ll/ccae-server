@@ -20,14 +20,14 @@ type Client interface {
 	GetID() string
 	GetRole() string
 	GetJoinTime() time.Time
-	GetProps() map[string]any
+	GetProps() map[string]string
 }
 
 type GenericClient struct {
 	ID       string
 	Role     string
 	JoinTime time.Time
-	Props    map[string]any
+	Props    map[string]string
 	WS       wsrpc.ClientWrapper
 }
 
@@ -43,7 +43,7 @@ func (c *GenericClient) GetJoinTime() time.Time {
 	return c.JoinTime
 }
 
-func (c *GenericClient) GetProps() map[string]any {
+func (c *GenericClient) GetProps() map[string]string {
 	return c.Props
 }
 
@@ -70,7 +70,7 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 		defer cancel()
 
-		props := make(map[string]any)
+		props := make(map[string]string)
 		err := server.SendRequestSync(ctx, clientId, "init", url, &props)
 		if err != nil {
 			log.Printf("[ERROR] Can't init client: %v", err)
@@ -88,7 +88,7 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) 
 	return clientsManager
 }
 
-func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role string, props map[string]any) error {
+func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role string, props map[string]string) error {
 
 	ws := wsrpc.NewClientWrapper(c.server, webscoketClientId)
 

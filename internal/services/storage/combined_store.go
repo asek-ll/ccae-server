@@ -9,9 +9,6 @@ import (
 )
 
 type CombinedStore struct {
-	coldStoragePrefix string
-	warmStoragePrefix string
-
 	coldStorage    *SemiManagedStore
 	warmStorage    *MultipleChestsStore
 	loadedAt       time.Time
@@ -26,18 +23,24 @@ func NewCombinedStore(
 	storageAdapter *wsmethods.StorageAdapter,
 ) *CombinedStore {
 	return &CombinedStore{
-		coldStoragePrefix: "storagedrowers:",
-		warmStoragePrefix: "ironchest:diamond_chest",
-		coldStorage:       NewSemiManagedStore(storageAdapter),
-		warmStorage:       NewMultipleChestsStore(storageAdapter),
-		storageAdapter:    storageAdapter,
+		coldStorage:    NewSemiManagedStore(storageAdapter),
+		warmStorage:    NewMultipleChestsStore(storageAdapter),
+		storageAdapter: storageAdapter,
 	}
 }
 
 func (s *CombinedStore) sync() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	items, err := s.storageAdapter.GetItems([]string{s.coldStoragePrefix, s.warmStoragePrefix})
+
+	props, err := s.storageAdapter.GetProps()
+	if err != nil {
+		return err
+	}
+	coldStoragePrefix := props["cold_storage_prefix"]
+	warmStoragePrefix := props["warm_storage_prefix"]
+
+	items, err := s.storageAdapter.GetItems([]string{coldStoragePrefix, warmStoragePrefix})
 	if err != nil {
 		return err
 	}
@@ -46,9 +49,9 @@ func (s *CombinedStore) sync() error {
 
 	s.warmStorage.Clear()
 	for _, inventory := range items {
-		if strings.HasPrefix(inventory.Name, s.coldStoragePrefix) {
+		if strings.HasPrefix(inventory.Name, coldStoragePrefix) {
 			s.coldStorage.Sync(&inventory)
-		} else if strings.HasPrefix(inventory.Name, s.warmStoragePrefix) {
+		} else if strings.HasPrefix(inventory.Name, warmStoragePrefix) {
 			s.warmStorage.Add(&inventory)
 		} else {
 			continue

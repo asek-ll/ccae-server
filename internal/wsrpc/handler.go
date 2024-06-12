@@ -155,6 +155,7 @@ func (h *JsonRpcServer) SendRequestSync(ctx context.Context, clientId uint, meth
 	if !e {
 		return errors.New("Client not exists")
 	}
+	log.Printf("[INFO] Client call %d %s %v", clientId, method, params)
 
 	done := make(chan *Message)
 

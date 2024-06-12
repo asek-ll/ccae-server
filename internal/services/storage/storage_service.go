@@ -11,6 +11,7 @@ import (
 )
 
 type ItemStore interface {
+	ImportAll(fromInventory string) error
 	ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error)
 	ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error)
 	GetItemsCount() (map[string]int, error)
@@ -105,6 +106,21 @@ func (s *Storage) ImportStack(uid string, fromInventory string, fromSlot int, am
 
 func (s *Storage) ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error) {
 	return s.combinedStore.ExportStack(uid, toInventory, toSlot, amount)
+}
+
+func (s *Storage) ImportAll(inventoryName string) error {
+	items, err := s.storageAdapter.ListItems(inventoryName)
+	if err != nil {
+		return err
+	}
+
+	for _, item := range items {
+		_, err := s.ImportStack(item.Item.GetUID(), inventoryName, item.Slot, item.Item.Count)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type SlotRef struct {
