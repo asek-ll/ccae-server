@@ -93,53 +93,56 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 			state[item] = count
 		}
 	}
-	state[uid] = -count
-
 	var steps []Step
 
-	for _, item := range expandState.Items {
-		if state[item] < 0 {
-			toCraft := -state[item]
-			recipe, e := expandState.Recipes[item]
-			if !e {
-				continue
-			}
-
-			repeats := ceil(toCraft, recipe.Results[0].Amount)
-
-			for _, ing := range recipe.Ingredients {
-				ingredientCount := ing.Amount * repeats
-				state[ing.ItemUID] -= ingredientCount
-			}
-
-			for _, ing := range recipe.Results {
-				ingredientCount := ing.Amount * repeats
-				state[ing.ItemUID] += ingredientCount
-			}
-
-			steps = append(steps, Step{
-				Recipe:  recipe,
-				Repeats: repeats,
-			})
-		}
-	}
-
-	var related []Related
+	related := make(map[string]*Related)
 
 	for _, item := range expandState.Items {
-		var storageCount int
-		if count, e := storageCounts[item]; e {
-			storageCount = count
-		}
-		resultCount := state[item]
-		if storageCount == resultCount {
+		if state[item] >= 0 && item != uid {
 			continue
 		}
 
-		related = append(related, Related{
-			ItemUID:       item,
-			ResultAmount:  resultCount,
-			StorageAmount: storageCount,
+		var toCraft int
+		if item == uid {
+			toCraft = count
+		} else {
+			toCraft = -state[item]
+		}
+
+		recipe, e := expandState.Recipes[item]
+		if !e {
+			continue
+		}
+
+		repeats := ceil(toCraft, recipe.Results[0].Amount)
+
+		for _, ing := range recipe.Ingredients {
+			ingredientCount := ing.Amount * repeats
+			state[ing.ItemUID] -= ingredientCount
+
+			r, e := related[ing.ItemUID]
+			if !e {
+				r = &Related{StorageAmount: storageCounts[ing.ItemUID]}
+				related[ing.ItemUID] = r
+			}
+			r.Consumed += ingredientCount
+		}
+
+		for _, ing := range recipe.Results {
+			ingredientCount := ing.Amount * repeats
+			state[ing.ItemUID] += ingredientCount
+
+			r, e := related[ing.ItemUID]
+			if !e {
+				r = &Related{StorageAmount: storageCounts[ing.ItemUID]}
+				related[ing.ItemUID] = r
+			}
+			r.Produced += ingredientCount
+		}
+
+		steps = append(steps, Step{
+			Recipe:  recipe,
+			Repeats: repeats,
 		})
 	}
 

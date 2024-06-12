@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/common"
@@ -51,6 +52,8 @@ type ClientsManager struct {
 	server     *wsrpc.JsonRpcServer
 	clientsDao *dao.ClientsDao
 	clients    map[uint]Client
+
+	mu sync.RWMutex
 }
 
 func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) *ClientsManager {
@@ -116,16 +119,22 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 		client = &genericClient
 	}
 
+	c.mu.Lock()
 	c.clients[webscoketClientId] = client
+	c.mu.Unlock()
 	return nil
 }
 
 func (c *ClientsManager) RemoveClient(id uint) error {
+	c.mu.Lock()
 	delete(c.clients, id)
+	c.mu.Unlock()
 	return nil
 }
 
 func GetClientForType[T interface{}](c *ClientsManager) (T, error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	for _, client := range c.clients {
 		convertedClient, ok := client.(T)
 		if ok {
@@ -146,5 +155,7 @@ func CallWithClientForType[T any, V any](c *ClientsManager, fn func(client T) (V
 }
 
 func (c *ClientsManager) GetClients() []Client {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 	return common.MapValues(c.clients)
 }

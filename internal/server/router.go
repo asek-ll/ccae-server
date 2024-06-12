@@ -451,6 +451,26 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.Page("Craft plan", components.PlanDetail(plan)).Render(ctx, w)
 	})
 
+	handleFuncWithError(common, "DELETE /craft-plans/{planId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		planIdStr := r.PathValue("planId")
+		planId, err := strconv.Atoi(planIdStr)
+		if err != nil {
+			return err
+		}
+		plan, err := app.Daos.Plans.GetPlanById(planId)
+		if err != nil {
+			return err
+		}
+
+		err = app.Daos.Plans.RemovePlan(plan.ID)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", "/craft-plans/")
+		return nil
+	})
+
 	handleFuncWithError(common, "POST /craft-plans/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 		strCount := r.PathValue("count")

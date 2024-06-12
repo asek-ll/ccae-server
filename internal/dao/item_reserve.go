@@ -30,30 +30,19 @@ func NewItemReserveDao(db *sql.DB) (*ItemReserveDao, error) {
 	}, nil
 }
 
-func (d *ItemReserveDao) ReleaseItems(tx *sql.Tx, reserves []ItemReserve) error {
-	for _, reserve := range reserves {
-		_, err := tx.Exec("UPDATE item_reserve SET amount = amount - ? WHERE item_uid = ?",
-			reserve.Amount, reserve.ItemUID)
+func ReleaseItems(tx *sql.Tx, uid string, amount int) error {
+	_, err := tx.Exec("UPDATE item_reserve SET amount = amount - ? WHERE item_uid = ?", amount, uid)
 
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
-func (d *ItemReserveDao) ReserveItems(tx *sql.Tx, reserves []ItemReserve) error {
-	for _, reserve := range reserves {
-		_, err := tx.Exec(`
-		INSERT OR INGORE INTO item_reserve VALUES(?, 0);
-		UPDATE item_reserve SET amount = amount + ? WHERE item_uid = ?;
-		`, reserve.ItemUID, reserve.Amount, reserve.ItemUID)
+func ReserveItem(tx *sql.Tx, uid string, amount int) error {
+	_, err := tx.Exec(`
+	INSERT OR IGNORE INTO item_reserve VALUES(?, 0);
+	UPDATE item_reserve SET amount = amount + ? WHERE item_uid = ?;
+	`, uid, amount, uid)
 
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	return err
 }
 
 func (d *ItemReserveDao) UpdateItemCount(uid string, count int) error {

@@ -99,8 +99,11 @@ func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
 	}
 
 	for _, ing := range recipe.Ingredients {
-		res, err := tx.Exec("UPDATE plan_item_state SET amount = amount - ? WHERE item_uid = ? AND plan_id = ? AND amount >= ?",
-			ing.Amount*repeats, ing.ItemUID, planId, ing.Amount*repeats)
+		amount := ing.Amount * repeats
+		res, err := tx.Exec(`
+		UPDATE plan_item_state SET amount = amount - ?, required_amount = required_amount - ?
+		WHERE item_uid = ? AND plan_id = ? AND amount >= ?`,
+			amount, amount, ing.ItemUID, planId, amount)
 		if err != nil {
 			return err
 		}
@@ -110,6 +113,11 @@ func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
 		}
 		if afftected == 0 {
 			return errors.New("Can't acquire ingredients")
+		}
+
+		err = ReleaseItems(tx, ing.ItemUID, amount)
+		if err != nil {
+			return err
 		}
 	}
 

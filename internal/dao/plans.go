@@ -6,8 +6,9 @@ import (
 )
 
 type PlanItemState struct {
-	ItemUID string
-	Amount  int
+	ItemUID        string
+	Amount         int
+	RequiredAmount int
 }
 
 type PlanStepState struct {
@@ -42,7 +43,8 @@ func NewPlansDao(db *sql.DB) (*PlansDao, error) {
 	CREATE TABLE IF NOT EXISTS plan_item_state (
 		plan_id INTEGER NOT NULL,
 		item_uid string NOT NULL,
-		amount integer NOT NULL
+		amount integer NOT NULL,
+		required_amount integer NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS plan_step_state (
@@ -121,7 +123,7 @@ func (d *PlansDao) GetPlans() ([]*PlanState, error) {
 }
 
 func (d *PlansDao) GetPlanItemState(planId int) ([]PlanItemState, error) {
-	rows, err := d.db.Query("SELECT item_uid, amount FROM plan_item_state WHERE plan_id = ?", planId)
+	rows, err := d.db.Query("SELECT item_uid, amount, required_amount FROM plan_item_state WHERE plan_id = ?", planId)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +136,7 @@ func readPlanItemState(rows *sql.Rows) ([]PlanItemState, error) {
 	var planItemState []PlanItemState
 	for rows.Next() {
 		itemState := PlanItemState{}
-		err := rows.Scan(&itemState.ItemUID, &itemState.Amount)
+		err := rows.Scan(&itemState.ItemUID, &itemState.Amount, &itemState.RequiredAmount)
 		if err != nil {
 			return nil, err
 		}
@@ -195,7 +197,12 @@ func (d *PlansDao) InsertPlan(plan *PlanState) error {
 	plan.ID = int(id)
 
 	for _, item := range plan.Items {
-		_, err := tx.Exec("INSERT INTO plan_item_state (plan_id, item_uid, amount) VALUES (?, ?, ?)", plan.ID, item.ItemUID, item.Amount)
+		_, err := tx.Exec("INSERT INTO plan_item_state (plan_id, item_uid, amount, required_amount) VALUES (?, ?, ?, ?)",
+			plan.ID, item.ItemUID, item.Amount, item.RequiredAmount)
+		if err != nil {
+			return err
+		}
+		err = ReserveItem(tx, item.ItemUID, item.Amount)
 		if err != nil {
 			return err
 		}
@@ -206,6 +213,49 @@ func (d *PlansDao) InsertPlan(plan *PlanState) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	return tx.Commit()
+}
+
+func (d *PlansDao) RemovePlan(planId int) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	_, err = tx.Exec("DELETE FROM plan_state WHERE id = ?", planId)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM plan_step_state WHERE plan_id = ?", planId)
+	if err != nil {
+		return err
+	}
+
+	rows, err := tx.Query("SELECT item_uid, amount, required_amount FROM plan_item_state WHERE plan_id = ?", planId)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	item_states, err := readPlanItemState(rows)
+	if err != nil {
+		return err
+	}
+
+	for _, item_state := range item_states {
+		err = ReleaseItems(tx, item_state.ItemUID, item_state.Amount)
+		if err != nil {
+			return err
+		}
+	}
+
+	_, err = tx.Exec("DELETE FROM plan_item_state WHERE plan_id = ?", planId)
+	if err != nil {
+		return err
 	}
 
 	return tx.Commit()

@@ -36,6 +36,9 @@ templ PlanDetail(plan *dao.PlanState) {
 			<td>
 				<button hx-post={ fmt.Sprintf("/craft-plans/%d/ping/", plan.ID) }>PING</button>
 			</td>
+			<td>
+				<button hx-delete={ fmt.Sprintf("/craft-plans/%d/", plan.ID) }>REMOVE</button>
+			</td>
 		</tr>
 	</table>
 	<table>

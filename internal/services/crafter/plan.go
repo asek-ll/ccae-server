@@ -8,8 +8,8 @@ type Step struct {
 }
 
 type Related struct {
-	ItemUID       string
-	ResultAmount  int
+	Produced      int
+	Consumed      int
 	StorageAmount int
 }
 
@@ -17,5 +17,5 @@ type Plan struct {
 	Items   []string
 	Steps   []Step
 	Goals   []Stack
-	Related []Related
+	Related map[string]*Related
 }

@@ -92,16 +92,16 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 	}
 
 	var planItems []dao.PlanItemState
-	for _, rel := range plan.Related {
-		if rel.ResultAmount < 0 {
+	for itemUID, rel := range plan.Related {
+		resultAmount := rel.StorageAmount + rel.Produced - rel.Consumed
+		if resultAmount < 0 {
 			return nil, errors.New("Not enough items in storage")
 		}
-		if rel.ResultAmount < rel.StorageAmount {
-			planItems = append(planItems, dao.PlanItemState{
-				ItemUID: rel.ItemUID,
-				Amount:  rel.StorageAmount - rel.ResultAmount,
-			})
-		}
+		planItems = append(planItems, dao.PlanItemState{
+			ItemUID:        itemUID,
+			Amount:         min(rel.StorageAmount, rel.Consumed),
+			RequiredAmount: rel.Consumed,
+		})
 	}
 	var planSteps []dao.PlanStepState
 
