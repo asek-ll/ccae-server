@@ -76,7 +76,11 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 }
 
 func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeats int) error {
-	err := c.daoProvider.Crafts.InsertCraft(plan.ID, recipe, repeats)
+	workerId := recipe.Type
+	if workerId == "" {
+		workerId = "crafter-9x9"
+	}
+	err := c.daoProvider.Crafts.InsertCraft(plan.ID, workerId, recipe, repeats)
 	if err != nil {
 		return err
 	}

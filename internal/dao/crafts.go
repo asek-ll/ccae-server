@@ -10,7 +10,7 @@ import (
 type Craft struct {
 	ID       int
 	PlanID   int
-	WorkerID int
+	WorkerID string
 	Status   string
 	Created  time.Time
 	RecipeID int
@@ -27,7 +27,7 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 	CREATE TABLE IF NOT EXISTS craft (
 		id INTEGER PRIMARY KEY,
 		plan_id INTEGER NOT NULL,
-		worker_id INTEGER NOT NULL,
+		worker_id string NOT NULL,
 		status string NOT NULL,
 		created timestamp NOT NULL,
 		recipe_id INTEGER NOT NULL,
@@ -72,7 +72,7 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	return craft, nil
 }
 
-func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
+func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, repeats int) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -80,7 +80,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
 	defer tx.Rollback()
 
 	_, err = tx.Exec("INSERT INTO craft (plan_id, worker_id, status, created, recipe_id, repeats) VALUES (?, ?, ?, ?, ?, ?)",
-		planId, 0, "pending", time.Now(), recipe.ID, repeats)
+		planId, workderId, "PENDING", time.Now(), recipe.ID, repeats)
 	if err != nil {
 		return err
 	}
@@ -114,8 +114,51 @@ func (d *CraftsDao) InsertCraft(planId int, recipe *Recipe, repeats int) error {
 		if afftected == 0 {
 			return errors.New("Can't acquire ingredients")
 		}
+	}
 
-		err = ReleaseItems(tx, ing.ItemUID, amount)
+	return tx.Commit()
+}
+
+func (d *CraftsDao) CommitCraft(craft *Craft) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec("UPDATE craft SET status = 'COMMITED' WHERE id = ? AND status = 'PENDING'", craft.ID)
+	if err != nil {
+		return err
+	}
+
+	afftected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if afftected != 1 {
+		return errors.New("Expected craft in PENDING state")
+	}
+
+	rows, err := tx.Query(`
+	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
+	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id 
+	WHERE r.id = ?`, craft.RecipeID)
+	if err != nil {
+		return err
+	}
+
+	recipes, err := readRecipes(rows)
+	if err != nil {
+		return err
+	}
+	if len(recipes) != 1 {
+		return errors.New("Expected single recipe")
+	}
+
+	recipe := recipes[0]
+
+	for _, ing := range recipe.Ingredients {
+		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*craft.Repeats)
 		if err != nil {
 			return err
 		}

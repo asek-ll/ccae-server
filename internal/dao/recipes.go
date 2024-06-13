@@ -58,7 +58,7 @@ func NewRecipesDao(db *sql.DB) (*RecipesDao, error) {
 	return &RecipesDao{db: db}, nil
 }
 
-func readRows(rows *sql.Rows) ([]*Recipe, error) {
+func readRecipes(rows *sql.Rows) ([]*Recipe, error) {
 	var recipes []*Recipe
 	recipes_by_id := make(map[int]int)
 	for rows.Next() {
@@ -279,7 +279,7 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 
 	defer rows.Close()
 
-	return readRows(rows)
+	return readRecipes(rows)
 }
 
 func (r *RecipesDao) GetRecipeById(recipeId int) (*Recipe, error) {
