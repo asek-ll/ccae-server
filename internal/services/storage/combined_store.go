@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
@@ -128,5 +129,5 @@ func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	return s.itemStats, nil
+	return common.CopyMap(s.itemStats), nil
 }

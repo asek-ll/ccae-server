@@ -45,40 +45,43 @@ func ReserveItem(tx *sql.Tx, uid string, amount int) error {
 	return err
 }
 
-func (d *ItemReserveDao) UpdateItemCount(uid string, count int) error {
+func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 	tx, err := d.db.Begin()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer tx.Rollback()
 
 	rows, err := tx.Query("SELECT amount FROM item_reserve WHERE item_uid = ?", uid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	var reserve int
 	if rows.Next() {
 		err = rows.Scan(&reserve)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if count <= reserve {
-		return nil
+		return nil, nil
 	}
 
 	freeAmount := count - reserve
 
 	rows, err = tx.Query("SELECT plan_id, required_amount-amount FROM plan_item_state WHERE item_uid = ? AND required_amount < amount", uid)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var planIds []int
 	for rows.Next() && freeAmount > 0 {
 		var planId, required int
 
+		planIds = append(planIds, planId)
+
 		err = rows.Scan(planId, required)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		toAdd := min(freeAmount, required)
@@ -86,7 +89,7 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) error {
 
 		_, err = tx.Exec("UPDATE plan_item_state SET amount = amount + ? WHERE plan_id = ? AND item_uid = ?", toAdd, planId, uid)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
@@ -94,10 +97,15 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) error {
 
 		_, err = tx.Exec("INSERT OR REPLACE INTO item_reserve VALUES(?, ?)", uid, count-freeAmount)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return nil, err
+	}
+
+	return planIds, nil
 }

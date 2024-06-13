@@ -33,3 +33,11 @@ func ToSet[K comparable](s []K) map[K]struct{} {
 
 	return set
 }
+
+func CopyMap[K comparable, V any](m map[K]V) map[K]V {
+	cp := make(map[K]V)
+	for k, v := range m {
+		cp[k] = v
+	}
+	return cp
+}
