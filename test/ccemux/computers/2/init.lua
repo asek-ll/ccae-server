@@ -1,4 +1,6 @@
 local m = peripheral.find 'modem' --[[@as ccTweaked.peripherals.WiredModem]]
+local source = peripheral.wrap 'top' --[[@as ccTweaked.peripherals.Inventory]]
+-- local buf = peripheral.wrap 'bottom' --[[@as ccTweaked.peripherals.Inventory]]
 
 local config = {}
 
@@ -10,6 +12,28 @@ local function dump_out()
             turtle.dropUp(cnt)
         end
     end
+    source.pullItems('bottom', 1)
+    return true
+end
+
+local function craft_slot_to_turtle_slot(slot)
+    local column = (slot - 1) % 3
+    local row = (slot - 1 - column) / 3
+    local result_slot = (row * 4 + column) + 1
+    return result_slot
+end
+
+local function craft()
+    local items = source.list()
+    for slot = 1, 9 do
+        if items[slot] ~= nil then
+            source.pushItems('bottom', slot)
+            turtle.select(craft_slot_to_turtle_slot(slot))
+            turtle.suckDown()
+        end
+    end
+    local res, msg = turtle.craft()
+    return res
 end
 
 local function get_placeholder_no(name)
@@ -70,5 +94,7 @@ end
 
 return function(methods, handlers, wsclient)
     config = setup()
+    methods['dumpOut'] = dump_out
+    methods['craft'] = craft
     return config
 end

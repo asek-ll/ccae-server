@@ -44,16 +44,16 @@ func (f *WorkerFactory) NewWorker(id string, client *wsmethods.CrafterClient) *C
 func (f *WorkerFactory) HandleClientConnected(client wsmethods.Client) {
 	crafterClient, e := client.(*wsmethods.CrafterClient)
 	if e {
-		f.NewWorker(crafterClient.ID, crafterClient)
+		f.NewWorker(crafterClient.Role, crafterClient)
 	}
 }
 
 func (f *WorkerFactory) HandleClientDisconnected(client wsmethods.Client) {
 	crafterClient, e := client.(*wsmethods.CrafterClient)
 	if e {
-		f.workers[crafterClient.ID].Stop()
+		f.workers[crafterClient.Role].Stop()
 		f.mu.Lock()
-		delete(f.workers, crafterClient.ID)
+		delete(f.workers, crafterClient.Role)
 		f.mu.Unlock()
 	}
 }

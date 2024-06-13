@@ -91,6 +91,14 @@ func (c *CraftWorker) process() (bool, error) {
 		return done, nil
 	}
 
+	next, err := c.daos.Crafts.FindNext(c.workerId)
+	if err != nil {
+		return false, err
+	}
+	if next == nil {
+		return false, nil
+	}
+
 	cleaned, err := c.client.DumpOut()
 	if err != nil {
 		return false, err
@@ -104,37 +112,29 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 
-	next, err := c.daos.Crafts.FindNext(c.workerId)
+	recipe, err := c.daos.Recipes.GetRecipeById(next.RecipeID)
 	if err != nil {
 		return false, err
 	}
 
-	if next != nil {
-		recipe, err := c.daos.Recipes.GetRecipeById(next.RecipeID)
-		if err != nil {
-			return false, err
-		}
-
-		err = c.trasferItems(next, recipe)
-		if err != nil {
-			return false, err
-		}
-
-		err = c.daos.Crafts.CommitCraft(next, recipe)
-		if err != nil {
-			return false, err
-		}
-		done, err := c.client.Craft()
-		if done {
-			err = c.daos.Crafts.CompleteCraft(current)
-			if err != nil {
-				return false, err
-			}
-		}
-		return done, nil
+	err = c.trasferItems(next, recipe)
+	if err != nil {
+		return false, err
 	}
 
-	return false, nil
+	err = c.daos.Crafts.CommitCraft(next, recipe)
+	if err != nil {
+		return false, err
+	}
+	done, err := c.client.Craft()
+	if done {
+		err = c.daos.Crafts.CompleteCraft(current)
+		if err != nil {
+			return false, err
+		}
+	}
+	return done, nil
+
 }
 func (c *CraftWorker) trasferItems(craft *dao.Craft, recipe *dao.Recipe) error {
 	for _, ing := range recipe.Ingredients {
