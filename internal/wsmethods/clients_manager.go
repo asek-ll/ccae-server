@@ -49,18 +49,20 @@ func (c *GenericClient) GetProps() map[string]string {
 }
 
 type ClientsManager struct {
-	server     *wsrpc.JsonRpcServer
-	clientsDao *dao.ClientsDao
-	clients    map[uint]Client
+	server         *wsrpc.JsonRpcServer
+	clientsDao     *dao.ClientsDao
+	clients        map[uint]Client
+	clientListener ClientListener
 
 	mu sync.RWMutex
 }
 
 func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) *ClientsManager {
 	clientsManager := &ClientsManager{
-		server:     server,
-		clientsDao: clientsDao,
-		clients:    make(map[uint]Client),
+		server:         server,
+		clientsDao:     clientsDao,
+		clients:        make(map[uint]Client),
+		clientListener: DumpCycleListener{},
 	}
 
 	server.SetDisconnectHandler(func(clientId uint) error {
@@ -122,14 +124,24 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 	c.mu.Lock()
 	c.clients[webscoketClientId] = client
 	c.mu.Unlock()
+
+	c.clientListener.HandleClientConnected(client)
 	return nil
 }
 
 func (c *ClientsManager) RemoveClient(id uint) error {
+	c.mu.RLock()
+	c.clientListener.HandleClientDisconnected(c.clients[id])
+	c.mu.RUnlock()
+
 	c.mu.Lock()
 	delete(c.clients, id)
 	c.mu.Unlock()
 	return nil
+}
+
+func (c *ClientsManager) SetClientListener(listener ClientListener) {
+	c.clientListener = listener
 }
 
 func GetClientForType[T interface{}](c *ClientsManager) (T, error) {

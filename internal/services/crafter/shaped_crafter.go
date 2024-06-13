@@ -11,6 +11,7 @@ import (
 type ShapedCrafter struct {
 	storage storage.ItemStore
 	crafter *wsmethods.CrafterClient
+	daos    *dao.DaoProvider
 }
 
 func NewShapedCrafter(storage storage.ItemStore, crafter *wsmethods.CrafterClient) *ShapedCrafter {

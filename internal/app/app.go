@@ -20,4 +20,5 @@ type App struct {
 	PlayerManager  *player.PlayerManager
 	Logger         *log.Logger
 	ClientsManager *wsmethods.ClientsManager
+	WorkerFactory  *crafter.WorkerFactory
 }

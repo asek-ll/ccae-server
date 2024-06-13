@@ -119,7 +119,7 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 	return tx.Commit()
 }
 
-func (d *CraftsDao) CommitCraft(craft *Craft) error {
+func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -139,24 +139,6 @@ func (d *CraftsDao) CommitCraft(craft *Craft) error {
 		return errors.New("Expected craft in PENDING state")
 	}
 
-	rows, err := tx.Query(`
-	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
-	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id 
-	WHERE r.id = ?`, craft.RecipeID)
-	if err != nil {
-		return err
-	}
-
-	recipes, err := readRecipes(rows)
-	if err != nil {
-		return err
-	}
-	if len(recipes) != 1 {
-		return errors.New("Expected single recipe")
-	}
-
-	recipe := recipes[0]
-
 	for _, ing := range recipe.Ingredients {
 		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*craft.Repeats)
 		if err != nil {
@@ -165,6 +147,65 @@ func (d *CraftsDao) CommitCraft(craft *Craft) error {
 	}
 
 	return tx.Commit()
+}
+
+func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
+	rows, err := d.db.Query(`
+	SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft 
+	WHERE worker_id = ? AND status = 'COMMITED'
+	LIMIT 1`, workerId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	crafts, err := readCrafts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(crafts) == 0 {
+		return nil, nil
+	}
+
+	return crafts[0], nil
+}
+
+func (d *CraftsDao) FindNext(workerId string) (*Craft, error) {
+	rows, err := d.db.Query(`
+	SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft 
+	WHERE worker_id = ? AND status = 'PENDING'
+	LIMIT 1`, workerId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	crafts, err := readCrafts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(crafts) == 0 {
+		return nil, nil
+	}
+
+	return crafts[0], nil
+}
+
+func (d *CraftsDao) CompleteCraft(craft *Craft) error {
+	res, err := d.db.Exec("DELETE FROM crafts WHERE id = ? AND status = 'COMMITED'", craft.ID)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return errors.New("Expected commited craft to complete")
+	}
+	return nil
 }
 
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {

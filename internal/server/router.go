@@ -554,18 +554,18 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.Page("Craft plans", components.CraftList(craftItems)).Render(ctx, w)
 	})
 
-	handleFuncWithError(common, "POST /crafts/{craftId}/ping/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		craftIdStr := r.PathValue("craftId")
-		craftId, err := strconv.Atoi(craftIdStr)
-		if err != nil {
-			return err
-		}
-		err = app.Crafter.Craft(craftId)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
+	// handleFuncWithError(common, "POST /crafts/{craftId}/ping/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	// 	craftIdStr := r.PathValue("craftId")
+	// 	craftId, err := strconv.Atoi(craftIdStr)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	err = app.Crafter.Craft(craftId)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// 	return nil
+	// })
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)

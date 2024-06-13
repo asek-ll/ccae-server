@@ -42,6 +42,9 @@ func (s ServerCommand) Execute(args []string) error {
 	plannerService := crafter.NewPlanner(daos, storageService)
 	crafterService := crafter.NewCrafter(daos, plannerService, clientsManager, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)
+	workerFactory := crafter.NewWorkerFactory(storageService, daos)
+
+	clientsManager.SetClientListener(workerFactory)
 
 	app := &app.App{
 		Daos:           daos,
@@ -52,6 +55,7 @@ func (s ServerCommand) Execute(args []string) error {
 		PlayerManager:  playerManager,
 		Logger:         log.Default(),
 		ClientsManager: clientsManager,
+		WorkerFactory:  workerFactory,
 	}
 
 	mux, err := server.CreateMux(app)
