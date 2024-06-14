@@ -2,6 +2,7 @@ package wsmethods
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -10,6 +11,8 @@ import (
 
 type StorageClient struct {
 	GenericClient
+
+	InputStorage string
 }
 
 type ItemRef struct {
@@ -76,10 +79,16 @@ func ItemRefFromUid(uid string) ItemRef {
 	return ItemRef{Name: uid}
 }
 
-func NewStorageClient(base GenericClient) *StorageClient {
+func NewStorageClient(base GenericClient) (*StorageClient, error) {
+	input, ok := base.Props["input"]
+	if !ok {
+		return nil, errors.New("Expected input storage name")
+	}
+
 	return &StorageClient{
 		GenericClient: base,
-	}
+		InputStorage:  input,
+	}, nil
 }
 
 type MoveStackParams struct {

@@ -106,19 +106,19 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 	}
 	var client Client
 
+	var err error
 	switch role {
 	case CLIENT_ROLE_STORAGE:
-		client = NewStorageClient(genericClient)
+		client, err = NewStorageClient(genericClient)
 	case CLIENT_ROLE_CRAFTER:
-		var err error
 		client, err = NewCrafterClient(genericClient)
-		if err != nil {
-			return err
-		}
 	case CLIENT_ROLE_PLAYER:
 		client = NewPlayerClient(genericClient)
 	default:
 		client = &genericClient
+	}
+	if err != nil {
+		return err
 	}
 
 	c.mu.Lock()

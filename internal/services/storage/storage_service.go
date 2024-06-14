@@ -123,6 +123,15 @@ func (s *Storage) ImportAll(inventoryName string) error {
 	return nil
 }
 
+func (s *Storage) PullInputs() error {
+	props, err := s.storageAdapter.GetProps()
+	if err != nil {
+		return err
+	}
+	input := props["input"]
+	return s.ImportAll(input)
+}
+
 type SlotRef struct {
 	Inventory string
 	Slot      int

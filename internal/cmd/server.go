@@ -44,6 +44,9 @@ func (s ServerCommand) Execute(args []string) error {
 	recipeManager := recipe.NewRecipeManager(daos)
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
 
+	stateUpdater := crafter.NewStateUpdater(storageService, daos, crafterService)
+	stateUpdater.Start()
+
 	clientsManager.SetClientListener(workerFactory)
 
 	app := &app.App{

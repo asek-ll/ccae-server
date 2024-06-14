@@ -1,22 +1,53 @@
 package crafter
 
 import (
+	"log"
 	"sync"
+	"time"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 )
 
 type StateUpdater struct {
-	storage storage.ItemStore
-	daos    dao.DaoProvider
+	storage *storage.Storage
+	daos    *dao.DaoProvider
 	crafter *Crafter
 
 	snapshot map[string]int
 	mu       sync.RWMutex
 }
 
+func NewStateUpdater(
+	storage *storage.Storage,
+	daos *dao.DaoProvider,
+	crafter *Crafter,
+) *StateUpdater {
+	return &StateUpdater{
+		storage: storage,
+		daos:    daos,
+		crafter: crafter,
+	}
+}
+
+func (s *StateUpdater) Start() {
+	go func() {
+		for {
+			time.Sleep(time.Second * 30)
+			err := s.UpdateState()
+			if err != nil {
+				log.Printf("[WARN] On state updater: %v", err)
+			}
+		}
+	}()
+}
+
 func (s *StateUpdater) UpdateState() error {
+	err := s.storage.PullInputs()
+	if err != nil {
+		return err
+	}
+
 	counts, err := s.storage.GetItemsCount()
 	if err != nil {
 		return err
