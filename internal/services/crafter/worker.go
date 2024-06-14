@@ -18,6 +18,8 @@ type CraftWorker struct {
 
 	stopped bool
 	done    chan bool
+
+	resultProcessedTime time.Time
 }
 
 func NewCraftWorker(
@@ -60,8 +62,13 @@ func (c *CraftWorker) cycle() {
 		done, err := c.process()
 		if err != nil {
 			log.Printf("[ERROR] Can't process craft for worker '%s', error: %v", c.workerId, err)
-		} else if done {
-			continue
+		} else {
+			err = c.processResults()
+			if err != nil {
+				log.Printf("[ERROR] Can't process results for worker '%s', error: %v", c.workerId, err)
+			} else if done {
+				continue
+			}
 		}
 		select {
 		case <-c.done:
@@ -70,6 +77,19 @@ func (c *CraftWorker) cycle() {
 			continue
 		}
 	}
+}
+
+func (c *CraftWorker) processResults() error {
+	if c.resultProcessedTime.Add(time.Second * 30).After(time.Now()) {
+		return nil
+	}
+	c.resultProcessedTime = time.Now()
+
+	_, err := c.client.ProcessResults()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (c *CraftWorker) process() (bool, error) {
