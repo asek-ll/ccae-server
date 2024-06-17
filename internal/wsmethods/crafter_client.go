@@ -59,11 +59,11 @@ func (c *CrafterClient) Restore() (bool, error) {
 	return res, nil
 }
 
-func (c *CrafterClient) ProcessResults() (bool, error) {
+func (c *CrafterClient) ProcessResults(inventory string) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res bool
-	err := c.WS.SendRequestSync(ctx, "processResults", nil, &res)
+	err := c.WS.SendRequestSync(ctx, "processResults", inventory, &res)
 	if err != nil {
 		return false, err
 	}

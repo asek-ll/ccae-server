@@ -9,14 +9,14 @@ import (
 )
 
 type WorkerFactory struct {
-	storage storage.ItemStore
+	storage *storage.Storage
 	daos    *dao.DaoProvider
 
 	workers map[string]*CraftWorker
 	mu      sync.Mutex
 }
 
-func NewWorkerFactory(storage storage.ItemStore, daos *dao.DaoProvider) *WorkerFactory {
+func NewWorkerFactory(storage *storage.Storage, daos *dao.DaoProvider) *WorkerFactory {
 	return &WorkerFactory{
 		storage: storage,
 		daos:    daos,

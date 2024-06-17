@@ -13,7 +13,7 @@ import (
 type CraftWorker struct {
 	workerId string
 	client   *wsmethods.CrafterClient
-	storage  storage.ItemStore
+	storage  *storage.Storage
 	daos     *dao.DaoProvider
 
 	stopped bool
@@ -25,7 +25,7 @@ type CraftWorker struct {
 func NewCraftWorker(
 	workerId string,
 	client *wsmethods.CrafterClient,
-	storage storage.ItemStore,
+	storage *storage.Storage,
 	daos *dao.DaoProvider,
 ) *CraftWorker {
 	return &CraftWorker{
@@ -83,9 +83,13 @@ func (c *CraftWorker) processResults() error {
 	if c.resultProcessedTime.Add(time.Second * 30).After(time.Now()) {
 		return nil
 	}
+	input, err := c.storage.GetInput()
+	if err != nil {
+		return err
+	}
 	c.resultProcessedTime = time.Now()
 
-	_, err := c.client.ProcessResults()
+	_, err = c.client.ProcessResults(input)
 	if err != nil {
 		return err
 	}
@@ -148,7 +152,7 @@ func (c *CraftWorker) process() (bool, error) {
 	}
 	done, err := c.client.Craft()
 	if done {
-		err = c.daos.Crafts.CompleteCraft(current)
+		err = c.daos.Crafts.CompleteCraft(next)
 		if err != nil {
 			return false, err
 		}

@@ -2,6 +2,7 @@ package crafter
 
 import (
 	"errors"
+	"sort"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -55,8 +56,12 @@ func (p *Planner) expandRecipes(itemIds []string) (*ExpandState, error) {
 		}
 		layer = common.MapKeys(nextItems)
 	}
-
-	orderedItems := common.TopologicalSort(common.MapKeys(items), deps)
+	for _, v := range deps {
+		sort.Strings(v)
+	}
+	uids := common.MapKeys(items)
+	sort.Strings(uids)
+	orderedItems := common.TopologicalSort(uids, deps)
 	if len(orderedItems) == 0 {
 		return nil, errors.New("Cycle detected")
 	}
@@ -122,7 +127,10 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 
 			r, e := related[ing.ItemUID]
 			if !e {
-				r = &Related{StorageAmount: storageCounts[ing.ItemUID]}
+				r = &Related{
+					UID:           ing.ItemUID,
+					StorageAmount: storageCounts[ing.ItemUID],
+				}
 				related[ing.ItemUID] = r
 			}
 			r.Consumed += ingredientCount
@@ -134,7 +142,10 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 
 			r, e := related[ing.ItemUID]
 			if !e {
-				r = &Related{StorageAmount: storageCounts[ing.ItemUID]}
+				r = &Related{
+					UID:           ing.ItemUID,
+					StorageAmount: storageCounts[ing.ItemUID],
+				}
 				related[ing.ItemUID] = r
 			}
 			r.Produced += ingredientCount
@@ -146,10 +157,26 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 		})
 	}
 
+	rels := common.MapValues(related)
+	sort.Slice(rels, func(i, j int) bool {
+		vi := rels[i].StorageAmount - rels[i].Consumed + rels[i].Produced
+		vj := rels[j].StorageAmount - rels[j].Consumed + rels[j].Produced
+
+		if vi == vj {
+
+			if rels[i].Consumed == rels[j].Consumed {
+				return rels[i].UID < rels[j].UID
+			}
+
+			return rels[i].Consumed > rels[j].Consumed
+		}
+		return vi < vj
+	})
+
 	plan := Plan{
 		Items:   expandState.Items,
 		Steps:   steps,
-		Related: related,
+		Related: rels,
 	}
 
 	return &plan, nil

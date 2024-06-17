@@ -31,10 +31,10 @@ templ CraftingPlan(plan *crafter.Plan) {
 		}
 	</table>
 	<table>
-		for itemUID, related := range plan.Related {
+		for _, related := range plan.Related {
 			<tr>
 				<td>
-					@ItemIconByUID(itemUID)
+					@ItemIconByUID(related.UID)
 				</td>
 				<td>
 					{ strconv.Itoa(related.Consumed) }

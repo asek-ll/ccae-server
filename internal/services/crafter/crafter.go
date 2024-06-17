@@ -51,6 +51,8 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 		recipesById[recipe.ID] = recipe
 	}
 
+	updated := false
+
 	for _, step := range plan.Steps {
 		recipe := recipesById[step.RecipeID]
 		minRepeats := step.Repeats
@@ -59,6 +61,7 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 		}
 		if minRepeats > 0 {
 			log.Printf("[INFO] Submit craft %v", recipe)
+			updated = true
 			err = c.submitCrafting(plan, recipe, minRepeats)
 			if err != nil {
 				return err
@@ -67,6 +70,13 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 			for _, item := range plan.Items {
 				store[item.ItemUID] = item.Amount
 			}
+		}
+	}
+
+	if updated {
+		err = c.cleanupItems(plan)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -88,6 +98,10 @@ func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeat
 	return nil
 }
 
+func (c *Crafter) cleanupItems(plan *dao.PlanState) error {
+	return c.daoProvider.Plans.CleanupItems(plan.ID)
+}
+
 func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, error) {
 	plan, err := c.planner.GetPlanForItem(uid, count)
 	if err != nil {
@@ -95,13 +109,13 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 	}
 
 	var planItems []dao.PlanItemState
-	for itemUID, rel := range plan.Related {
+	for _, rel := range plan.Related {
 		resultAmount := rel.StorageAmount + rel.Produced - rel.Consumed
 		if resultAmount < 0 {
 			return nil, errors.New("Not enough items in storage")
 		}
 		planItems = append(planItems, dao.PlanItemState{
-			ItemUID:        itemUID,
+			ItemUID:        rel.UID,
 			Amount:         min(rel.StorageAmount, rel.Consumed),
 			RequiredAmount: rel.Consumed,
 		})
@@ -124,6 +138,11 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 	}
 
 	err = c.daoProvider.Plans.InsertPlan(&planState)
+	if err != nil {
+		return nil, err
+	}
+
+	err = c.CheckNextSteps(&planState)
 	if err != nil {
 		return nil, err
 	}

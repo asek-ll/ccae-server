@@ -59,6 +59,7 @@ func (s *StateUpdater) UpdateState() error {
 	defer s.mu.Unlock()
 	for k, v := range counts {
 		if v > s.snapshot[k] {
+			// log.Printf("[INFO] Updated %s: %d > %d", k, v, s.snapshot[k])
 			planIds, err := s.daos.ItemReserves.UpdateItemCount(k, v)
 			if err != nil {
 				return err
@@ -69,7 +70,6 @@ func (s *StateUpdater) UpdateState() error {
 		}
 	}
 	s.snapshot = counts
-	s.mu.Unlock()
 
 	for planId := range affectedPlanIds {
 		state, err := s.daos.Plans.GetPlanById(planId)

@@ -260,3 +260,8 @@ func (d *PlansDao) RemovePlan(planId int) error {
 
 	return tx.Commit()
 }
+
+func (d *PlansDao) CleanupItems(planId int) error {
+	_, err := d.db.Exec("DELETE FROM plan_item_state WHERE plan_id = ? and required_amount = 0 and amount = 0", planId)
+	return err
+}

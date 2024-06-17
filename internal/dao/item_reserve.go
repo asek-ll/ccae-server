@@ -1,6 +1,9 @@
 package dao
 
-import "database/sql"
+import (
+	"database/sql"
+	"log"
+)
 
 type ItemReserve struct {
 	ItemUID string
@@ -69,17 +72,17 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 
 	freeAmount := count - reserve
 
-	rows, err = tx.Query("SELECT plan_id, required_amount-amount FROM plan_item_state WHERE item_uid = ? AND required_amount < amount", uid)
+	rows, err = tx.Query("SELECT plan_id, required_amount-amount FROM plan_item_state WHERE item_uid = ? AND required_amount > amount", uid)
 	if err != nil {
 		return nil, err
 	}
+
 	var planIds []int
 	for rows.Next() && freeAmount > 0 {
+		log.Printf("[INFO] DETECT TO update %s", uid)
 		var planId, required int
 
-		planIds = append(planIds, planId)
-
-		err = rows.Scan(planId, required)
+		err = rows.Scan(&planId, &required)
 		if err != nil {
 			return nil, err
 		}
@@ -91,6 +94,8 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		planIds = append(planIds, planId)
 	}
 
 	if freeAmount < count-reserve {

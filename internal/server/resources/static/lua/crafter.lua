@@ -32,8 +32,29 @@ local function craft()
             turtle.suckDown()
         end
     end
+    turtle.select(13)
     local res, msg = turtle.craft()
+    if res then
+        turtle.select(13)
+        turtle.drop()
+    end
     return res
+end
+
+local function restore()
+    if turtle.getItemCount(13) > 0 then
+        turtle.select(13)
+        turtle.drop()
+        return true
+    end
+    return craft()
+end
+
+local function processResults(storage)
+    for slot in pairs(m.callRemote(config["output_name"], "list")) do
+        m.callRemote(config['output_name'], "pushItems", storage, slot)
+    end
+    return true
 end
 
 local function get_placeholder_no(name)
@@ -96,5 +117,7 @@ return function(methods, handlers, wsclient)
     config = setup()
     methods['dumpOut'] = dump_out
     methods['craft'] = craft
+    methods['restore'] = restore
+    methods['processResults'] = processResults
     return config
 end

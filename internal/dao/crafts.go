@@ -194,7 +194,7 @@ func (d *CraftsDao) FindNext(workerId string) (*Craft, error) {
 }
 
 func (d *CraftsDao) CompleteCraft(craft *Craft) error {
-	res, err := d.db.Exec("DELETE FROM crafts WHERE id = ? AND status = 'COMMITED'", craft.ID)
+	res, err := d.db.Exec("DELETE FROM craft WHERE id = ? AND status = 'COMMITED'", craft.ID)
 	if err != nil {
 		return err
 	}

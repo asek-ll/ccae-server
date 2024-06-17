@@ -123,12 +123,20 @@ func (s *Storage) ImportAll(inventoryName string) error {
 	return nil
 }
 
-func (s *Storage) PullInputs() error {
+func (s *Storage) GetInput() (string, error) {
 	props, err := s.storageAdapter.GetProps()
+	if err != nil {
+		return "", err
+	}
+	input := props["input"]
+	return input, nil
+}
+
+func (s *Storage) PullInputs() error {
+	input, err := s.GetInput()
 	if err != nil {
 		return err
 	}
-	input := props["input"]
 	return s.ImportAll(input)
 }
 
