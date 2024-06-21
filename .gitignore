@@ -3,3 +3,4 @@ data.db
 items.json
 recipes.json
 *_templ.go
+/*.json

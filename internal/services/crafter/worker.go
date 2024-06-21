@@ -19,7 +19,7 @@ type CraftWorker struct {
 	stopped bool
 	done    chan bool
 
-	resultProcessedTime time.Time
+	// resultProcessedTime time.Time
 }
 
 func NewCraftWorker(
@@ -63,10 +63,11 @@ func (c *CraftWorker) cycle() {
 		if err != nil {
 			log.Printf("[ERROR] Can't process craft for worker '%s', error: %v", c.workerId, err)
 		} else {
-			err = c.processResults()
-			if err != nil {
-				log.Printf("[ERROR] Can't process results for worker '%s', error: %v", c.workerId, err)
-			} else if done {
+			// err = c.processResults()
+			// if err != nil {
+			// log.Printf("[ERROR] Can't process results for worker '%s', error: %v", c.workerId, err)
+			// } else
+			if done {
 				continue
 			}
 		}
@@ -79,22 +80,22 @@ func (c *CraftWorker) cycle() {
 	}
 }
 
-func (c *CraftWorker) processResults() error {
-	if c.resultProcessedTime.Add(time.Second * 30).After(time.Now()) {
-		return nil
-	}
-	input, err := c.storage.GetInput()
-	if err != nil {
-		return err
-	}
-	c.resultProcessedTime = time.Now()
+// func (c *CraftWorker) processResults() error {
+// 	if c.resultProcessedTime.Add(time.Second * 30).After(time.Now()) {
+// 		return nil
+// 	}
+// 	input, err := c.storage.GetInput()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	c.resultProcessedTime = time.Now()
 
-	_, err = c.client.ProcessResults(input)
-	if err != nil {
-		return err
-	}
-	return nil
-}
+// 	_, err = c.client.ProcessResults(input)
+// 	if err != nil {
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func (c *CraftWorker) process() (bool, error) {
 	current, err := c.daos.Crafts.FindCurrent(c.workerId)

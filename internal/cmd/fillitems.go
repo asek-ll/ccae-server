@@ -53,7 +53,7 @@ func (s FillItemsCommand) Execute(args []string) error {
 	for _, d := range data {
 		var item dao.Item
 
-		item.ID = d["id"].(string)
+		item.ID = d["name"].(string)
 		item.DisplayName = d["displayName"].(string)
 		if nbtRaw, ok := d["nbt"].(string); ok {
 			item.NBT = &nbtRaw
