@@ -151,14 +151,19 @@ func (c *CraftWorker) process() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	done, err := c.client.Craft()
+	done, err := c.client.Craft(wsmethods.RecipeDto{Type: recipe.Type})
 	if done {
 		err = c.daos.Crafts.CompleteCraft(next)
 		if err != nil {
 			return false, err
 		}
+	} else {
+		err = c.daos.Crafts.SuspendCraft(next)
+		if err != nil {
+			return false, err
+		}
 	}
-	return done, nil
+	return true, nil
 
 }
 func (c *CraftWorker) trasferItems(craft *dao.Craft, recipe *dao.Recipe) error {

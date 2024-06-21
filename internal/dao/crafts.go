@@ -208,6 +208,10 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 	return nil
 }
 
+func (d *CraftsDao) SuspendCraft(craft *Craft) error {
+
+}
+
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
 	rows, err := d.db.Query("SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft WHERE id = ? LIMIT 1", craftId)
 	if err != nil {

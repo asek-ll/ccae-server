@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+type RecipeDto struct {
+	Type string `json:"type"`
+}
+
 type CrafterClient struct {
 	GenericClient
 	bufferName string
@@ -26,11 +30,11 @@ func (c *CrafterClient) BufferName() string {
 	return c.bufferName
 }
 
-func (c *CrafterClient) Craft() (bool, error) {
+func (c *CrafterClient) Craft(recipe RecipeDto) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res bool
-	err := c.WS.SendRequestSync(ctx, "craft", nil, &res)
+	err := c.WS.SendRequestSync(ctx, "craft", recipe, &res)
 	if err != nil {
 		return false, err
 	}
@@ -53,17 +57,6 @@ func (c *CrafterClient) Restore() (bool, error) {
 	defer cancel()
 	var res bool
 	err := c.WS.SendRequestSync(ctx, "restore", nil, &res)
-	if err != nil {
-		return false, err
-	}
-	return res, nil
-}
-
-func (c *CrafterClient) ProcessResults(inventory string) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
-	defer cancel()
-	var res bool
-	err := c.WS.SendRequestSync(ctx, "processResults", inventory, &res)
 	if err != nil {
 		return false, err
 	}
