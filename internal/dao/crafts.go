@@ -8,18 +8,22 @@ import (
 )
 
 type Craft struct {
-	ID       int
-	PlanID   int
-	WorkerID string
-	Status   string
-	Created  time.Time
-	RecipeID int
-	Repeats  int
+	ID            int
+	PlanID        int
+	WorkerID      string
+	Status        string
+	Created       time.Time
+	RecipeID      int
+	Repeats       int
+	CheckAt       time.Time
+	CommitRepeats int
 }
 
 type CraftsDao struct {
 	db *sql.DB
 }
+
+const craftsFieldList string = "id, plan_id, worker_id, status, created, recipe_id, repeats, check_at, commit_repeats"
 
 func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 
@@ -31,7 +35,9 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 		status string NOT NULL,
 		created timestamp NOT NULL,
 		recipe_id INTEGER NOT NULL,
-		repeats INTEGER NOT NULL
+		repeats INTEGER NOT NULL,
+		check_at timestamp NOT NULL,
+		commit_repeats int NOT NULL
 	);
 	`
 	_, err := db.Exec(sqlStmt)
@@ -45,7 +51,12 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 }
 
 func (d *CraftsDao) GetCrafts() ([]*Craft, error) {
-	rows, err := d.db.Query("SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft LIMIT 50")
+	rows, err := d.db.Query(`
+	SELECT `+craftsFieldList+` 
+	FROM craft 
+	WHERE check_at < ?
+	LIMIT 50
+	`, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +70,7 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	var craft []*Craft
 	for rows.Next() {
 		var c Craft
-		err := rows.Scan(&c.ID, &c.PlanID, &c.WorkerID, &c.Status, &c.Created, &c.RecipeID, &c.Repeats)
+		err := rows.Scan(&c.ID, &c.PlanID, &c.WorkerID, &c.Status, &c.Created, &c.RecipeID, &c.Repeats, &c.CheckAt)
 		if err != nil {
 			return nil, err
 		}
@@ -79,8 +90,10 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec("INSERT INTO craft (plan_id, worker_id, status, created, recipe_id, repeats) VALUES (?, ?, ?, ?, ?, ?)",
-		planId, workderId, "PENDING", time.Now(), recipe.ID, repeats)
+	_, err = tx.Exec(`INSERT INTO 
+	craft (plan_id, worker_id, status, created, recipe_id, repeats, check_at, commit_repeats) 
+	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		planId, workderId, "PENDING", time.Now(), recipe.ID, repeats, time.Now(), 0)
 	if err != nil {
 		return err
 	}
@@ -119,14 +132,14 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 	return tx.Commit()
 }
 
-func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe) error {
+func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 
-	res, err := tx.Exec("UPDATE craft SET status = 'COMMITED' WHERE id = ? AND status = 'PENDING'", craft.ID)
+	res, err := tx.Exec("UPDATE craft SET status = 'COMMITED', commit_repeats = ? WHERE id = ? AND status = 'PENDING'", repeats, craft.ID)
 	if err != nil {
 		return err
 	}
@@ -151,9 +164,10 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe) error {
 
 func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 	rows, err := d.db.Query(`
-	SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft 
-	WHERE worker_id = ? AND status = 'COMMITED'
-	LIMIT 1`, workerId)
+	SELECT `+craftsFieldList+` 
+	FROM craft 
+	WHERE worker_id = ? AND status = 'COMMITED' AND check_at < ?
+	LIMIT 1`, workerId, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -173,9 +187,10 @@ func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 
 func (d *CraftsDao) FindNext(workerId string) (*Craft, error) {
 	rows, err := d.db.Query(`
-	SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft 
-	WHERE worker_id = ? AND status = 'PENDING'
-	LIMIT 1`, workerId)
+	SELECT `+craftsFieldList+` 
+	FROM craft 
+	WHERE worker_id = ? AND status = 'PENDING' AND check_at < ?
+	LIMIT 1`, workerId, time.Now())
 	if err != nil {
 		return nil, err
 	}
@@ -194,26 +209,55 @@ func (d *CraftsDao) FindNext(workerId string) (*Craft, error) {
 }
 
 func (d *CraftsDao) CompleteCraft(craft *Craft) error {
-	res, err := d.db.Exec("DELETE FROM craft WHERE id = ? AND status = 'COMMITED'", craft.ID)
+	tx, err := d.db.Begin()
 	if err != nil {
 		return err
 	}
-	affected, err := res.RowsAffected()
+
+	row := tx.QueryRow(`UPDATE craft SET 
+	repeats = repeats - commit_repeats, 
+	commit_repeats = 0,
+	status = 'PENDING',
+	check_at = ?
+	WHERE id = ? AND status = 'COMMITED' RETURNING repeats`, time.Now(), craft.ID)
+
+	err = row.Err()
 	if err != nil {
 		return err
 	}
-	if affected != 1 {
-		return errors.New("Expected commited craft to complete")
+
+	var newRepeats int
+	row.Scan(&newRepeats)
+
+	if newRepeats == 0 {
+
+		res, err := tx.Exec("DELETE FROM craft WHERE id = ?", craft.ID)
+		if err != nil {
+			return err
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if affected != 1 {
+			return errors.New("Expected commited craft to complete")
+		}
 	}
 	return nil
 }
 
 func (d *CraftsDao) SuspendCraft(craft *Craft) error {
-
+	_, err := d.db.Exec("UPDATE craft SET status = 'PENDING', check_at = ?, commit_repeats = 0 WHERE id = ?",
+		time.Now().Add(time.Minute), craft.ID)
+	return err
 }
 
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
-	rows, err := d.db.Query("SELECT id, plan_id, worker_id, status, created, recipe_id, repeats FROM craft WHERE id = ? LIMIT 1", craftId)
+	rows, err := d.db.Query(`
+	SELECT `+craftsFieldList+` 
+	FROM craft 
+	WHERE id = ? 
+	LIMIT 1`, craftId)
 	if err != nil {
 		return nil, err
 	}

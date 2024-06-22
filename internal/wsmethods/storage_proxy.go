@@ -10,8 +10,8 @@ func NewStorageAdapter(clientsManager *ClientsManager) *StorageAdapter {
 	}
 }
 
-func (s *StorageAdapter) GetProps() (map[string]string, error) {
-	return CallWithClientForType(s.clientsManager, func(client *StorageClient) (map[string]string, error) {
+func (s *StorageAdapter) GetProps() (map[string]any, error) {
+	return CallWithClientForType(s.clientsManager, func(client *StorageClient) (map[string]any, error) {
 		return client.Props, nil
 	})
 }

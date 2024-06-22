@@ -38,8 +38,8 @@ func (s *CombinedStore) sync() error {
 	if err != nil {
 		return err
 	}
-	coldStoragePrefix := props["cold_storage_prefix"]
-	warmStoragePrefix := props["warm_storage_prefix"]
+	coldStoragePrefix := props["cold_storage_prefix"].(string)
+	warmStoragePrefix := props["warm_storage_prefix"].(string)
 
 	items, err := s.storageAdapter.GetItems([]string{coldStoragePrefix, warmStoragePrefix})
 	if err != nil {

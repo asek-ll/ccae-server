@@ -142,12 +142,14 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 
-	err = c.trasferItems(next, recipe)
+	repeats := min(next.Repeats, 64)
+
+	err = c.trasferItems(recipe, repeats)
 	if err != nil {
 		return false, err
 	}
 
-	err = c.daos.Crafts.CommitCraft(next, recipe)
+	err = c.daos.Crafts.CommitCraft(next, recipe, repeats)
 	if err != nil {
 		return false, err
 	}
@@ -166,9 +168,9 @@ func (c *CraftWorker) process() (bool, error) {
 	return true, nil
 
 }
-func (c *CraftWorker) trasferItems(craft *dao.Craft, recipe *dao.Recipe) error {
+func (c *CraftWorker) trasferItems(recipe *dao.Recipe, repeats int) error {
 	for _, ing := range recipe.Ingredients {
-		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), *ing.Slot, ing.Amount*craft.Repeats)
+		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), *ing.Slot, ing.Amount*repeats)
 		if err != nil {
 			return err
 		}

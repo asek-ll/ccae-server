@@ -22,7 +22,7 @@ func NewCrafterClient(base GenericClient) (*CrafterClient, error) {
 	}
 	return &CrafterClient{
 		GenericClient: base,
-		bufferName:    bufferName,
+		bufferName:    bufferName.(string),
 	}, nil
 }
 

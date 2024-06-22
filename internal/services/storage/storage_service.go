@@ -123,13 +123,21 @@ func (s *Storage) ImportAll(inventoryName string) error {
 	return nil
 }
 
-func (s *Storage) GetInput() (string, error) {
+func (s *Storage) GetInput() ([]string, error) {
 	props, err := s.storageAdapter.GetProps()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	input := props["input"]
-	return input, nil
+	input, ok := props["input"]
+	if !ok {
+		return nil, errors.New("Expected input storage name")
+	}
+
+	inventoryNames, ok := input.([]string)
+	if !ok {
+		return nil, errors.New("Expected input storage name")
+	}
+	return inventoryNames, nil
 }
 
 func (s *Storage) PullInputs() error {
@@ -137,7 +145,13 @@ func (s *Storage) PullInputs() error {
 	if err != nil {
 		return err
 	}
-	return s.ImportAll(input)
+	for _, inventoryName := range input {
+		err = s.ImportAll(inventoryName)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 type SlotRef struct {

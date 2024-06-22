@@ -87,7 +87,7 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 
 	return &StorageClient{
 		GenericClient: base,
-		InputStorage:  input,
+		InputStorage:  input.(string),
 	}, nil
 }
 
