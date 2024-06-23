@@ -124,20 +124,11 @@ func (s *Storage) ImportAll(inventoryName string) error {
 }
 
 func (s *Storage) GetInput() ([]string, error) {
-	props, err := s.storageAdapter.GetProps()
+	client, err := s.storageAdapter.GetClient()
 	if err != nil {
 		return nil, err
 	}
-	input, ok := props["input"]
-	if !ok {
-		return nil, errors.New("Expected input storage name")
-	}
-
-	inventoryNames, ok := input.([]string)
-	if !ok {
-		return nil, errors.New("Expected input storage name")
-	}
-	return inventoryNames, nil
+	return client.InputStorages, nil
 }
 
 func (s *Storage) PullInputs() error {

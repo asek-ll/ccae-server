@@ -28,9 +28,10 @@ type CreateRecipeItemParams struct {
 }
 
 type CreateRecipeParams struct {
-	Name  string
-	Type  string
-	Items []CreateRecipeItemParams
+	Name       string
+	Type       string
+	Items      []CreateRecipeItemParams
+	MaxRepeats *int
 }
 
 func parseCreateRecipeParams(params url.Values) (*CreateRecipeParams, error) {
@@ -70,10 +71,21 @@ outer:
 		itemsParams = append(itemsParams, itemParams)
 	}
 
+	maxRepeatsStr := params.Get("maxRepeats")
+	var maxRepeats *int
+	if maxRepeatsStr != "" {
+		maxRepeatsInt, err := strconv.Atoi(maxRepeatsStr)
+		if err != nil {
+			return nil, err
+		}
+		maxRepeats = &maxRepeatsInt
+	}
+
 	return &CreateRecipeParams{
-		Name:  name,
-		Type:  recipeType,
-		Items: itemsParams,
+		Name:       name,
+		Type:       recipeType,
+		Items:      itemsParams,
+		MaxRepeats: maxRepeats,
 	}, nil
 }
 
@@ -198,6 +210,7 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 		Type:        params.Type,
 		Results:     results,
 		Ingredients: ingredients,
+		MaxRepeats:  params.MaxRepeats,
 	}
 
 	return &recipe, nil

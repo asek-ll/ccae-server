@@ -12,7 +12,9 @@ import (
 type StorageClient struct {
 	GenericClient
 
-	InputStorage string
+	InputStorages     []string
+	ColdStoragePrefix string
+	WarmStoragePrefix string
 }
 
 type ItemRef struct {
@@ -85,9 +87,34 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 		return nil, errors.New("Expected input storage name")
 	}
 
+	inputs, ok := input.([]interface{})
+	if !ok {
+		return nil, errors.New("Expected input storage name")
+	}
+
+	var inputNames []string
+	for _, name := range inputs {
+		inputName, ok := name.(string)
+		if !ok {
+			return nil, errors.New("Expected input storage name")
+		}
+		inputNames = append(inputNames, inputName)
+	}
+
+	coldStoragePrefix, ok := base.Props["cold_storage_prefix"].(string)
+	if !ok {
+		return nil, errors.New("Expected cold storage name")
+	}
+	warmStoragePrefix, ok := base.Props["warm_storage_prefix"].(string)
+	if !ok {
+		return nil, errors.New("Expected warm storage name")
+	}
+
 	return &StorageClient{
-		GenericClient: base,
-		InputStorage:  input.(string),
+		GenericClient:     base,
+		InputStorages:     inputNames,
+		ColdStoragePrefix: coldStoragePrefix,
+		WarmStoragePrefix: warmStoragePrefix,
 	}, nil
 }
 

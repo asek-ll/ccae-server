@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 )
 
@@ -70,7 +71,16 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	var craft []*Craft
 	for rows.Next() {
 		var c Craft
-		err := rows.Scan(&c.ID, &c.PlanID, &c.WorkerID, &c.Status, &c.Created, &c.RecipeID, &c.Repeats, &c.CheckAt)
+		err := rows.Scan(&c.ID,
+			&c.PlanID,
+			&c.WorkerID,
+			&c.Status,
+			&c.Created,
+			&c.RecipeID,
+			&c.Repeats,
+			&c.CheckAt,
+			&c.CommitRepeats,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -98,7 +108,13 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 		return err
 	}
 
-	res, err := tx.Exec("UPDATE plan_step_state SET repeats = repeats - ? WHERE plan_id = ? and recipe_id = ? and repeats >= ?", repeats, planId, recipe.ID, repeats)
+	res, err := tx.Exec(`
+	UPDATE 
+		plan_step_state 
+	SET 
+		repeats = repeats - ? 
+	WHERE 
+		plan_id = ? and recipe_id = ? and repeats >= ?`, repeats, planId, recipe.ID, repeats)
 
 	if err != nil {
 		return err
@@ -114,9 +130,14 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 	for _, ing := range recipe.Ingredients {
 		amount := ing.Amount * repeats
 		res, err := tx.Exec(`
-		UPDATE plan_item_state SET amount = amount - ?, required_amount = required_amount - ?
-		WHERE item_uid = ? AND plan_id = ? AND amount >= ?`,
+		UPDATE plan_item_state 
+		SET 
+			amount = amount - ?,
+			required_amount = required_amount - ?
+		WHERE 
+			item_uid = ? AND plan_id = ? AND amount >= ?`,
 			amount, amount, ing.ItemUID, planId, amount)
+		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, ing.ItemUID, planId)
 		if err != nil {
 			return err
 		}
@@ -153,7 +174,7 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error
 	}
 
 	for _, ing := range recipe.Ingredients {
-		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*craft.Repeats)
+		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*repeats)
 		if err != nil {
 			return err
 		}
@@ -214,6 +235,8 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 		return err
 	}
 
+	defer tx.Rollback()
+
 	row := tx.QueryRow(`UPDATE craft SET 
 	repeats = repeats - commit_repeats, 
 	commit_repeats = 0,
@@ -243,7 +266,7 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 			return errors.New("Expected commited craft to complete")
 		}
 	}
-	return nil
+	return tx.Commit()
 }
 
 func (d *CraftsDao) SuspendCraft(craft *Craft) error {

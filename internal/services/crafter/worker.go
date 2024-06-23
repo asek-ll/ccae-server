@@ -103,7 +103,12 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 	if current != nil {
-		done, err := c.client.Restore()
+		recipe, err := c.daos.Recipes.GetRecipeById(current.RecipeID)
+		if err != nil {
+			return false, err
+		}
+
+		done, err := c.client.Restore(wsmethods.RecipeDto{Type: recipe.Type})
 		if err != nil {
 			return false, err
 		}
@@ -142,7 +147,11 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 
-	repeats := min(next.Repeats, 64)
+	maxRepeats := 64
+	if recipe.MaxRepeats != nil {
+		maxRepeats = *recipe.MaxRepeats
+	}
+	repeats := min(next.Repeats, maxRepeats)
 
 	err = c.trasferItems(recipe, repeats)
 	if err != nil {
@@ -169,8 +178,13 @@ func (c *CraftWorker) process() (bool, error) {
 
 }
 func (c *CraftWorker) trasferItems(recipe *dao.Recipe, repeats int) error {
-	for _, ing := range recipe.Ingredients {
-		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), *ing.Slot, ing.Amount*repeats)
+	log.Printf("[INFO] Transfer items for '%s' and recipe: %v", c.workerId, recipe)
+	for i, ing := range recipe.Ingredients {
+		slot := i + 1
+		if ing.Slot != nil {
+			slot = *ing.Slot
+		}
+		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), slot, ing.Amount*repeats)
 		if err != nil {
 			return err
 		}

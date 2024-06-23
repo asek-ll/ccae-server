@@ -58,6 +58,13 @@ func shapedRecipeItemWrap(items []dao.RecipeItem, slot int) templ.Component {
 	})
 }
 
+func ip2a(i *int) string {
+    if i == nil {
+        return ""
+    }
+    return fmt.Sprintf("%d", *i)
+}
+
 templ RecipeForm(recipe *dao.Recipe) {
 	<button
 		hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
@@ -70,12 +77,11 @@ templ RecipeForm(recipe *dao.Recipe) {
 			</label>
 			<label>
 				Type
-				<select name="type" aria-label="Select type...">
-					<option></option>
-					<option>wire</option>
-					<option>rod</option>
-					<option>smelter</option>
-				</select>
+				<input name="type" placeholder="" value={ recipe.Type }/>
+			</label>
+			<label>
+				MaxRepeats
+				<input name="maxRepeats" placeholder="64" value={ ip2a(recipe.MaxRepeats) }/>
 			</label>
 		</fieldset>
 		<div>

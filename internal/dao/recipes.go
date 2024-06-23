@@ -22,6 +22,7 @@ type Recipe struct {
 	ID          int
 	Name        string
 	Type        string
+	MaxRepeats  *int
 	Results     []RecipeItem
 	Ingredients []RecipeItem
 }
@@ -36,7 +37,8 @@ func NewRecipesDao(db *sql.DB) (*RecipesDao, error) {
 	CREATE TABLE IF NOT EXISTS recipes (
 		id INTEGER PRIMARY KEY,
 		name string NOT NULL,
-		type string NOT NULL
+		type string NOT NULL,
+		max_repeats integer
 	);
 
 	CREATE TABLE IF NOT EXISTS recipe_items (
@@ -69,16 +71,18 @@ func readRecipes(rows *sql.Rows) ([]*Recipe, error) {
 		var amount *int
 		var role *string
 		var slot *int
-		err := rows.Scan(&id, &name, &typ, &item_uid, &amount, &role, &slot)
+		var maxRepeats *int
+		err := rows.Scan(&id, &name, &typ, &maxRepeats, &item_uid, &amount, &role, &slot)
 		if err != nil {
 			return nil, err
 		}
 		recipe_idx, ok := recipes_by_id[id]
 		if !ok {
 			recipe := Recipe{
-				ID:   id,
-				Name: name,
-				Type: typ,
+				ID:         id,
+				Name:       name,
+				Type:       typ,
+				MaxRepeats: maxRepeats,
 			}
 			recipe_idx = len(recipes)
 			recipes_by_id[id] = recipe_idx
@@ -156,7 +160,8 @@ func (r *RecipesDao) InsertRecipe(recipe *Recipe) error {
 	}
 	defer tx.Rollback()
 
-	res, err := tx.Exec("INSERT INTO recipes (name, type) VALUES (?, ?)", recipe.Name, recipe.Type)
+	res, err := tx.Exec("INSERT INTO recipes (name, type, max_repeats) VALUES (?, ?, ?)",
+		recipe.Name, recipe.Type, recipe.MaxRepeats)
 	if err != nil {
 		return err
 	}
@@ -195,7 +200,14 @@ func (r *RecipesDao) UpdateRecipe(recipe *Recipe) error {
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec("UPDATE recipes SET name = ?, type = ? WHERE id = ?", recipe.Name, recipe.Type, recipe.ID)
+	_, err = tx.Exec(`
+	UPDATE recipes 
+	SET 
+		name = ?,
+		type = ? ,
+		max_repeats = ?
+	WHERE 
+		id = ?`, recipe.Name, recipe.Type, recipe.MaxRepeats, recipe.ID)
 	if err != nil {
 		return err
 	}

@@ -52,11 +52,11 @@ func (c *CrafterClient) DumpOut() (bool, error) {
 	return res, nil
 }
 
-func (c *CrafterClient) Restore() (bool, error) {
+func (c *CrafterClient) Restore(recipe RecipeDto) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res bool
-	err := c.WS.SendRequestSync(ctx, "restore", nil, &res)
+	err := c.WS.SendRequestSync(ctx, "restore", recipe, &res)
 	if err != nil {
 		return false, err
 	}

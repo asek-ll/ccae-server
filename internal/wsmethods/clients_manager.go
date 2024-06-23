@@ -15,6 +15,7 @@ import (
 
 const CLIENT_ROLE_STORAGE = "storage"
 const CLIENT_ROLE_CRAFTER = "crafter"
+const CLIENT_ROLE_PROCESSING = "processing"
 const CLIENT_ROLE_PLAYER = "player"
 
 type Client interface {
@@ -111,6 +112,8 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 	case CLIENT_ROLE_STORAGE:
 		client, err = NewStorageClient(genericClient)
 	case CLIENT_ROLE_CRAFTER:
+		client, err = NewCrafterClient(genericClient)
+	case CLIENT_ROLE_PROCESSING:
 		client, err = NewCrafterClient(genericClient)
 	case CLIENT_ROLE_PLAYER:
 		client = NewPlayerClient(genericClient)

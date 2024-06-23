@@ -34,14 +34,11 @@ func (s *CombinedStore) sync() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	props, err := s.storageAdapter.GetProps()
+	client, err := s.storageAdapter.GetClient()
 	if err != nil {
 		return err
 	}
-	coldStoragePrefix := props["cold_storage_prefix"].(string)
-	warmStoragePrefix := props["warm_storage_prefix"].(string)
-
-	items, err := s.storageAdapter.GetItems([]string{coldStoragePrefix, warmStoragePrefix})
+	items, err := s.storageAdapter.GetItems([]string{client.ColdStoragePrefix, client.WarmStoragePrefix})
 	if err != nil {
 		return err
 	}
@@ -50,9 +47,9 @@ func (s *CombinedStore) sync() error {
 
 	s.warmStorage.Clear()
 	for _, inventory := range items {
-		if strings.HasPrefix(inventory.Name, coldStoragePrefix) {
+		if strings.HasPrefix(inventory.Name, client.ColdStoragePrefix) {
 			s.coldStorage.Sync(&inventory)
-		} else if strings.HasPrefix(inventory.Name, warmStoragePrefix) {
+		} else if strings.HasPrefix(inventory.Name, client.WarmStoragePrefix) {
 			s.warmStorage.Add(&inventory)
 		} else {
 			continue

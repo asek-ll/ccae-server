@@ -50,13 +50,6 @@ local function restore()
     return craft()
 end
 
-local function processResults(storage)
-    for slot in pairs(m.callRemote(config["output_name"], "list")) do
-        m.callRemote(config['output_name'], "pushItems", storage, slot)
-    end
-    return true
-end
-
 local function get_placeholder_no(name)
     local methods = m.getMethodsRemote(name)
     if methods == nil then
@@ -118,6 +111,5 @@ return function(methods, handlers, wsclient)
     methods['dumpOut'] = dump_out
     methods['craft'] = craft
     methods['restore'] = restore
-    methods['processResults'] = processResults
     return config
 end

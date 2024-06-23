@@ -45,6 +45,7 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 	for _, item := range plan.Items {
 		store[item.ItemUID] = item.Amount
 	}
+	log.Printf("[INFO] Check for plan %v", store)
 
 	recipesById := make(map[int]*dao.Recipe)
 	for _, recipe := range recipes {
@@ -55,10 +56,17 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 
 	for _, step := range plan.Steps {
 		recipe := recipesById[step.RecipeID]
-		minRepeats := step.Repeats
+
+		recipeIngredients := make(map[string]int)
 		for _, ing := range recipe.Ingredients {
-			minRepeats = min(minRepeats, store[ing.ItemUID]/ing.Amount)
+			recipeIngredients[ing.ItemUID] += ing.Amount
 		}
+
+		minRepeats := step.Repeats
+		for ing, amount := range recipeIngredients {
+			minRepeats = min(minRepeats, store[ing]/amount)
+		}
+
 		if minRepeats > 0 {
 			log.Printf("[INFO] Submit craft %v", recipe)
 			updated = true
@@ -89,7 +97,7 @@ func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeat
 	if recipe.Type == "" {
 		workerId = "crafter"
 	} else {
-		workerId = "processing_crafter"
+		workerId = "processing"
 	}
 	err := c.daoProvider.Crafts.InsertCraft(plan.ID, workerId, recipe, repeats)
 	if err != nil {
