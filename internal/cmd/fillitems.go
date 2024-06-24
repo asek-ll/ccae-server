@@ -26,13 +26,21 @@ func (s FillItemsCommand) Execute(args []string) error {
 		return err
 	}
 
-	_, err = db.Exec("DROP TABLE IF EXISTS item;")
+	_, err = db.Exec(`
+	DROP TABLE IF EXISTS item;
+	DROP TABLE IF EXISTS item_tag;
+	`)
 
 	if err != nil {
 		return err
 	}
 
 	items, err := dao.NewItemsDao(db)
+	if err != nil {
+		return err
+	}
+
+	importedRecipes, err := dao.NewImportedRecipesDao(db)
 	if err != nil {
 		return err
 	}
@@ -69,9 +77,18 @@ func (s FillItemsCommand) Execute(args []string) error {
 			return err
 		}
 
-		err = items.InsertItems([]dao.Item{item})
+		err = items.InsertItems([]*dao.Item{&item})
 		if err != nil {
 			return err
+		}
+
+		if tags, e := d["tags"]; e {
+			for _, tag := range tags.([]any) {
+				err = importedRecipes.InsertTag(tag.(string), item.UID)
+				if err != nil {
+					return err
+				}
+			}
 		}
 	}
 

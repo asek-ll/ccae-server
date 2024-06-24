@@ -49,7 +49,7 @@ func NewItemsDao(db *sql.DB) (*ItemsDao, error) {
 	return &ItemsDao{db: db}, nil
 }
 
-func (d *ItemsDao) InsertItems(items []Item) error {
+func (d *ItemsDao) InsertItems(items []*Item) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -61,7 +61,8 @@ func (d *ItemsDao) InsertItems(items []Item) error {
 	}
 
 	for _, item := range items {
-		_, err = stmt.Exec(common.MakeUid(item.ID, item.NBT), item.ID, item.DisplayName, item.NBT, item.Meta, item.Icon)
+		item.UID = common.MakeUid(item.ID, item.NBT)
+		_, err = stmt.Exec(item.UID, item.ID, item.DisplayName, item.NBT, item.Meta, item.Icon)
 		if err != nil {
 			return err
 		}
