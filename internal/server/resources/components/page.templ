@@ -10,6 +10,7 @@ templ Page(title string, content ...templ.Component) {
 			<title>AECC</title>
 			<meta name="description" content="A pure HTML example, without dependencies."/>
 			<link rel="stylesheet" href="/static/css/pico.min.css"/>
+			<link rel="stylesheet" href="/static/css/app.css"/>
 		</head>
 		<body>
 			<!-- Header -->
@@ -18,9 +19,10 @@ templ Page(title string, content ...templ.Component) {
 					<ul></ul>
 					<ul>
 						<li><a href="/">Home</a></li>
+						<li><a href="/items">Items</a></li>
 						<li><a href="/clients">Clients</a></li>
 						<li><a href="/recipes">Recipes</a></li>
-						<li><a href="/items">Storage</a></li>
+						<li><a href="/storageItems">Storage</a></li>
 						<li><a href="/playerItems">Inventory</a></li>
 						<li><a href="/craft-plans">Plans</a></li>
 						<li><a href="/crafts">Jobs</a></li>

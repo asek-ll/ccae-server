@@ -2,7 +2,9 @@ package dao
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
+	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 )
@@ -95,63 +97,83 @@ func (d *ImportedRecipesDao) InsertRecipe(recipe ImportedRecipe) error {
 	return tx.Commit()
 }
 
-func (d *ImportedRecipesDao) FindRecipeByResult(uid string) error {
+func (d *ImportedRecipesDao) FindRecipeByResult(uid string) ([]*Recipe, error) {
 	itemId, nbt := common.FromUid(uid)
 
 	var rows *sql.Rows
 	var err error
 	if nbt == nil {
-		rows, err = d.db.Query("SELECT id, result_count WHERE result_id = ? and result_nbt IS NULL", itemId)
+		rows, err = d.db.Query("SELECT id, result_count FROM imported_recipe WHERE result_id = ? and result_nbt IS NULL", itemId)
 	} else {
-		rows, err = d.db.Query("SELECT id, result_count WHERE result_id = ? and result_nbt = ?", itemId, nbt)
+		rows, err = d.db.Query("SELECT id, result_count FROM imported_recipe WHERE result_id = ? and result_nbt = ?", itemId, nbt)
 	}
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	if !rows.Next() {
-		return nil
+	recipeById := make(map[int]*Recipe)
+
+	for rows.Next() {
+		var id int
+		var resultCountPtr *int
+
+		err = rows.Scan(&id, &resultCountPtr)
+		if err != nil {
+			return nil, err
+		}
+		resultCount := 1
+		if resultCountPtr != nil {
+			resultCount = *resultCountPtr
+		}
+
+		results := []RecipeItem{{
+			ItemUID: uid,
+			Amount:  resultCount,
+			Role:    RESULT_ROLE,
+		}}
+
+		recipeById[id] = &Recipe{
+			Name:    uid,
+			Results: results,
+		}
 	}
 
-	var id int
-	var resultCount int
-
-	err = rows.Scan(&id, &resultCount)
-	if err != nil {
-		return err
+	if len(recipeById) == 0 {
+		return nil, nil
 	}
 
-	stmt := `
-	SELECT iri.slot, iri.count, iri.item, iri.nbt, it.item_uid
-	FROM imported_recipe_ingredient iri ON iri.recipe_id = ir.id
+	stmt := fmt.Sprintf(`
+	SELECT iri.recipe_id, iri.slot, iri.count, iri.item, iri.nbt, it.item_uid
+	FROM imported_recipe_ingredient iri
 	LEFT JOIN item_tag it ON it.name = iri.item_tag
-	WHERE iri.recipe_id = ?
-	`
+	WHERE iri.recipe_id IN (?%s)
+	`, strings.Repeat(", ?", len(recipeById)-1))
 
-	rows, err = d.db.Query(stmt, id)
+	rows, err = d.db.Query(stmt, common.ToArgs(common.MapKeys(recipeById))...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = rows.Err()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for rows.Next() {
+		var recipe_id int
 		var slot int
 		var count *int
 		var item *string
 		var nbt *string
 		var uid_from_tag *string
-		err = rows.Scan(&slot, &count, &item, &nbt, &uid_from_tag)
+		err = rows.Scan(&recipe_id, &slot, &count, &item, &nbt, &uid_from_tag)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		var uid string
 		if uid_from_tag != nil {
@@ -159,7 +181,7 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) error {
 		} else if item != nil {
 			uid = common.MakeUid(*item, nbt)
 		} else {
-			log.Printf("[WARN] Invalid ingredient for recipe: %d", id)
+			log.Printf("[WARN] Invalid ingredient for recipe: %d", recipe_id)
 			continue
 		}
 		amount := 1
@@ -167,14 +189,16 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) error {
 			amount = *count
 		}
 
-		_ = RecipeItem{
+		recipe := recipeById[recipe_id]
+
+		recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
 			ItemUID: uid,
 			Amount:  amount,
 			Role:    INGREDIENT_ROLE,
 			Slot:    &slot,
-		}
+		})
 
 	}
 
-	return nil
+	return common.MapValues(recipeById), nil
 }

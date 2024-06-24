@@ -1,0 +1,47 @@
+package components
+
+import (
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ ItemsList(items []dao.Item) {
+	<table>
+		for row := range GetRowCount(len(items), 7) {
+			<tr>
+				for col := range 7 {
+					<td>
+						if (row*7 + col) < len(items) {
+							@ItemWithAmount(&items[row*7+col], 1)
+						}
+					</td>
+				}
+			</tr>
+		}
+	</table>
+}
+
+templ ItemsListPage(filter string, items []dao.Item) {
+	@Page("Items") {
+		@ItemsFilter(filter)
+		<div id="items-result">
+			@ItemsList(items)
+		</div>
+	}
+}
+
+templ ItemsFilter(filter string) {
+	<div>
+		<label>
+			Filter
+			<input
+				id="filter"
+				name="filter"
+				value={ filter }
+				hx-get="/items?view=list"
+				hx-trigger="keyup changed delay:500ms"
+				hx-target="#items-result"
+				placeholder="Search..."
+			/>
+		</label>
+	</div>
+}

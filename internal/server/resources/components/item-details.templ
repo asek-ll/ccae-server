@@ -13,6 +13,26 @@ templ ItemPage(info *storage.RichItemInfo) {
 			<h3>Recipes</h3>
 			@RecipesList(info.Recipes)
 			<a href={ templ.URL(fmt.Sprintf("/recipes/new?item_1=%s&role_1=result&amount_1=1&name=%s", info.Item.UID, info.Item.DisplayName)) }>Add craft recipe</a>
+			<h3>Imported</h3>
+			<section>
+				<table>
+					for _, recipe := range info.ImportedRecipes {
+						<tr>
+							<td>
+								@RecipesGrid(recipe)
+							</td>
+							<td>
+								<div class="grid">
+									for _, item := range recipe.Results {
+										@ItemStack(item.ItemUID, item.Amount)
+									}
+								</div>
+							</td>
+							<td><a href={ templ.URL(RecipeToURL(recipe)) }>USE</a></td>
+						</tr>
+					}
+				</table>
+			</section>
 		</section>
 	}
 }

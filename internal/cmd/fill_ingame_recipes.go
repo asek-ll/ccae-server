@@ -85,7 +85,7 @@ func (s FillInGameRecipesCommand) Execute(args []string) error {
 			}
 			h := 3
 			if r.Height != nil {
-				w = *r.Height
+				h = *r.Height
 			}
 
 			var importedIngredients []dao.ImportedIngredient
@@ -148,7 +148,7 @@ func (s FillInGameRecipesCommand) Execute(args []string) error {
 
 			if isValid {
 				err = importedDao.InsertRecipe(dao.ImportedRecipe{
-					ResultUID:   r.Result.Item,
+					ResultID:    r.Result.Item,
 					ResultCount: r.Result.Count,
 					ResultNBT:   r.Result.NBT,
 					Ingredients: importedIngredients,

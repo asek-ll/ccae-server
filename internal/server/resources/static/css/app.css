@@ -1,0 +1,9 @@
+.stack-count {
+  position: absolute;
+  top: 27px;
+  left: -10px;
+  font-weight: bold;
+  text-shadow: 0 0 5px white;
+  text-align: right;
+  width: 64px;
+}

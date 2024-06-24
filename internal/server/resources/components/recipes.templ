@@ -22,7 +22,7 @@ templ RecipesGrid(recipe *dao.Recipe) {
 				for _, item := range row {
 					<div class="recipe-slot" style="width: 48px">
 						if item != nil {
-							@ItemIconByUID(item.ItemUID)
+							@ItemStack(item.ItemUID, item.Amount)
 						}
 					</div>
 				}
@@ -60,7 +60,7 @@ templ RecipesList(recipes []*dao.Recipe) {
 					<td>
 						<div class="grid">
 							for _, item := range recipe.Results {
-								@ItemIconByUID(item.ItemUID)
+								@ItemStack(item.ItemUID, item.Amount)
 							}
 						</div>
 					</td>

@@ -59,10 +59,10 @@ func shapedRecipeItemWrap(items []dao.RecipeItem, slot int) templ.Component {
 }
 
 func ip2a(i *int) string {
-    if i == nil {
-        return ""
-    }
-    return fmt.Sprintf("%d", *i)
+	if i == nil {
+		return ""
+	}
+	return fmt.Sprintf("%d", *i)
 }
 
 templ RecipeForm(recipe *dao.Recipe) {

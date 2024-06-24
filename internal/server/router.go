@@ -96,13 +96,29 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.ClientsPage(clients).Render(r.Context(), w)
 	})
 
-	handleFuncWithError(common, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "GET /storageItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		items, err := app.Storage.GetItems()
 		if err != nil {
 			return err
 		}
 
-		return components.ItemsPage(items).Render(r.Context(), w)
+		return components.ItemsInventory(items, 9).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		filter := r.URL.Query().Get("filter")
+		view := r.URL.Query().Get("view")
+
+		items, err := app.Daos.Items.FindByName(filter)
+		if err != nil {
+			return err
+		}
+
+		if view == "list" {
+			return components.ItemsList(items).Render(r.Context(), w)
+		}
+
+		return components.ItemsListPage(filter, items).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "GET /playerItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -160,7 +176,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipes(item.Recipes).ToContext(r.Context())
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipes(item.Recipes).FromRecipes(item.ImportedRecipes).ToContext(r.Context())
 		if err != nil {
 			return err
 		}

@@ -19,3 +19,21 @@ templ ItemIcon(item *dao.Item) {
 		</a>
 	</div>
 }
+
+templ ItemWithAmount(item *dao.Item, amount int) {
+	<div data-tooltip={ item.UID } style="width: 48px; height: 48px;">
+		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
+			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
+		</a>
+		if amount > 1 {
+			<span class="stack-count">{ fmt.Sprintf("%d", amount) }</span>
+		}
+	</div>
+}
+
+func ItemStack(itemUid string, amount int) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+		item := getItem(ctx, itemUid)
+		return ItemWithAmount(item, amount).Render(ctx, w)
+	})
+}

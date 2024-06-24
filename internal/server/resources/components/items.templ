@@ -1,9 +1,28 @@
 package components
 
 import (
-	"strconv"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 )
+
+templ ItemsInventory(stacks []storage.AggregateStacks, width int) {
+	@Page("Items") {
+		<section>
+			<table>
+				for _, row := range ToTable(stacks, width) {
+					<tr>
+						for i := 0; i < width; i++ {
+							<td>
+								if i < len(row) {
+									@ItemWithAmount(&row[i].Item, row[i].Count)
+								}
+							</td>
+						}
+					</tr>
+				}
+			</table>
+		</section>
+	}
+}
 
 templ ItemsPage(stacks []storage.AggregateStacks) {
 	@Page("Items") {
@@ -14,9 +33,8 @@ templ ItemsPage(stacks []storage.AggregateStacks) {
 						<td>{ stack.Item.ID }</td>
 						<td>{ stack.Item.DisplayName }</td>
 						<td>
-							@ItemIcon(&stack.Item)
+							@ItemWithAmount(&stack.Item, stack.Count)
 						</td>
-						<td>{ strconv.Itoa(stack.Count) }</td>
 					</tr>
 				}
 			</table>

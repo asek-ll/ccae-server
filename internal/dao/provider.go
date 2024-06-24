@@ -7,14 +7,15 @@ import (
 )
 
 type DaoProvider struct {
-	Clients      *ClientsDao
-	Seqs         *SeqsDao
-	Items        *ItemsDao
-	Recipes      *RecipesDao
-	Configs      *ConfigsDao
-	Plans        *PlansDao
-	Crafts       *CraftsDao
-	ItemReserves *ItemReserveDao
+	Clients          *ClientsDao
+	Seqs             *SeqsDao
+	Items            *ItemsDao
+	Recipes          *RecipesDao
+	Configs          *ConfigsDao
+	Plans            *PlansDao
+	Crafts           *CraftsDao
+	ItemReserves     *ItemReserveDao
+	ImporetedRecipes *ImportedRecipesDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -63,14 +64,20 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 
+	importedRecipesDao, err := NewImportedRecipesDao(db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DaoProvider{
-		Clients:      clientsDao,
-		Seqs:         seqsDao,
-		Items:        itemsDao,
-		Recipes:      recipesDao,
-		Configs:      configsDao,
-		Plans:        plansDao,
-		Crafts:       craftsDao,
-		ItemReserves: itemReserveDao,
+		Clients:          clientsDao,
+		Seqs:             seqsDao,
+		Items:            itemsDao,
+		Recipes:          recipesDao,
+		Configs:          configsDao,
+		Plans:            plansDao,
+		Crafts:           craftsDao,
+		ItemReserves:     itemReserveDao,
+		ImporetedRecipes: importedRecipesDao,
 	}, nil
 }

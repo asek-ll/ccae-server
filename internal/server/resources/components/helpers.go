@@ -3,6 +3,9 @@ package components
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
+	"net/url"
+	"strconv"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
@@ -49,4 +52,44 @@ func FormatIngredients(r *dao.Recipe) [][]*dao.RecipeItem {
 	}
 
 	return rows
+}
+
+func GetRowCount(items int, width int) int {
+	if items%width == 0 {
+		return items / width
+	}
+	return items/width + 1
+}
+
+func ToTable[T any](items []T, width int) [][]T {
+	var rows [][]T
+	for i := 0; i < len(items); i += width {
+		end := i + width
+		if end > len(items) {
+			end = len(items)
+		}
+		rows = append(rows, items[i:end])
+	}
+	return rows
+}
+
+func RecipeToURL(recipe *dao.Recipe) string {
+	params := url.Values(make(map[string][]string))
+	params.Set("name", recipe.Name)
+
+	for slot, item := range recipe.Ingredients {
+		params.Set(fmt.Sprintf("slot_%d", 100+slot), fmt.Sprintf("%d", *item.Slot))
+		params.Set(fmt.Sprintf("item_%d", 100+slot), item.ItemUID)
+		params.Set(fmt.Sprintf("role_%d", 100+slot), item.Role)
+		params.Set(fmt.Sprintf("amount_%d", 100+slot), strconv.Itoa(item.Amount))
+	}
+
+	for slot, item := range recipe.Results {
+		params.Set(fmt.Sprintf("slot_%d", slot), fmt.Sprintf("%d", slot+1))
+		params.Set(fmt.Sprintf("item_%d", slot), item.ItemUID)
+		params.Set(fmt.Sprintf("role_%d", slot), item.Role)
+		params.Set(fmt.Sprintf("amount_%d", slot), strconv.Itoa(item.Amount))
+	}
+
+	return fmt.Sprintf("/recipes/new?%s", url.Values(params).Encode())
 }

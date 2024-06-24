@@ -72,8 +72,9 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 }
 
 type RichItemInfo struct {
-	Item    *dao.Item
-	Recipes []*dao.Recipe
+	Item            *dao.Item
+	Recipes         []*dao.Recipe
+	ImportedRecipes []*dao.Recipe
 }
 
 func (s *Storage) GetItemCount(uid string) (int, error) {
@@ -94,9 +95,20 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 		return nil, err
 	}
 
+	importedRecipes, err := s.daoProvider.ImporetedRecipes.FindRecipeByResult(uid)
+	if err != nil {
+		return nil, err
+	}
+	if importedRecipes != nil {
+		log.Printf("[WARN] Found imporeted recipe %v", importedRecipes)
+	} else {
+		log.Printf("[WARN] No imporeted recipe found for %s", uid)
+	}
+
 	return &RichItemInfo{
-		Item:    &items[0],
-		Recipes: recipes,
+		Item:            &items[0],
+		Recipes:         recipes,
+		ImportedRecipes: importedRecipes,
 	}, nil
 }
 
