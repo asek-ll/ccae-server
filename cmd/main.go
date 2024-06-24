@@ -9,9 +9,10 @@ import (
 )
 
 type Options struct {
-	ServerCmd   cmd.ServerCommand      `command:"server"`
-	FillItems   cmd.FillItemsCommand   `command:"fill_items"`
-	FillRecipes cmd.FillRecipesCommand `command:"fill_recipes"`
+	ServerCmd         cmd.ServerCommand            `command:"server"`
+	FillItems         cmd.FillItemsCommand         `command:"fill_items"`
+	FillRecipes       cmd.FillRecipesCommand       `command:"fill_recipes"`
+	FillInGameRecipes cmd.FillInGameRecipesCommand `command:"fill_from_game"`
 }
 
 func main() {
