@@ -2,6 +2,9 @@ package cmd
 
 import (
 	"database/sql"
+	"encoding/json"
+	"fmt"
+	"os"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/jessevdk/go-flags"
@@ -10,6 +13,32 @@ import (
 var _ flags.Commander = FillInGameRecipesCommand{}
 
 type FillInGameRecipesCommand struct {
+}
+
+type InGameIngredient struct {
+	Item  *string `json:"item"`
+	Tag   *string `json:"tag"`
+	Count *int    `json:"count"`
+	NBT   *string `json:"nbt"`
+}
+
+type InGameResult struct {
+	Item  string  `json:"item"`
+	Count *int    `json:"count"`
+	NBT   *string `json:"nbt"`
+}
+
+type InGameRecipe struct {
+	Ingredients []json.RawMessage `json:"ingredients"`
+	Result      InGameResult      `json:"result"`
+	Width       *int              `json:"w"`
+	Height      *int              `json:"h"`
+}
+
+type InGameRecipeType struct {
+	Title   string         `json:"title"`
+	Mod     string         `json:"mod"`
+	Recipes []InGameRecipe `json:"recipes"`
 }
 
 func (s FillInGameRecipesCommand) Execute(args []string) error {
@@ -21,16 +50,114 @@ func (s FillInGameRecipesCommand) Execute(args []string) error {
 
 	_, err = db.Exec(`
 	DROP TABLE IF EXISTS imported_recipe;
-	DROP TABLE IF EXISTS imported_recipes_ingredient;
+	DROP TABLE IF EXISTS imported_recipe_ingredient;
 	`)
 
 	if err != nil {
 		return err
 	}
 
-	_, err = dao.NewImportedRecipesDao(db)
+	importedDao, err := dao.NewImportedRecipesDao(db)
 	if err != nil {
 		return err
+	}
+
+	jsonFile, err := os.Open("all_recipes.json")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer jsonFile.Close()
+
+	decoder := json.NewDecoder(jsonFile)
+	var data []InGameRecipeType
+	err = decoder.Decode(&data)
+	if err != nil {
+		return err
+	}
+
+	for _, rt := range data {
+		for _, r := range rt.Recipes {
+			isValid := true
+
+			w := 3
+			if r.Width != nil {
+				w = *r.Width
+			}
+			h := 3
+			if r.Height != nil {
+				w = *r.Height
+			}
+
+			var importedIngredients []dao.ImportedIngredient
+			for slot, is := range r.Ingredients {
+
+				var ings []InGameIngredient
+				err := json.Unmarshal(is, &ings)
+				if err != nil {
+					var ing InGameIngredient
+					err = json.Unmarshal(is, &ing)
+					if err != nil {
+						return err
+					}
+					ings = append(ings, ing)
+				}
+
+				for _, ing := range ings {
+					row := slot / w
+					column := slot % w
+
+					convertedSlot := (row*3 + column) + 1
+					if row >= h {
+						// if r.Result.NBT != nil {
+						// 	fmt.Println(rt.Title, r.Result, *r.Result.NBT, slot+1, convertedSlot)
+						// } else {
+						// 	fmt.Println(rt.Title, r.Result, slot+1, convertedSlot)
+						// }
+						// for _, ing2 := range importedIngredients {
+						// 	if ing2.Item != nil {
+						// 		fmt.Println(*ing2.Item)
+						// 	} else if ing2.ItemTag != nil {
+						// 		fmt.Println(*ing2.ItemTag)
+						// 	} else {
+						// 		fmt.Println("<no item>")
+						// 	}
+						// }
+						// return fmt.Errorf("Invalid wxh format: %d %d", row, h)
+						isValid = false
+					}
+
+					// if convertedSlot != slot+1 {
+					// 	fmt.Printf("Convert %d to %d for %dx%d\n", slot+1, convertedSlot, w, h)
+					// }
+
+					if ing.Item == nil && ing.Tag == nil {
+						// fmt.Printf("Invalid ingredient for %v\n", r.Result)
+						isValid = false
+					}
+
+					importedIngredients = append(importedIngredients, dao.ImportedIngredient{
+						Slot:    convertedSlot,
+						Item:    ing.Item,
+						ItemTag: ing.Tag,
+						Count:   ing.Count,
+						NBT:     ing.NBT,
+					})
+				}
+
+			}
+
+			if isValid {
+				err = importedDao.InsertRecipe(dao.ImportedRecipe{
+					ResultUID:   r.Result.Item,
+					ResultCount: r.Result.Count,
+					ResultNBT:   r.Result.NBT,
+					Ingredients: importedIngredients,
+				})
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
 	return nil
