@@ -570,18 +570,77 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.Page("Craft plans", components.CraftList(craftItems)).Render(ctx, w)
 	})
 
-	// handleFuncWithError(common, "POST /crafts/{craftId}/ping/{$}", func(w http.ResponseWriter, r *http.Request) error {
-	// 	craftIdStr := r.PathValue("craftId")
-	// 	craftId, err := strconv.Atoi(craftIdStr)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	err = app.Crafter.Craft(craftId)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	return nil
-	// })
+	handleFuncWithError(common, "GET /imported-recipe/{recipeId}/configure/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		rawRecipeId := r.PathValue("recipeId")
+		recipeId, err := strconv.Atoi(rawRecipeId)
+		if err != nil {
+			return err
+		}
+
+		recipe, err := app.Daos.ImporetedRecipes.FindRecipeById(recipeId)
+		if err != nil {
+			return err
+		}
+
+		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipe(recipe).ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		slotIngredients := make(map[int][]dao.RecipeItem)
+		for _, item := range recipe.Ingredients {
+			slotIngredients[*item.Slot] = append(slotIngredients[*item.Slot], item)
+		}
+
+		return components.Page(fmt.Sprintf("Imported Recipe for %s", recipe.Name), components.ImportRecipeSlotsSelector(slotIngredients)).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "POST /imported-recipe/{recipeId}/configure/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		rawRecipeId := r.PathValue("recipeId")
+		recipeId, err := strconv.Atoi(rawRecipeId)
+		if err != nil {
+			return err
+		}
+
+		recipe, err := app.Daos.ImporetedRecipes.FindRecipeById(recipeId)
+		if err != nil {
+			return err
+		}
+
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		uidBySlot := make(map[int]string)
+
+		for k, vs := range r.PostForm {
+			slot, err := strconv.Atoi(k)
+			if err != nil {
+				return err
+			}
+			if len(vs) == 0 {
+				continue
+			}
+			uidBySlot[slot] = vs[0]
+		}
+
+		filteredRecipeItems := make([]dao.RecipeItem, 0, len(recipe.Ingredients))
+		for _, item := range recipe.Ingredients {
+			if uid, ok := uidBySlot[*item.Slot]; ok && uid != item.ItemUID {
+				continue
+			}
+			filteredRecipeItems = append(filteredRecipeItems, item)
+		}
+
+		recipe.Ingredients = filteredRecipeItems
+
+		url := components.RecipeToURL(recipe)
+
+		http.Redirect(w, r, url, http.StatusSeeOther)
+
+		return nil
+	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)

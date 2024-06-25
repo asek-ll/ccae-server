@@ -103,9 +103,9 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) ([]*Recipe, error) {
 	var rows *sql.Rows
 	var err error
 	if nbt == nil {
-		rows, err = d.db.Query("SELECT id, result_count FROM imported_recipe WHERE result_id = ? and result_nbt IS NULL", itemId)
+		rows, err = d.db.Query("SELECT id, result_count, result_id, result_nbt FROM imported_recipe WHERE result_id = ? and result_nbt IS NULL", itemId)
 	} else {
-		rows, err = d.db.Query("SELECT id, result_count FROM imported_recipe WHERE result_id = ? and result_nbt = ?", itemId, nbt)
+		rows, err = d.db.Query("SELECT id, result_count, result_id, result_nbt FROM imported_recipe WHERE result_id = ? and result_nbt = ?", itemId, nbt)
 	}
 	if err != nil {
 		return nil, err
@@ -116,16 +116,47 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) ([]*Recipe, error) {
 		return nil, err
 	}
 
+	return d.parseImportedRecipes(rows)
+}
+
+func (d *ImportedRecipesDao) FindRecipeById(id int) (*Recipe, error) {
+	rows, err := d.db.Query("SELECT id, result_count, result_id, result_nbt FROM imported_recipe WHERE id = ?", id)
+	if err != nil {
+		return nil, err
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	recipes, err := d.parseImportedRecipes(rows)
+	if err != nil {
+		return nil, err
+	}
+	if len(recipes) == 0 {
+		return nil, fmt.Errorf("Recipe with id %d not found", id)
+	}
+	return recipes[0], nil
+}
+
+func (d *ImportedRecipesDao) parseImportedRecipes(rows *sql.Rows) ([]*Recipe, error) {
+	var err error
+
 	recipeById := make(map[int]*Recipe)
 
 	for rows.Next() {
 		var id int
 		var resultCountPtr *int
+		var resultId string
+		var resultNbt *string
 
-		err = rows.Scan(&id, &resultCountPtr)
+		err := rows.Scan(&id, &resultCountPtr, &resultId, &resultNbt)
 		if err != nil {
 			return nil, err
 		}
+		uid := common.MakeUid(resultId, resultNbt)
+
 		resultCount := 1
 		if resultCountPtr != nil {
 			resultCount = *resultCountPtr
@@ -138,6 +169,7 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) ([]*Recipe, error) {
 		}}
 
 		recipeById[id] = &Recipe{
+			ID:      id,
 			Name:    uid,
 			Results: results,
 		}
@@ -197,8 +229,16 @@ func (d *ImportedRecipesDao) FindRecipeByResult(uid string) ([]*Recipe, error) {
 			Role:    INGREDIENT_ROLE,
 			Slot:    &slot,
 		})
+		// if len(recipe.Ingredients) > 9 {
+		// 	recipe.Type = "custom"
+		// }
 
 	}
 
-	return common.MapValues(recipeById), nil
+	recipes := common.MapValues(recipeById)
+	// for _, recipe := range recipes {
+
+	// }
+
+	return recipes, nil
 }

@@ -278,7 +278,7 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 	}
 
 	query := fmt.Sprintf(`
-	SELECT r.*, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
+	SELECT r.id, r.name, r.type, r.max_repeats, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
 	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id 
 	WHERE r.id IN (?%s)
 	`, strings.Repeat(", ?", len(ids)-1))

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"math"
 	"net/url"
 	"strconv"
 
@@ -26,26 +27,49 @@ func getItem(ctx context.Context, uid string) *dao.Item {
 
 func FormatIngredients(r *dao.Recipe) [][]*dao.RecipeItem {
 	var rows [][]*dao.RecipeItem
-	if r.Type == "" {
-		rows = append(rows, make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3), make([]*dao.RecipeItem, 3))
+
+	maxSlot := 0
+	allWithSlot := true
+	for _, ing := range r.Ingredients {
+		if ing.Slot == nil {
+			allWithSlot = false
+			break
+		}
+
+		if *ing.Slot > maxSlot {
+			maxSlot = *ing.Slot
+		}
+	}
+
+	if allWithSlot {
+		columnCount := int(math.Ceil(math.Sqrt(float64(maxSlot))))
+		if columnCount < 3 {
+			columnCount = 3
+		}
+
+		for i := 0; i < columnCount; i += 1 {
+			rows = append(rows, make([]*dao.RecipeItem, columnCount))
+		}
+
 		for _, ri := range r.Ingredients {
-			r := ((*ri.Slot) - 1) / 3
-			c := ((*ri.Slot) - 1) % 3
+			r := ((*ri.Slot) - 1) / columnCount
+			c := ((*ri.Slot) - 1) % columnCount
 			rows[r][c] = &ri
 		}
 	} else {
+		columnCount := 3
 		var currentRow []*dao.RecipeItem
 		for i, ri := range r.Ingredients {
 			if len(currentRow) == 0 {
-				currentRow = make([]*dao.RecipeItem, 3)
+				currentRow = make([]*dao.RecipeItem, columnCount)
 				rows = append(rows, currentRow)
 			}
 
-			c := i % 3
+			c := i % columnCount
 
 			currentRow[c] = &ri
 
-			if c == 2 {
+			if c == columnCount-1 {
 				currentRow = nil
 			}
 		}

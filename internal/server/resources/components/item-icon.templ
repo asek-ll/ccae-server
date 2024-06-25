@@ -13,7 +13,7 @@ func ItemIconByUID(itemUid string) templ.Component {
 }
 
 templ ItemIcon(item *dao.Item) {
-	<div data-tooltip={ item.UID } style="width: 48px; height: 48px;">
+	<div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } style="width: 48px; height: 48px;">
 		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
 			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
 		</a>
@@ -21,7 +21,7 @@ templ ItemIcon(item *dao.Item) {
 }
 
 templ ItemWithAmount(item *dao.Item, amount int) {
-	<div data-tooltip={ item.UID } style="width: 48px; height: 48px;">
+	<div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } style="width: 48px; height: 48px;">
 		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
 			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
 		</a>

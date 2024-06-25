@@ -100,7 +100,7 @@ func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {
 		return nil, err
 	}
 	if importedRecipes != nil {
-		log.Printf("[WARN] Found imporeted recipe %v", importedRecipes)
+		log.Printf("[WARN] Found imporeted recipe %v", *importedRecipes[0])
 	} else {
 		log.Printf("[WARN] No imporeted recipe found for %s", uid)
 	}
