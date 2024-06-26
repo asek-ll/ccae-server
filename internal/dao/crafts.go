@@ -51,6 +51,19 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 	}, nil
 }
 
+func (d *CraftsDao) GetAllCrafts() ([]*Craft, error) {
+	rows, err := d.db.Query(`
+	SELECT ` + craftsFieldList + ` 
+	FROM craft 
+	LIMIT 50`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return readCrafts(rows)
+}
+
 func (d *CraftsDao) GetCrafts() ([]*Craft, error) {
 	rows, err := d.db.Query(`
 	SELECT `+craftsFieldList+` 
@@ -160,10 +173,18 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error
 	}
 	defer tx.Rollback()
 
-	res, err := tx.Exec("UPDATE craft SET status = 'COMMITED', commit_repeats = ? WHERE id = ? AND status = 'PENDING'", repeats, craft.ID)
+	res, err := tx.Exec(`
+	UPDATE craft 
+	SET 
+		status = 'COMMITED',
+		commit_repeats = ? 
+	WHERE
+		id = ? AND status = 'PENDING' AND commit_repeats = 0`, repeats, craft.ID)
 	if err != nil {
 		return err
 	}
+
+	log.Printf("[WARN] Commit recipe %d", repeats)
 
 	afftected, err := res.RowsAffected()
 	if err != nil {
@@ -173,6 +194,39 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error
 		return errors.New("Expected craft in PENDING state")
 	}
 
+	for _, ing := range recipe.Ingredients {
+		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*repeats)
+		if err != nil {
+			return err
+		}
+	}
+
+	craft.CommitRepeats = repeats
+
+	return tx.Commit()
+}
+
+func (d *CraftsDao) CancelCraft(craft *Craft, recipe *Recipe) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	res, err := tx.Exec("DELETE FROM craft WHERE id = ? AND commit_repeats = ?", craft.ID, craft.CommitRepeats)
+	if err != nil {
+		return err
+	}
+
+	afftected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if afftected != 1 {
+		return errors.New("Expected craft")
+	}
+
+	repeats := craft.Repeats - craft.CommitRepeats
 	for _, ing := range recipe.Ingredients {
 		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*repeats)
 		if err != nil {
@@ -237,6 +291,8 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 
 	defer tx.Rollback()
 
+	log.Println("[ERROR] set status 'PENDING'")
+
 	row := tx.QueryRow(`UPDATE craft SET 
 	repeats = repeats - commit_repeats, 
 	commit_repeats = 0,
@@ -269,10 +325,45 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 	return tx.Commit()
 }
 
-func (d *CraftsDao) SuspendCraft(craft *Craft) error {
-	_, err := d.db.Exec("UPDATE craft SET status = 'PENDING', check_at = ?, commit_repeats = 0 WHERE id = ?",
-		time.Now().Add(time.Minute), craft.ID)
-	return err
+func (d *CraftsDao) SuspendCraft(craft *Craft, recipe *Recipe) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	res, err := tx.Exec(`
+	UPDATE craft 
+	SET status = 'PENDING', check_at = ?, commit_repeats = 0 
+	WHERE id = ? and commit_repeats = ?`,
+		time.Now().Add(time.Minute), craft.ID, craft.CommitRepeats)
+
+	if err != nil {
+		return err
+	}
+
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if affected != 1 {
+		return errors.New("Expected craft")
+	}
+
+	repeats := craft.CommitRepeats
+
+	log.Printf("[ERROR] set status 'PENDING' %d", repeats)
+
+	for _, ing := range recipe.Ingredients {
+		err = ReserveItem(tx, ing.ItemUID, ing.Amount*repeats)
+		if err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {

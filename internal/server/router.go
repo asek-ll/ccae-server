@@ -530,7 +530,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /crafts/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		crafts, err := app.Daos.Crafts.GetCrafts()
+		crafts, err := app.Daos.Crafts.GetAllCrafts()
 		if err != nil {
 			return err
 		}
@@ -640,6 +640,60 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		http.Redirect(w, r, url, http.StatusSeeOther)
 
 		return nil
+	})
+
+	handleFuncWithError(common, "POST /crafts/{id}/commit/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		id := r.PathValue("id")
+		craftId, err := strconv.Atoi(id)
+		if err != nil {
+			return err
+		}
+
+		craft, err := app.Daos.Crafts.FindById(craftId)
+		if err != nil {
+			return err
+		}
+
+		recipe, err := app.Daos.Recipes.GetRecipeById(craft.RecipeID)
+		if err != nil {
+			return err
+		}
+
+		return app.Daos.Crafts.CommitCraft(craft, recipe, 1)
+	})
+	handleFuncWithError(common, "POST /crafts/{id}/complete/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		id := r.PathValue("id")
+		craftId, err := strconv.Atoi(id)
+		if err != nil {
+			return err
+		}
+
+		craft, err := app.Daos.Crafts.FindById(craftId)
+		if err != nil {
+			return err
+		}
+
+		return app.Daos.Crafts.CompleteCraft(craft)
+	})
+
+	handleFuncWithError(common, "POST /crafts/{id}/cancel/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		id := r.PathValue("id")
+		craftId, err := strconv.Atoi(id)
+		if err != nil {
+			return err
+		}
+
+		craft, err := app.Daos.Crafts.FindById(craftId)
+		if err != nil {
+			return err
+		}
+
+		recipe, err := app.Daos.Recipes.GetRecipeById(craft.RecipeID)
+		if err != nil {
+			return err
+		}
+
+		return app.Daos.Crafts.CancelCraft(craft, recipe)
 	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

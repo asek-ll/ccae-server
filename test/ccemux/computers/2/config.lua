@@ -1,4 +1,4 @@
 return {
-  buffer_name = "inventory_2",
+  buffer_name = "crafter_input",
   buffer_side = "top",
 }

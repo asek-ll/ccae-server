@@ -33,10 +33,10 @@ target/ccemux/ccemux.json: target/ccemux
 	cp test/ccemux/ccemux.json target/ccemux/ccemux.json
 
 target/ccemux.jar: target/ccemux/ccemux.json
-	curl https://github.com/asek-ll/ccemux-fork/releases/download/v0.0.1/CCEmuX-1.1.0-1.110.3-e17ad754dd9a30130db317d9a6cefcfe56e0bfff-cct.jar -o target/ccemux.jar -L
+	curl https://github.com/asek-ll/ccemux-fork/releases/download/v0.0.2/CCEmuX-1.1.1-1.110.3-cct.jar  -o target/ccemux.jar -L
 
 target/ccemux-plugin.jar: target/ccemux/ccemux.json
-	curl https://github.com/asek-ll/ccemux-testnet-plugin/releases/download/v0.0.4/ccemux-testnet-plugin-1.0-SNAPSHOT.jar -o target/ccemux-plugin.jar -L
+	curl https://github.com/asek-ll/ccemux-testnet-plugin/releases/download/v0.0.6/ccemux-testnet-plugin-1.0-SNAPSHOT.jar -o target/ccemux-plugin.jar -L
 
 .PHONY: ccemux
 ccemux: target/ccemux.jar target/ccemux/ccemux.json target/ccemux-plugin.jar

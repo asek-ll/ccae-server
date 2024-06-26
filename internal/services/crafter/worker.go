@@ -169,7 +169,7 @@ func (c *CraftWorker) process() (bool, error) {
 			return false, err
 		}
 	} else {
-		err = c.daos.Crafts.SuspendCraft(next)
+		err = c.daos.Crafts.SuspendCraft(next, recipe)
 		if err != nil {
 			return false, err
 		}

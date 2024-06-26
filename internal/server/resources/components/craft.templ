@@ -13,13 +13,18 @@ templ CraftList(crafts []CraftItem) {
 					{ strconv.Itoa(craft.Craft.ID) }
 				</td>
 				<td>
-					{ strconv.Itoa(craft.Craft.Repeats) }
+					{ strconv.Itoa(craft.Craft.CommitRepeats) } / { strconv.Itoa(craft.Craft.Repeats) }
 				</td>
 				<td>
 					@RecipesGrid(craft.Recipe)
 				</td>
 				<td>
-					<button hx-post={ fmt.Sprintf("/crafts/%d/ping/", craft.Craft.ID) }>PING</button>
+					{ craft.Craft.Status }
+				</td>
+				<td>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/commit/", craft.Craft.ID) }>COMMIT</button>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/complete/", craft.Craft.ID) }>COMPLETE</button>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/cancel/", craft.Craft.ID) }>CANCEL</button>
 				</td>
 			</tr>
 		}
