@@ -54,7 +54,7 @@ templ RecipesList(recipes []*dao.Recipe) {
 			for _, recipe := range recipes {
 				<tr>
 					<td><a href={ templ.URL(fmt.Sprintf("/recipes/%d", recipe.ID)) }>{ recipe.Name }</a></td>
-					<td> { recipe.Type } </td>
+					<td>{ recipe.Type } </td>
 					<td>
 						@RecipesGrid(recipe)
 					</td>

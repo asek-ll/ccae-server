@@ -10,12 +10,15 @@ templ ImportItemSelector(slot int, items []dao.RecipeItem) {
 	<fieldset>
 		<legend>{ fmt.Sprintf("%d", slot) }</legend>
 		for idx, item := range items {
-			<input type="radio" id={ fmt.Sprintf("%d", slot*100+idx) } name={ fmt.Sprintf("%d", slot) } 
-            value={ item.ItemUID } 
-            if idx == 0{
-                checked
-            }
-            />
+			<input
+				type="radio"
+				id={ fmt.Sprintf("%d", slot*100+idx) }
+				name={ fmt.Sprintf("%d", slot) }
+				value={ item.ItemUID }
+				if idx == 0 {
+					checked
+				}
+			/>
 			<label htmlFor={ fmt.Sprintf("%d", slot*100+idx) }>
 				@ItemIconByUID(item.ItemUID)
 			</label>
@@ -24,12 +27,12 @@ templ ImportItemSelector(slot int, items []dao.RecipeItem) {
 }
 
 templ ImportRecipeSlotsSelector(itemsBySlot map[int][]dao.RecipeItem) {
-    <form method="post">
-	for slot, items := range itemsBySlot {
-		if len(items) > 1 {
-			@ImportItemSelector(slot, items)
+	<form method="post">
+		for slot, items := range itemsBySlot {
+			if len(items) > 1 {
+				@ImportItemSelector(slot, items)
+			}
 		}
-	}
-    <input type="submit" value="Use"/>
-    </form>
+		<input type="submit" value="Use"/>
+	</form>
 }

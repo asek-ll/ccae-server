@@ -40,7 +40,7 @@ func parseCreateRecipeParams(params url.Values) (*CreateRecipeParams, error) {
 		return nil, errors.New("Name can't be empty")
 	}
 
-	recipeType := params.Get("recipeType")
+	recipeType := params.Get("type")
 
 	items := make(map[string]map[string]string)
 	props := []string{"item", "slot", "amount", "role"}
