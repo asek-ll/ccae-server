@@ -67,15 +67,11 @@ func (s *MultipleChestsStore) Add(inv *wsmethods.Inventory) {
 	}
 }
 
-func (s *MultipleChestsStore) GetMaxSize(UID string, inventory string, slot int) (int, error) {
-	s.mu.RLock()
+func (s *MultipleChestsStore) getMaxSize(UID string, inventory string, slot int) (int, error) {
 	size, e := s.maxSizeByUID[UID]
-	s.mu.RUnlock()
 	if e {
 		return size, nil
 	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
 
 	size, e = s.maxSizeByUID[UID]
 	if e {
@@ -142,7 +138,7 @@ func (s *MultipleChestsStore) ImportStack(uid string, fromInventory string, from
 	if len(stacks) == 0 {
 		return s.importToEmptySlot(uid, fromInventory, fromSlot, amount)
 	}
-	maxCount, err := s.GetMaxSize(uid, fromInventory, fromSlot)
+	maxCount, err := s.getMaxSize(uid, fromInventory, fromSlot)
 	if err != nil {
 		return 0, err
 	}

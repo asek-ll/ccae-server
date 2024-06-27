@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"log"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,7 @@ func (s *CombinedStore) sync() error {
 			continue
 		}
 	}
+	log.Println("[INFO] Syned!!!")
 	s.loadedAt = time.Now()
 	return nil
 }

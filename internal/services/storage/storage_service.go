@@ -149,6 +149,7 @@ func (s *Storage) PullInputs() error {
 		return err
 	}
 	for _, inventoryName := range input {
+		log.Printf("[INFO] BEFORE Pull items %s", inventoryName)
 		err = s.ImportAll(inventoryName)
 		if err != nil {
 			return err

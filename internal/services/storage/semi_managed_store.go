@@ -28,6 +28,12 @@ func (s *SemiManagedStore) Sync(inventory *wsmethods.Inventory) {
 	defer s.mu.Unlock()
 
 	s.StacksByUID = indexInventory([]*wsmethods.Inventory{inventory})
+
+	s.itemStats = make(map[string]int)
+	for _, stack := range inventory.Items {
+		uid := stack.Item.GetUID()
+		s.itemStats[uid] += stack.Item.Count
+	}
 }
 
 func (s *SemiManagedStore) ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
