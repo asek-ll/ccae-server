@@ -5,7 +5,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
@@ -14,8 +13,6 @@ type CombinedStore struct {
 	warmStorage    *MultipleChestsStore
 	loadedAt       time.Time
 	storageAdapter *wsmethods.StorageAdapter
-
-	itemStats map[string]int
 
 	mu sync.RWMutex
 }
@@ -31,9 +28,6 @@ func NewCombinedStore(
 }
 
 func (s *CombinedStore) sync() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	client, err := s.storageAdapter.GetClient()
 	if err != nil {
 		return err
@@ -42,8 +36,6 @@ func (s *CombinedStore) sync() error {
 	if err != nil {
 		return err
 	}
-
-	s.itemStats = make(map[string]int)
 
 	s.warmStorage.Clear()
 	for _, inventory := range items {
@@ -54,11 +46,6 @@ func (s *CombinedStore) sync() error {
 		} else {
 			continue
 		}
-
-		for _, item := range inventory.Items {
-			id := item.Item.GetUID()
-			s.itemStats[id] += item.Item.Count
-		}
 	}
 	s.loadedAt = time.Now()
 	return nil
@@ -66,7 +53,12 @@ func (s *CombinedStore) sync() error {
 
 func (s *CombinedStore) checkSync() error {
 	if time.Since(s.loadedAt) > time.Second*30 {
-		return s.sync()
+		s.mu.Lock()
+		defer s.mu.Unlock()
+
+		if time.Since(s.loadedAt) > time.Second*30 {
+			return s.sync()
+		}
 	}
 	return nil
 }
@@ -123,8 +115,19 @@ func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
 	if err != nil {
 		return nil, err
 	}
-	s.mu.RLock()
-	defer s.mu.RUnlock()
 
-	return common.CopyMap(s.itemStats), nil
+	count, err := s.coldStorage.GetItemsCount()
+	if err != nil {
+		return nil, err
+	}
+	warmCount, err := s.warmStorage.GetItemsCount()
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range warmCount {
+		count[k] += v
+	}
+
+	return count, nil
 }

@@ -3,6 +3,7 @@ package storage
 import (
 	"sync"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
@@ -17,26 +18,36 @@ func NewMultipleChestsStore(storageAdapter *wsmethods.StorageAdapter) *MultipleC
 		inventories:    make(map[string]*StoreInventory),
 		usedSlots:      make(map[SlotRef]struct{}),
 		maxSizeByUID:   make(map[string]int),
+		itemStats:      make(map[string]int),
 		storageAdapter: storageAdapter,
 	}
 }
 
 type MultipleChestsStore struct {
-	stacksByUID    IndexedInventory
-	inventories    map[string]*StoreInventory
-	usedSlots      map[SlotRef]struct{}
-	maxSizeByUID   map[string]int
+	stacksByUID  IndexedInventory
+	inventories  map[string]*StoreInventory
+	usedSlots    map[SlotRef]struct{}
+	maxSizeByUID map[string]int
+	itemStats    map[string]int
+
 	storageAdapter *wsmethods.StorageAdapter
 	mu             sync.RWMutex
 }
 
 func (s *MultipleChestsStore) Clear() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.stacksByUID = make(map[string]map[SlotRef]int)
 	s.usedSlots = make(map[SlotRef]struct{})
 	s.inventories = make(map[string]*StoreInventory)
+	s.itemStats = make(map[string]int)
 }
 
 func (s *MultipleChestsStore) Add(inv *wsmethods.Inventory) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.inventories[inv.Name] = &StoreInventory{
 		Size:      inv.Size,
 		FreeSlots: inv.Size - len(inv.Items),
@@ -52,6 +63,7 @@ func (s *MultipleChestsStore) Add(inv *wsmethods.Inventory) {
 		}
 		stackMap[slotRef] = stack.Item.Count
 		s.usedSlots[slotRef] = struct{}{}
+		s.itemStats[uid] += stack.Item.Count
 	}
 }
 
@@ -85,6 +97,7 @@ func (s *MultipleChestsStore) setStackSize(uid string, ref SlotRef, amount int) 
 		stacks = make(map[SlotRef]int)
 		s.stacksByUID[uid] = stacks
 	}
+	s.itemStats[uid] += amount - stacks[ref]
 	if amount > 0 {
 		if stacks[ref] == 0 {
 			s.inventories[ref.Inventory].FreeSlots -= 1
@@ -98,7 +111,7 @@ func (s *MultipleChestsStore) setStackSize(uid string, ref SlotRef, amount int) 
 	}
 }
 
-func (s *MultipleChestsStore) ImportToEmptySlot(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
+func (s *MultipleChestsStore) importToEmptySlot(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
 	for name, inv := range s.inventories {
 		if inv.FreeSlots == 0 {
 			continue
@@ -122,9 +135,12 @@ func (s *MultipleChestsStore) ImportToEmptySlot(uid string, fromInventory string
 }
 
 func (s *MultipleChestsStore) ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	stacks := s.stacksByUID[uid]
 	if len(stacks) == 0 {
-		return s.ImportToEmptySlot(uid, fromInventory, fromSlot, amount)
+		return s.importToEmptySlot(uid, fromInventory, fromSlot, amount)
 	}
 	maxCount, err := s.GetMaxSize(uid, fromInventory, fromSlot)
 	if err != nil {
@@ -148,7 +164,7 @@ func (s *MultipleChestsStore) ImportStack(uid string, fromInventory string, from
 		}
 	}
 	if remain > 0 {
-		moved, err := s.ImportToEmptySlot(uid, fromInventory, fromSlot, remain)
+		moved, err := s.importToEmptySlot(uid, fromInventory, fromSlot, remain)
 		if err != nil {
 			return 0, err
 		}
@@ -159,6 +175,9 @@ func (s *MultipleChestsStore) ImportStack(uid string, fromInventory string, from
 }
 
 func (s *MultipleChestsStore) ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	stacks := s.stacksByUID[uid]
 
 	remain := amount
@@ -178,4 +197,11 @@ func (s *MultipleChestsStore) ExportStack(uid string, toInventory string, toSlot
 	}
 
 	return amount - remain, nil
+}
+
+func (s *MultipleChestsStore) GetItemsCount() (map[string]int, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return common.CopyMap(s.itemStats), nil
 }

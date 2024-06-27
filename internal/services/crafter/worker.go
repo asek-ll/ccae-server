@@ -147,12 +147,19 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 
-	maxResult := 1
+	maxIngs := 1
 	for _, r := range recipe.Results {
-		maxResult = max(maxResult, r.Amount)
+		maxIngs = max(maxIngs, r.Amount)
+	}
+	for _, r := range recipe.Ingredients {
+		maxIngs = max(maxIngs, r.Amount)
 	}
 
-	maxRepeats := 64 / maxResult
+	maxRepeats := 64 / maxIngs
+	if maxRepeats == 0 {
+		return false, errors.New("Illegal max repeats for recipe")
+	}
+
 	if recipe.MaxRepeats != nil {
 		maxRepeats = *recipe.MaxRepeats
 	}
