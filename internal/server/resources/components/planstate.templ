@@ -19,6 +19,9 @@ templ PlanList(plans []*dao.PlanState) {
 				<td>
 					{ strconv.Itoa(plan.GoalAmount) }
 				</td>
+                <td>
+                    <button hx-delete={ fmt.Sprintf("/craft-plans/%d/", plan.ID) }>REMOVE</button>
+                </td>
 			</tr>
 		}
 	</table>
@@ -48,7 +51,7 @@ templ PlanDetail(plan *dao.PlanState) {
 					@ItemIconByUID(item.ItemUID)
 				</td>
 				<td>
-					{ strconv.Itoa(item.Amount) }
+					{ strconv.Itoa(item.Amount) } / { strconv.Itoa(item.RequiredAmount) }
 				</td>
 			</tr>
 		}

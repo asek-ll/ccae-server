@@ -625,9 +625,22 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			uidBySlot[slot] = vs[0]
 		}
 
+		items := make(map[string]*dao.Item)
+		for _, ing := range recipe.Ingredients {
+			items[ing.ItemUID] = nil
+		}
+
+		err = app.Daos.Items.FindItemsIndexed(items)
+		if err != nil {
+			return err
+		}
+
 		filteredRecipeItems := make([]dao.RecipeItem, 0, len(recipe.Ingredients))
 		for _, item := range recipe.Ingredients {
 			if uid, ok := uidBySlot[*item.Slot]; ok && uid != item.ItemUID {
+				continue
+			}
+			if items[item.ItemUID] == nil {
 				continue
 			}
 			filteredRecipeItems = append(filteredRecipeItems, item)
