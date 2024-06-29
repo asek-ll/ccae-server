@@ -10,17 +10,17 @@ import (
 templ CraftingPlanPage(plan *crafter.Plan, createUrl string) {
 	@Page("Craft Plan For") {
 		<button hx-post={ createUrl }>Process!</button>
-        <section>
-        <form>
-        <div>
-        for i, recipeItem := range plan.Goals {
-            @ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
-        }
-        <button type="button" hx-get="/item-popup?role=goal" hx-target="this" hx-swap="beforebegin">Add</button>
-            </div>
-                <input type="submit" value="Apply" />
-            </form>
-        </section>
+		<section>
+			<form>
+				<div>
+					for i, recipeItem := range plan.Goals {
+						@ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
+					}
+					<button type="button" hx-get="/item-popup?role=goal" hx-target="this" hx-swap="beforebegin">Add</button>
+				</div>
+				<input type="submit" value="Apply"/>
+			</form>
+		</section>
 		@CraftingPlan(plan)
 	}
 }
@@ -34,9 +34,8 @@ templ CraftingPlan(plan *crafter.Plan) {
 					for _, result := range step.Recipe.Results {
 						@ItemStack(result.ItemUID, result.Amount)
 					}
-
-                </td>
-                <td>
+				</td>
+				<td>
 					<a href={ templ.URL(fmt.Sprintf("/recipes/%d", step.Recipe.ID)) }>({ step.Recipe.Name })</a>
 				</td>
 				<td>

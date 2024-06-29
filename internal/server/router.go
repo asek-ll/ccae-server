@@ -730,6 +730,49 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return app.Daos.Crafts.CancelCraft(craft, recipe)
 	})
 
+	handleFuncWithError(common, "GET /recipe-types/{$}", func(w http.ResponseWriter, r *http.Request) error {
+
+		types, err := app.Daos.RecipeTypes.GetRecipeTypes()
+		if err != nil {
+			return err
+		}
+
+		return components.RecipeTypesPage(types).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "POST /recipe-types/{$}", func(w http.ResponseWriter, r *http.Request) error {
+
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		recipeType := dao.RecipeType{
+			Name:     r.FormValue("name"),
+			WorkerID: r.FormValue("worker_id"),
+		}
+
+		err = app.Daos.RecipeTypes.InsertRecipeType(recipeType)
+		if err != nil {
+			return err
+		}
+
+		http.Redirect(w, r, "/recipe-types/", http.StatusSeeOther)
+		return nil
+	})
+
+	handleFuncWithError(common, "DELETE /recipe-types/{name}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		name := r.PathValue("name")
+
+		err = app.Daos.RecipeTypes.DeleteRecipeType(name)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", "/recipe-types")
+		return nil
+	})
+
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)
 		return components.Page("Not found").Render(r.Context(), w)

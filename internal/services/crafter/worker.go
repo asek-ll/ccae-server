@@ -19,7 +19,7 @@ type CraftWorker struct {
 	stopped bool
 	done    chan bool
 
-	// resultProcessedTime time.Time
+	ping chan bool
 }
 
 func NewCraftWorker(
@@ -35,6 +35,7 @@ func NewCraftWorker(
 		client:   client,
 
 		done: make(chan bool),
+		ping: make(chan bool, 1),
 	}
 }
 
@@ -51,6 +52,15 @@ func (c *CraftWorker) Start() error {
 	log.Printf("[INFO] Start worker for '%s'", c.workerId)
 	go c.cycle()
 	return nil
+}
+
+func (c *CraftWorker) Ping() {
+	select {
+	case c.ping <- true:
+		return
+	default:
+		return
+	}
 }
 
 func (c *CraftWorker) cycle() {
@@ -75,6 +85,8 @@ func (c *CraftWorker) cycle() {
 		case <-c.done:
 			return
 		case <-time.After(time.Second * 30):
+			continue
+		case <-c.ping:
 			continue
 		}
 	}

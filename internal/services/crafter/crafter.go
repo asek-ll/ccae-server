@@ -6,26 +6,25 @@ import (
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
-	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type Crafter struct {
 	planner       *Planner
 	daoProvider   *dao.DaoProvider
-	clientManager *wsmethods.ClientsManager
+	workerFactory *WorkerFactory
 	storage       *storage.Storage
 }
 
 func NewCrafter(
 	daoProvider *dao.DaoProvider,
 	planner *Planner,
-	clientManager *wsmethods.ClientsManager,
+	workerFactory *WorkerFactory,
 	storage *storage.Storage,
 ) *Crafter {
 	return &Crafter{
 		daoProvider:   daoProvider,
 		planner:       planner,
-		clientManager: clientManager,
+		workerFactory: workerFactory,
 		storage:       storage,
 	}
 }
@@ -69,14 +68,16 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 
 		if minRepeats > 0 {
 			log.Printf("[INFO] Submit craft %v", recipe)
-			updated = true
-			err = c.submitCrafting(plan, recipe, minRepeats)
+			done, err := c.submitCrafting(plan, recipe, minRepeats)
 			if err != nil {
 				return err
 			}
-			store = make(map[string]int)
-			for _, item := range plan.Items {
-				store[item.ItemUID] = item.Amount
+			if done {
+				updated = true
+				store = make(map[string]int)
+				for _, item := range plan.Items {
+					store[item.ItemUID] = item.Amount
+				}
 			}
 		}
 	}
@@ -92,20 +93,28 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 	return nil
 }
 
-func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeats int) error {
+func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeats int) (bool, error) {
 	var workerId string
 	if recipe.Type == "" {
 		workerId = "crafter"
 	} else {
-		workerId = "processing"
+		tp, err := c.daoProvider.RecipeTypes.GetRecipeType(recipe.Type)
+		if err != nil {
+			return false, err
+		}
+		if tp == nil {
+			return false, nil
+		}
+		workerId = tp.WorkerID
 	}
 	err := c.daoProvider.Crafts.InsertCraft(plan.ID, workerId, recipe, repeats)
 	if err != nil {
-		return err
+		return false, err
 	}
+	c.workerFactory.Ping(workerId)
 
 	plan.Items, err = c.daoProvider.Plans.GetPlanItemState(plan.ID)
-	return nil
+	return true, nil
 }
 
 func (c *Crafter) cleanupItems(plan *dao.PlanState) error {

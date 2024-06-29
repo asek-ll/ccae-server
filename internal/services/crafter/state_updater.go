@@ -33,7 +33,7 @@ func NewStateUpdater(
 func (s *StateUpdater) Start() {
 	go func() {
 		for {
-			time.Sleep(time.Second * 30)
+			time.Sleep(time.Second * 20)
 			err := s.UpdateState()
 			if err != nil {
 				log.Printf("[WARN] On state updater: %v", err)

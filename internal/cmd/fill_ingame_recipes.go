@@ -30,7 +30,7 @@ type InGameResult struct {
 
 type InGameRecipe struct {
 	Ingredients []json.RawMessage `json:"ingredients"`
-	Result      InGameResult      `json:"result"`
+	Result      json.RawMessage   `json:"result"`
 	Width       *int              `json:"w"`
 	Height      *int              `json:"h"`
 }
@@ -147,10 +147,28 @@ func (s FillInGameRecipesCommand) Execute(args []string) error {
 			}
 
 			if isValid {
+
+				var reses []InGameResult
+				err := json.Unmarshal(r.Result, &reses)
+				if err != nil {
+					var res InGameResult
+					err := json.Unmarshal(r.Result, &res)
+					if err != nil {
+						var res any
+						json.Unmarshal(r.Result, &res)
+						fmt.Println(res)
+						return err
+					}
+					reses = append(reses, res)
+				}
+				if len(reses) > 1 {
+					fmt.Println(reses)
+				}
+
 				err = importedDao.InsertRecipe(dao.ImportedRecipe{
-					ResultID:    r.Result.Item,
-					ResultCount: r.Result.Count,
-					ResultNBT:   r.Result.NBT,
+					ResultID:    reses[0].Item,
+					ResultCount: reses[0].Count,
+					ResultNBT:   reses[0].NBT,
 					Ingredients: importedIngredients,
 				})
 				if err != nil {

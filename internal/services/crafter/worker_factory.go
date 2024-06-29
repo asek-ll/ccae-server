@@ -13,7 +13,7 @@ type WorkerFactory struct {
 	daos    *dao.DaoProvider
 
 	workers map[string]*CraftWorker
-	mu      sync.Mutex
+	mu      sync.RWMutex
 }
 
 func NewWorkerFactory(storage *storage.Storage, daos *dao.DaoProvider) *WorkerFactory {
@@ -55,5 +55,13 @@ func (f *WorkerFactory) HandleClientDisconnected(client wsmethods.Client) {
 		f.mu.Lock()
 		delete(f.workers, crafterClient.Role)
 		f.mu.Unlock()
+	}
+}
+
+func (f *WorkerFactory) Ping(workerId string) {
+	f.mu.RLock()
+	defer f.mu.RUnlock()
+	if worker, e := f.workers[workerId]; e {
+		worker.Ping()
 	}
 }
