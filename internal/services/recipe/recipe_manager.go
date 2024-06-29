@@ -34,6 +34,39 @@ type CreateRecipeParams struct {
 	MaxRepeats *int
 }
 
+func ParseItemsParams(params url.Values) ([]CreateRecipeItemParams, error) {
+	items := make(map[string]map[string]string)
+	props := []string{"item", "slot", "amount", "role"}
+outer:
+	for k, v := range params {
+		for _, prop := range props {
+			prefix := prop + "_"
+			if strings.HasPrefix(k, prefix) {
+				id := strings.TrimPrefix(k, prefix)
+				if i, e := items[id]; !e {
+					i = make(map[string]string)
+					items[id] = i
+				}
+				items[id][prop] = v[0]
+				continue outer
+			}
+		}
+	}
+
+	var itemsParams []CreateRecipeItemParams
+
+	for _, item := range items {
+		itemParams, err := parseItemParams(item)
+		if err != nil {
+			return nil, err
+		}
+
+		itemsParams = append(itemsParams, itemParams)
+	}
+
+	return itemsParams, nil
+}
+
 func parseCreateRecipeParams(params url.Values) (*CreateRecipeParams, error) {
 	name := strings.TrimSpace(params.Get("name"))
 	if name == "" {

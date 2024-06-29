@@ -6,12 +6,15 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
+	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
 	"github.com/google/uuid"
@@ -181,7 +184,13 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.ItemPage(item).Render(ctx, w)
+		createParams := url.Values{}
+		createParams.Add("item_g1", item.Item.UID)
+		createParams.Add("amount_g1", "1")
+		createParams.Add("role_g1", "goal")
+		createUrl := fmt.Sprintf("/craft-plans/new/?%s", createParams.Encode())
+
+		return components.ItemPage(item, createUrl).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) error {
@@ -220,14 +229,19 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.RecipesPage(filter, recipes).Render(ctx, w)
 	})
 
-	handleFuncWithError(common, "GET /craft-plan/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		uid := r.PathValue("itemUid")
-		strCount := r.PathValue("count")
-		count, err := strconv.Atoi(strCount)
+	handleFuncWithError(common, "GET /craft-plans/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+
+		items, err := recipe.ParseItemsParams(r.URL.Query())
 		if err != nil {
-			count = 1
+			return err
 		}
-		plan, err := app.Planner.GetPlanForItem(uid, count)
+
+		goals := make([]crafter.Stack, len(items))
+		for i, item := range items {
+			goals[i] = crafter.Stack{ItemID: item.ItemUID, Count: item.Amount}
+		}
+
+		plan, err := app.Planner.GetPlanForItem(goals)
 		if err != nil {
 			return err
 		}
@@ -237,7 +251,10 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.CraftingPlanPage(plan, uid, count).Render(ctx, w)
+		goalsParams := components.RecipeItemsToParams(plan.Goals)
+		createUrl := fmt.Sprintf("/craft-plans/new/?%s", goalsParams.Encode())
+
+		return components.CraftingPlanPage(plan, createUrl).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -432,7 +449,9 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		itemLoader := app.Daos.Items.NewDeferedLoader()
 
 		for _, plan := range plans {
-			itemLoader.AddUid(plan.GoalItemUID)
+			for _, goal := range plan.Goals {
+				itemLoader.AddUid(goal.ItemUID)
+			}
 		}
 
 		ctx, err := itemLoader.ToContext(r.Context())
@@ -454,7 +473,10 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		loader := app.Daos.Items.NewDeferedLoader().AddUid(plan.GoalItemUID)
+		loader := app.Daos.Items.NewDeferedLoader()
+		for _, goal := range plan.Goals {
+			loader.AddUid(goal.ItemUID)
+		}
 		for _, item := range plan.Items {
 			loader.AddUid(item.ItemUID)
 		}
@@ -487,26 +509,25 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return nil
 	})
 
-	handleFuncWithError(common, "POST /craft-plans/item/{itemUid}/{count}/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		uid := r.PathValue("itemUid")
-		strCount := r.PathValue("count")
-		count, err := strconv.Atoi(strCount)
-		if err != nil {
-			count = 1
-		}
-		plan, err := app.Crafter.SchedulePlanForItem(uid, count)
+	handleFuncWithError(common, "POST /craft-plans/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+
+		items, err := recipe.ParseItemsParams(r.URL.Query())
 		if err != nil {
 			return err
 		}
 
-		// ctx, err := app.Daos.Items.NewDeferedLoader().AddUids(plan.Items).ToContext(r.Context())
-		// if err != nil {
-		// 	return err
-		// }
+		goals := make([]crafter.Stack, len(items))
+		for i, item := range items {
+			goals[i] = crafter.Stack{ItemID: item.ItemUID, Count: item.Amount}
+		}
+
+		plan, err := app.Crafter.SchedulePlanForItem(goals)
+		if err != nil {
+			return err
+		}
 
 		w.Header().Add("HX-Location", fmt.Sprintf("/craft-plans/%d", plan.ID))
 		return nil
-		// return componens.Page("Craft plan", components.Plan(plan)).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "POST /craft-plans/{planId}/ping/{$}", func(w http.ResponseWriter, r *http.Request) error {

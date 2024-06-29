@@ -97,6 +97,20 @@ func ToTable[T any](items []T, width int) [][]T {
 	return rows
 }
 
+func RecipeItemsToParams(items []dao.RecipeItem) url.Values {
+	params := url.Values(make(map[string][]string))
+	for slot, item := range items {
+		if item.Slot != nil {
+			params.Set(fmt.Sprintf("slot_%d", slot), fmt.Sprintf("%d", *item.Slot))
+		}
+		params.Set(fmt.Sprintf("item_%d", slot), item.ItemUID)
+		params.Set(fmt.Sprintf("role_%d", slot), item.Role)
+		params.Set(fmt.Sprintf("amount_%d", slot), strconv.Itoa(item.Amount))
+	}
+
+	return params
+}
+
 func RecipeToURL(recipe *dao.Recipe) string {
 	params := url.Values(make(map[string][]string))
 	params.Set("name", recipe.Name)

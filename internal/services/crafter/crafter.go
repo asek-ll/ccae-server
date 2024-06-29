@@ -112,8 +112,8 @@ func (c *Crafter) cleanupItems(plan *dao.PlanState) error {
 	return c.daoProvider.Plans.CleanupItems(plan.ID)
 }
 
-func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, error) {
-	plan, err := c.planner.GetPlanForItem(uid, count)
+func (c *Crafter) SchedulePlanForItem(goals []Stack) (*dao.PlanState, error) {
+	plan, err := c.planner.GetPlanForItem(goals)
 	if err != nil {
 		return nil, err
 	}
@@ -139,12 +139,19 @@ func (c *Crafter) SchedulePlanForItem(uid string, count int) (*dao.PlanState, er
 		})
 	}
 
+	planGoals := make([]dao.PlanGoal, len(goals))
+	for i, goal := range goals {
+		planGoals[i] = dao.PlanGoal{
+			ItemUID: goal.ItemID,
+			Amount:  goal.Count,
+		}
+	}
+
 	planState := dao.PlanState{
-		Status:      "SCHEDULED",
-		Items:       planItems,
-		Steps:       planSteps,
-		GoalItemUID: uid,
-		GoalAmount:  count,
+		Status: "SCHEDULED",
+		Items:  planItems,
+		Steps:  planSteps,
+		Goals:  planGoals,
 	}
 
 	err = c.daoProvider.Plans.InsertPlan(&planState)

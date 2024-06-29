@@ -2,6 +2,7 @@ package crafter
 
 import (
 	"errors"
+	"log"
 	"sort"
 
 	"github.com/asek-ll/aecc-server/internal/common"
@@ -82,9 +83,15 @@ func ceil(x, y int) int {
 	return 1 + ((x - rem) / y)
 }
 
-func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
+func (p *Planner) GetPlanForItem(goals []Stack) (*Plan, error) {
+	uids := make([]string, len(goals))
+	for i, goal := range goals {
+		uids[i] = goal.ItemID
+	}
 
-	expandState, err := p.expandRecipes([]string{uid})
+	log.Printf("[INFO] Goal for uids %v", uids)
+
+	expandState, err := p.expandRecipes(uids)
 	if err != nil {
 		return nil, err
 	}
@@ -98,21 +105,24 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 			state[item] = count
 		}
 	}
-	var steps []Step
 
 	related := make(map[string]*Related)
+	for _, goal := range goals {
+		state[goal.ItemID] = -goal.Count
+		related[goal.ItemID] = &Related{
+			UID:      goal.ItemID,
+			Consumed: goal.Count,
+		}
+	}
+
+	var steps []Step
 
 	for _, item := range expandState.Items {
-		if state[item] >= 0 && item != uid {
+		if state[item] >= 0 {
 			continue
 		}
 
-		var toCraft int
-		if item == uid {
-			toCraft = count
-		} else {
-			toCraft = -state[item]
-		}
+		toCraft := -state[item]
 
 		recipe, e := expandState.Recipes[item]
 		if !e {
@@ -173,11 +183,23 @@ func (p *Planner) GetPlanForItem(uid string, count int) (*Plan, error) {
 		return vi < vj
 	})
 
+	goalItems := make([]dao.RecipeItem, len(goals))
+	for i, g := range goals {
+		goalItems[i] = dao.RecipeItem{
+			ItemUID: g.ItemID,
+			Amount:  g.Count,
+			Role:    "goal",
+		}
+	}
+
 	plan := Plan{
+		Goals:   goalItems,
 		Items:   expandState.Items,
 		Steps:   steps,
 		Related: rels,
 	}
+
+	log.Printf("[INFO] Plan %v", plan)
 
 	return &plan, nil
 }

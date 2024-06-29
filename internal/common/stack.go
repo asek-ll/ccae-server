@@ -9,6 +9,10 @@ func MakeUid(name string, nbt *string) string {
 	if nbt == nil {
 		return name
 	}
+	if *nbt == "fa498b90c4fe78d5a4e7185cfbeecb99" {
+		return fmt.Sprintf("%s:b729bba220cd3bbe2881bb0f71b31f54", name)
+	}
+
 	return fmt.Sprintf("%s:%s", name, *nbt)
 }
 

@@ -5,10 +5,10 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 )
 
-templ ItemPage(info *storage.RichItemInfo) {
+templ ItemPage(info *storage.RichItemInfo, createUrl string) {
 	@Page(fmt.Sprintf("%s %s", info.Item.DisplayName, info.Item.ID)) {
 		<section>
-			<a href={ templ.URL(fmt.Sprintf("/craft-plan/item/%s/1", info.Item.UID)) }>Craft</a>
+			<a href={ templ.URL(createUrl) }>Craft</a>
 			@ItemIcon(info.Item)
 			<h3>Recipes</h3>
 			@RecipesList(info.Recipes)

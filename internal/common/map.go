@@ -2,7 +2,7 @@ package common
 
 func MapKeys[K comparable, V any](m map[K]V) []K {
 	var values []K
-	for k, _ := range m {
+	for k := range m {
 		values = append(values, k)
 	}
 	return values

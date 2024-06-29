@@ -7,9 +7,20 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 )
 
-templ CraftingPlanPage(plan *crafter.Plan, uid string, count int) {
+templ CraftingPlanPage(plan *crafter.Plan, createUrl string) {
 	@Page("Craft Plan For") {
-		<button hx-post={ fmt.Sprintf("/craft-plans/item/%s/%d/", uid, count) }>Process!</button>
+		<button hx-post={ createUrl }>Process!</button>
+        <section>
+        <form>
+        <div>
+        for i, recipeItem := range plan.Goals {
+            @ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
+        }
+        <button type="button" hx-get="/item-popup?role=goal" hx-target="this" hx-swap="beforebegin">Add</button>
+            </div>
+                <input type="submit" value="Apply" />
+            </form>
+        </section>
 		@CraftingPlan(plan)
 	}
 }

@@ -3,6 +3,10 @@ package dao
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/asek-ll/aecc-server/internal/common"
 )
 
 type PlanItemState struct {
@@ -16,11 +20,15 @@ type PlanStepState struct {
 	Repeats  int
 }
 
+type PlanGoal struct {
+	ItemUID string
+	Amount  int
+}
+
 type PlanState struct {
-	ID          int
-	Status      string
-	GoalItemUID string
-	GoalAmount  int
+	ID     int
+	Status string
+	Goals  []PlanGoal
 
 	Steps []PlanStepState
 	Items []PlanItemState
@@ -35,9 +43,7 @@ func NewPlansDao(db *sql.DB) (*PlansDao, error) {
 
 	CREATE TABLE IF NOT EXISTS plan_state (
 		id INTEGER PRIMARY KEY,
-		status string NOT NULL,
-		goal_item_uid string NOT NULL,
-		goal_amount integer NOT NULL
+		status string NOT NULL
 	);
 
 	CREATE TABLE IF NOT EXISTS plan_item_state (
@@ -52,6 +58,12 @@ func NewPlansDao(db *sql.DB) (*PlansDao, error) {
 		recipe_id integer NOT NULL,
 		repeats integer NOT NULL
 	);
+
+	CREATE TABLE IF NOT EXISTS plan_goal (
+		plan_id INTEGER NOT NULL,
+		item_uid string NOT NULL,
+		amount integer NOT NULL
+	);
 	`
 
 	_, err := db.Exec(sqlStmt)
@@ -63,7 +75,7 @@ func NewPlansDao(db *sql.DB) (*PlansDao, error) {
 }
 
 func (d *PlansDao) GetPlanById(id int) (*PlanState, error) {
-	rows, err := d.db.Query("SELECT * FROM plan_state WHERE id = ?", id)
+	rows, err := d.db.Query("SELECT id, status FROM plan_state WHERE id = ?", id)
 	if err != nil {
 		return nil, err
 	}
@@ -79,6 +91,13 @@ func (d *PlansDao) GetPlanById(id int) (*PlanState, error) {
 	}
 
 	plan := states[0]
+
+	goals, err := d.GetPlanGoals([]int{plan.ID})
+	if err != nil {
+		return nil, err
+	}
+
+	plan.Goals = goals[plan.ID]
 
 	items, err := d.GetPlanItemState(plan.ID)
 	if err != nil {
@@ -99,7 +118,7 @@ func readPlanState(rows *sql.Rows) ([]*PlanState, error) {
 	var planState []*PlanState
 	for rows.Next() {
 		plan := PlanState{}
-		err := rows.Scan(&plan.ID, &plan.Status, &plan.GoalItemUID, &plan.GoalAmount)
+		err := rows.Scan(&plan.ID, &plan.Status)
 		if err != nil {
 			return nil, err
 		}
@@ -113,13 +132,32 @@ func readPlanState(rows *sql.Rows) ([]*PlanState, error) {
 }
 
 func (d *PlansDao) GetPlans() ([]*PlanState, error) {
-	rows, err := d.db.Query("SELECT * FROM plan_state")
+	rows, err := d.db.Query("SELECT id, status FROM plan_state")
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	return readPlanState(rows)
+	planStates, err := readPlanState(rows)
+	if err != nil {
+		return nil, err
+	}
+	var ids []int
+
+	for _, planState := range planStates {
+		ids = append(ids, planState.ID)
+	}
+
+	goals, err := d.GetPlanGoals(ids)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, planState := range planStates {
+		planState.Goals = goals[planState.ID]
+	}
+
+	return planStates, nil
 }
 
 func (d *PlansDao) GetPlanItemState(planId int) ([]PlanItemState, error) {
@@ -147,6 +185,38 @@ func readPlanItemState(rows *sql.Rows) ([]PlanItemState, error) {
 		return nil, err
 	}
 	return planItemState, nil
+}
+
+func (d *PlansDao) GetPlanGoals(planIds []int) (map[int][]PlanGoal, error) {
+	if len(planIds) == 0 {
+		return nil, nil
+	}
+	rows, err := d.db.Query(fmt.Sprintf("SELECT plan_id, item_uid, amount FROM plan_goal WHERE plan_id IN (?%s)",
+		strings.Repeat(",?", len(planIds)-1)), common.ToArgs(planIds)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return readPlanGoals(rows)
+}
+
+func readPlanGoals(rows *sql.Rows) (map[int][]PlanGoal, error) {
+	goals := make(map[int][]PlanGoal)
+	for rows.Next() {
+		var planId int
+		goal := PlanGoal{}
+		err := rows.Scan(&planId, &goal.ItemUID, &goal.Amount)
+		if err != nil {
+			return nil, err
+		}
+		goals[planId] = append(goals[planId], goal)
+	}
+	err := rows.Err()
+	if err != nil {
+		return nil, err
+	}
+	return goals, nil
 }
 
 func (d *PlansDao) GetPlanStepState(planId int) ([]PlanStepState, error) {
@@ -184,7 +254,7 @@ func (d *PlansDao) InsertPlan(plan *PlanState) error {
 
 	defer tx.Rollback()
 
-	res, err := tx.Exec("INSERT INTO plan_state (status, goal_item_uid, goal_amount) VALUES (?, ?, ?)", plan.Status, plan.GoalItemUID, plan.GoalAmount)
+	res, err := tx.Exec("INSERT INTO plan_state (status) VALUES (?)", plan.Status)
 	if err != nil {
 		return err
 	}
@@ -195,6 +265,13 @@ func (d *PlansDao) InsertPlan(plan *PlanState) error {
 	}
 
 	plan.ID = int(id)
+
+	for _, goal := range plan.Goals {
+		_, err := tx.Exec("INSERT INTO plan_goal (plan_id, item_uid, amount) VALUES (?, ?, ?)", plan.ID, goal.ItemUID, goal.Amount)
+		if err != nil {
+			return err
+		}
+	}
 
 	for _, item := range plan.Items {
 		_, err := tx.Exec("INSERT INTO plan_item_state (plan_id, item_uid, amount, required_amount) VALUES (?, ?, ?, ?)",
@@ -254,6 +331,11 @@ func (d *PlansDao) RemovePlan(planId int) error {
 	}
 
 	_, err = tx.Exec("DELETE FROM plan_item_state WHERE plan_id = ?", planId)
+	if err != nil {
+		return err
+	}
+
+	_, err = tx.Exec("DELETE FROM plan_goal WHERE plan_id = ?", planId)
 	if err != nil {
 		return err
 	}

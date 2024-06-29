@@ -17,6 +17,6 @@ type Related struct {
 type Plan struct {
 	Items   []string
 	Steps   []Step
-	Goals   []Stack
 	Related []*Related
+	Goals   []dao.RecipeItem
 }

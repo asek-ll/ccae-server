@@ -14,10 +14,9 @@ templ PlanList(plans []*dao.PlanState) {
 					<a href={ templ.URL(fmt.Sprintf("/craft-plans/%d", plan.ID)) }>{ strconv.Itoa(plan.ID) }</a>
 				</td>
 				<td>
-					@ItemIconByUID(plan.GoalItemUID)
-				</td>
-				<td>
-					{ strconv.Itoa(plan.GoalAmount) }
+                    for _, goal := range plan.Goals {
+                       @ItemStack(goal.ItemUID, goal.Amount) 
+                    }
 				</td>
                 <td>
                     <button hx-delete={ fmt.Sprintf("/craft-plans/%d/", plan.ID) }>REMOVE</button>
@@ -31,10 +30,9 @@ templ PlanDetail(plan *dao.PlanState) {
 	<table>
 		<tr>
 			<td>
-				@ItemIconByUID(plan.GoalItemUID)
-			</td>
-			<td>
-				{ strconv.Itoa(plan.GoalAmount) }
+            for _, goal := range plan.Goals {
+                @ItemStack(goal.ItemUID, goal.Amount) 
+            }
 			</td>
 			<td>
 				<button hx-post={ fmt.Sprintf("/craft-plans/%d/ping/", plan.ID) }>PING</button>
