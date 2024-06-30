@@ -107,6 +107,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		planId, recipeType, "PENDING", time.Now(), recipe.ID, repeats, 0)
 	if err != nil {
+		log.Printf("[ERROR] Insert craft: %v", err)
 		return err
 	}
 
@@ -123,6 +124,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	}
 	afftected, err := res.RowsAffected()
 	if err != nil {
+		log.Printf("[ERROR] Plan step update: %v", err)
 		return err
 	}
 	if afftected == 0 {
@@ -141,10 +143,12 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 			amount, amount, ing.ItemUID, planId, amount)
 		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, ing.ItemUID, planId)
 		if err != nil {
+			log.Printf("[ERROR] Plan item step: %v", err)
 			return err
 		}
 		afftected, err := res.RowsAffected()
 		if err != nil {
+			log.Printf("[ERROR] Affected rows: %v", err)
 			return err
 		}
 		if afftected == 0 {
@@ -152,7 +156,14 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 		}
 	}
 
-	return tx.Commit()
+	log.Printf("[INFO] Commit transaction INSERT")
+	err = tx.Commit()
+	if err != nil {
+		log.Printf("[ERROR] Commit error: %v", err)
+		return err
+	}
+
+	return nil
 }
 
 func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error {

@@ -63,9 +63,11 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 	if rows.Next() {
 		err = rows.Scan(&reserve)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 	}
+	rows.Close()
 	if count <= reserve {
 		return nil, nil
 	}
@@ -84,6 +86,7 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 
 		err = rows.Scan(&planId, &required)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 
@@ -92,11 +95,13 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 
 		_, err = tx.Exec("UPDATE plan_item_state SET amount = amount + ? WHERE plan_id = ? AND item_uid = ?", toAdd, planId, uid)
 		if err != nil {
+			rows.Close()
 			return nil, err
 		}
 
 		planIds = append(planIds, planId)
 	}
+	rows.Close()
 
 	if freeAmount < count-reserve {
 
