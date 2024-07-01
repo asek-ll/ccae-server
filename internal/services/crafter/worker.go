@@ -16,10 +16,11 @@ type CraftWorker struct {
 	storage  *storage.Storage
 	daos     *dao.DaoProvider
 
-	stopped bool
-	done    chan bool
-
+	done chan bool
 	ping chan bool
+
+	lastTypes []string
+	stopped   bool
 }
 
 func NewCraftWorker(
@@ -55,6 +56,7 @@ func (c *CraftWorker) Start() error {
 }
 
 func (c *CraftWorker) Ping() {
+	log.Printf("[INFO] Ping to %s", c.workerId)
 	select {
 	case c.ping <- true:
 		return
@@ -63,23 +65,19 @@ func (c *CraftWorker) Ping() {
 	}
 }
 
+func (c *CraftWorker) GetLastTypes() []string {
+	return c.lastTypes
+}
+
 func (c *CraftWorker) cycle() {
 	for {
 		if c.stopped {
 			<-c.done
 			return
 		}
-		done, err := c.process()
+		err := c.process()
 		if err != nil {
 			log.Printf("[ERROR] Can't process craft for worker '%s', error: %v", c.workerId, err)
-		} else {
-			// err = c.processResults()
-			// if err != nil {
-			// log.Printf("[ERROR] Can't process results for worker '%s', error: %v", c.workerId, err)
-			// } else
-			if done {
-				continue
-			}
 		}
 		select {
 		case <-c.done:
@@ -92,55 +90,30 @@ func (c *CraftWorker) cycle() {
 	}
 }
 
-// func (c *CraftWorker) processResults() error {
-// 	if c.resultProcessedTime.Add(time.Second * 30).After(time.Now()) {
-// 		return nil
-// 	}
-// 	input, err := c.storage.GetInput()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	c.resultProcessedTime = time.Now()
+func (c *CraftWorker) Restore(craft *dao.Craft) (bool, error) {
+	if craft.Status == dao.PENDING_CRAFT_STATUS {
+		return c.Craft(craft)
+	}
 
-// 	_, err = c.client.ProcessResults(input)
-// 	if err != nil {
-// 		return err
-// 	}
-// 	return nil
-// }
-
-func (c *CraftWorker) process() (bool, error) {
-	current, err := c.daos.Crafts.FindCurrent(c.workerId)
+	recipe, err := c.daos.Recipes.GetRecipeById(craft.RecipeID)
 	if err != nil {
 		return false, err
 	}
-	if current != nil {
-		recipe, err := c.daos.Recipes.GetRecipeById(current.RecipeID)
-		if err != nil {
-			return false, err
-		}
 
-		done, err := c.client.Restore(wsmethods.RecipeDto{Type: recipe.Type})
-		if err != nil {
-			return false, err
-		}
-		if done {
-			err = c.daos.Crafts.CompleteCraft(current)
-			if err != nil {
-				return false, err
-			}
-		}
-		return done, nil
-	}
-
-	next, err := c.daos.Crafts.FindNext(c.workerId)
+	done, err := c.client.Restore(wsmethods.RecipeDto{Type: recipe.Type})
 	if err != nil {
 		return false, err
 	}
-	if next == nil {
-		return false, nil
+	if done {
+		err = c.daos.Crafts.CompleteCraft(craft)
+		if err != nil {
+			return false, err
+		}
 	}
+	return done, nil
+}
 
+func (c *CraftWorker) Craft(craft *dao.Craft) (bool, error) {
 	cleaned, err := c.client.DumpOut()
 	if err != nil {
 		return false, err
@@ -154,7 +127,7 @@ func (c *CraftWorker) process() (bool, error) {
 		return false, err
 	}
 
-	recipe, err := c.daos.Recipes.GetRecipeById(next.RecipeID)
+	recipe, err := c.daos.Recipes.GetRecipeById(craft.RecipeID)
 	if err != nil {
 		return false, err
 	}
@@ -175,30 +148,82 @@ func (c *CraftWorker) process() (bool, error) {
 	if recipe.MaxRepeats != nil {
 		maxRepeats = *recipe.MaxRepeats
 	}
-	repeats := min(next.Repeats, maxRepeats)
+	repeats := min(craft.Repeats, maxRepeats)
 
 	err = c.trasferItems(recipe, repeats)
 	if err != nil {
 		return false, err
 	}
 
-	err = c.daos.Crafts.CommitCraft(next, recipe, repeats)
+	err = c.daos.Crafts.CommitCraft(craft, recipe, repeats)
 	if err != nil {
 		return false, err
 	}
 	done, err := c.client.Craft(wsmethods.RecipeDto{Type: recipe.Type})
 	if done {
-		err = c.daos.Crafts.CompleteCraft(next)
-		if err != nil {
-			return false, err
-		}
-	} else {
-		err = c.daos.Crafts.SuspendCraft(next, recipe)
+		err = c.daos.Crafts.CompleteCraft(craft)
 		if err != nil {
 			return false, err
 		}
 	}
-	return true, nil
+	return done, nil
+}
+
+func (c *CraftWorker) process() error {
+	current, err := c.daos.Crafts.FindCurrent(c.workerId)
+	if err != nil {
+		return err
+	}
+	if current != nil {
+		done, err := c.Restore(current)
+		if err != nil {
+			return err
+		}
+		if !done {
+			return nil
+		}
+	}
+
+	types, err := c.client.GetSupportTypes()
+	if err != nil {
+		return err
+	}
+	c.lastTypes = types
+
+	if len(types) == 0 {
+		return nil
+	}
+
+	active := true
+	for active {
+		active = false
+
+		nexts, err := c.daos.Crafts.FindNextByTypes(types, c.workerId)
+		if err != nil {
+			return err
+		}
+
+		log.Println(types, nexts)
+
+		for _, craft := range nexts {
+			assigned, err := c.daos.Crafts.AssignCraftToWorker(craft, c.workerId)
+			if err != nil {
+				return err
+			}
+			if assigned {
+				done, err := c.Craft(craft)
+				if err != nil {
+					return err
+				}
+				if !done {
+					return nil
+				}
+				active = true
+			}
+		}
+	}
+
+	return nil
 
 }
 func (c *CraftWorker) trasferItems(recipe *dao.Recipe, repeats int) error {
@@ -219,19 +244,3 @@ func (c *CraftWorker) trasferItems(recipe *dao.Recipe, repeats int) error {
 func (c *CraftWorker) cleanupBuffer() error {
 	return c.storage.ImportAll(c.client.BufferName())
 }
-
-// func (c *CraftWorker) dumpOut() error {
-// 	return nil
-// }
-
-// func (c *CraftWorker) restore() (bool, error) {
-// 	return false, nil
-// }
-
-// func (c *CraftWorker) craft() (bool, error) {
-// 	return false, nil
-// }
-
-// func (c *CraftWorker) bufferName() string {
-// 	return ""
-// }

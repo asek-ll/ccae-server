@@ -58,10 +58,15 @@ func (f *WorkerFactory) HandleClientDisconnected(client wsmethods.Client) {
 	}
 }
 
-func (f *WorkerFactory) Ping(workerId string) {
+func (f *WorkerFactory) Ping(recipeType string) {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
-	if worker, e := f.workers[workerId]; e {
-		worker.Ping()
+	for _, worker := range f.workers {
+		for _, tp := range worker.GetLastTypes() {
+			if tp == recipeType {
+				worker.Ping()
+				return
+			}
+		}
 	}
 }

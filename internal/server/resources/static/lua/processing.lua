@@ -35,6 +35,18 @@ local function dump_out()
     return true
 end
 
+local function get_types()
+    local result = {}
+
+    for type, inv in pairs(config['handlers']) do
+        if m.callRemote(inv, 'getItemDetail', 1) == nil then
+            table.insert(result, type)
+        end
+    end
+
+    return result
+end
+
 local function setup()
     local cfg_load = loadfile 'config.lua'
     return cfg_load()
@@ -46,6 +58,7 @@ return function(methods, _, _)
     methods['dumpOut'] = dump_out
     methods['craft'] = craft
     methods['restore'] = craft
+    methods['getTypes'] = get_types
     return {
         buffer_name = config['buffer_name'],
     }

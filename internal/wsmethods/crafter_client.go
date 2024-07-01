@@ -62,3 +62,14 @@ func (c *CrafterClient) Restore(recipe RecipeDto) (bool, error) {
 	}
 	return res, nil
 }
+
+func (c *CrafterClient) GetSupportTypes() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	var res []string
+	err := c.WS.SendRequestSync(ctx, "getTypes", nil, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}

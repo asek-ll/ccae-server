@@ -47,7 +47,8 @@ local function restore()
         turtle.drop()
         return true
     end
-    return craft()
+    craft()
+    return true
 end
 
 local function get_placeholder_no(name)
@@ -111,5 +112,8 @@ return function(methods, handlers, wsclient)
     methods['dumpOut'] = dump_out
     methods['craft'] = craft
     methods['restore'] = restore
+    methods['getTypes'] = function()
+        return { 'shaped_craft' }
+    end
     return config
 end

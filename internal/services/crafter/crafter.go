@@ -94,24 +94,15 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 }
 
 func (c *Crafter) submitCrafting(plan *dao.PlanState, recipe *dao.Recipe, repeats int) (bool, error) {
-	var workerId string
-	if recipe.Type == "" {
-		workerId = "crafter"
-	} else {
-		tp, err := c.daoProvider.RecipeTypes.GetRecipeType(recipe.Type)
-		if err != nil {
-			return false, err
-		}
-		if tp == nil {
-			return false, nil
-		}
-		workerId = tp.WorkerID
+	recipeType := recipe.Type
+	if recipeType == "" {
+		recipeType = "shaped_craft"
 	}
-	err := c.daoProvider.Crafts.InsertCraft(plan.ID, workerId, recipe, repeats)
+	err := c.daoProvider.Crafts.InsertCraft(plan.ID, recipeType, recipe, repeats)
 	if err != nil {
 		return false, err
 	}
-	c.workerFactory.Ping(workerId)
+	c.workerFactory.Ping(recipeType)
 
 	plan.Items, err = c.daoProvider.Plans.GetPlanItemState(plan.ID)
 	return true, nil

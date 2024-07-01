@@ -5,18 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 )
 
 type Craft struct {
 	ID            int
 	PlanID        int
-	WorkerID      string
+	RecipeType    string
+	WorkerID      *string
 	Status        string
 	Created       time.Time
 	RecipeID      int
 	Repeats       int
-	CheckAt       time.Time
 	CommitRepeats int
 }
 
@@ -24,7 +25,10 @@ type CraftsDao struct {
 	db *sql.DB
 }
 
-const craftsFieldList string = "id, plan_id, worker_id, status, created, recipe_id, repeats, check_at, commit_repeats"
+var COMMITED_CRAFT_STATUS = "COMMITED"
+var PENDING_CRAFT_STATUS = "PENDING"
+
+const craftsFieldList string = "id, plan_id, recipe_type, worker_id, status, created, recipe_id, repeats, commit_repeats"
 
 func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 
@@ -32,12 +36,12 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 	CREATE TABLE IF NOT EXISTS craft (
 		id INTEGER PRIMARY KEY,
 		plan_id INTEGER NOT NULL,
-		worker_id string NOT NULL,
+		recipe_type string NOT NULL,
+		worker_id string,
 		status string NOT NULL,
 		created timestamp NOT NULL,
 		recipe_id INTEGER NOT NULL,
 		repeats INTEGER NOT NULL,
-		check_at timestamp NOT NULL,
 		commit_repeats int NOT NULL
 	);
 	`
@@ -64,21 +68,6 @@ func (d *CraftsDao) GetAllCrafts() ([]*Craft, error) {
 	return readCrafts(rows)
 }
 
-func (d *CraftsDao) GetCrafts() ([]*Craft, error) {
-	rows, err := d.db.Query(`
-	SELECT `+craftsFieldList+` 
-	FROM craft 
-	WHERE check_at < ?
-	LIMIT 50
-	`, time.Now())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	return readCrafts(rows)
-}
-
 func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	defer rows.Close()
 	var craft []*Craft
@@ -86,12 +75,12 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 		var c Craft
 		err := rows.Scan(&c.ID,
 			&c.PlanID,
+			&c.RecipeType,
 			&c.WorkerID,
 			&c.Status,
 			&c.Created,
 			&c.RecipeID,
 			&c.Repeats,
-			&c.CheckAt,
 			&c.CommitRepeats,
 		)
 		if err != nil {
@@ -106,7 +95,7 @@ func readCrafts(rows *sql.Rows) ([]*Craft, error) {
 	return craft, nil
 }
 
-func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, repeats int) error {
+func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, repeats int) error {
 	tx, err := d.db.Begin()
 	if err != nil {
 		return err
@@ -114,9 +103,9 @@ func (d *CraftsDao) InsertCraft(planId int, workderId string, recipe *Recipe, re
 	defer tx.Rollback()
 
 	_, err = tx.Exec(`INSERT INTO 
-	craft (plan_id, worker_id, status, created, recipe_id, repeats, check_at, commit_repeats) 
-	VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		planId, workderId, "PENDING", time.Now(), recipe.ID, repeats, time.Now(), 0)
+	craft (plan_id, recipe_type, status, created, recipe_id, repeats, commit_repeats) 
+	VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		planId, recipeType, "PENDING", time.Now(), recipe.ID, repeats, 0)
 	if err != nil {
 		return err
 	}
@@ -241,31 +230,8 @@ func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 	rows, err := d.db.Query(`
 	SELECT `+craftsFieldList+` 
 	FROM craft 
-	WHERE worker_id = ? AND status = 'COMMITED' AND check_at < ?
-	LIMIT 1`, workerId, time.Now())
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	crafts, err := readCrafts(rows)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(crafts) == 0 {
-		return nil, nil
-	}
-
-	return crafts[0], nil
-}
-
-func (d *CraftsDao) FindNext(workerId string) (*Craft, error) {
-	rows, err := d.db.Query(`
-	SELECT `+craftsFieldList+` 
-	FROM craft 
-	WHERE worker_id = ? AND status = 'PENDING' AND check_at < ?
-	LIMIT 1`, workerId, time.Now())
+	WHERE worker_id = ?
+	LIMIT 1`, workerId)
 	if err != nil {
 		return nil, err
 	}
@@ -291,14 +257,11 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 
 	defer tx.Rollback()
 
-	log.Println("[ERROR] set status 'PENDING'")
-
 	row := tx.QueryRow(`UPDATE craft SET 
 	repeats = repeats - commit_repeats, 
 	commit_repeats = 0,
-	status = 'PENDING',
-	check_at = ?
-	WHERE id = ? AND status = 'COMMITED' RETURNING repeats`, time.Now(), craft.ID)
+	status = 'PENDING'
+	WHERE id = ? AND status = 'COMMITED' RETURNING repeats`, craft.ID)
 
 	err = row.Err()
 	if err != nil {
@@ -325,47 +288,6 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 	return tx.Commit()
 }
 
-func (d *CraftsDao) SuspendCraft(craft *Craft, recipe *Recipe) error {
-	tx, err := d.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-
-	res, err := tx.Exec(`
-	UPDATE craft 
-	SET status = 'PENDING', check_at = ?, commit_repeats = 0 
-	WHERE id = ? and commit_repeats = ?`,
-		time.Now().Add(time.Minute), craft.ID, craft.CommitRepeats)
-
-	if err != nil {
-		return err
-	}
-
-	affected, err := res.RowsAffected()
-	if err != nil {
-		return err
-	}
-
-	if affected != 1 {
-		return errors.New("Expected craft")
-	}
-
-	repeats := craft.CommitRepeats
-
-	log.Printf("[ERROR] set status 'PENDING' %d", repeats)
-
-	for _, ing := range recipe.Ingredients {
-		err = ReserveItem(tx, ing.ItemUID, ing.Amount*repeats)
-		if err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
 	rows, err := d.db.Query(`
 	SELECT `+craftsFieldList+` 
@@ -387,4 +309,52 @@ func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
 	}
 
 	return crafts[0], nil
+}
+
+func (d *CraftsDao) FindNextByTypes(types []string, workerId string) ([]*Craft, error) {
+	if len(types) == 0 {
+		return nil, nil
+	}
+	args := []any{workerId}
+	for _, tp := range types {
+		args = append(args, tp)
+	}
+
+	rows, err := d.db.Query(fmt.Sprintf(`
+	SELECT `+craftsFieldList+` 
+	FROM craft 
+	WHERE worker_id = ? OR recipe_type IN (?%s)
+	LIMIT 50`, strings.Repeat(",?", len(types)-1),
+	), args...)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	crafts, err := readCrafts(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return crafts, nil
+}
+
+func (d *CraftsDao) AssignCraftToWorker(craft *Craft, workerId string) (bool, error) {
+	res, err := d.db.Exec("UPDATE craft SET worker_id = ? WHERE id = ? AND worker_id IS NULL", workerId, craft.ID)
+	if err != nil {
+		return false, err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	if affected == 0 {
+		return false, nil
+	}
+	if affected > 1 {
+		return false, errors.New("More than one craft updated")
+	}
+
+	return true, nil
 }
