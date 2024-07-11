@@ -114,3 +114,30 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 
 	return planIds, nil
 }
+
+func (d *ItemReserveDao) GetReserves() ([]ItemReserve, error) {
+	rows, err := d.db.Query(`
+	SELECT ir.item_uid, ir.amount 
+	FROM item_reserve ir
+	JOIN plan_item_state pis ON pis.item_uid = ir.item_uid 
+	WHERE pis.amount < pis.required_amount
+	LIMIT 50`)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var result []ItemReserve
+
+	for rows.Next() {
+		var itemReserve ItemReserve
+		err := rows.Scan(&itemReserve.ItemUID, &itemReserve.Amount)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, itemReserve)
+	}
+
+	return result, nil
+}

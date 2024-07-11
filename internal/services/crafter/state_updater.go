@@ -53,14 +53,20 @@ func (s *StateUpdater) UpdateState() error {
 		return err
 	}
 
+	reserves, err := s.daos.ItemReserves.GetReserves()
+	if err != nil {
+		return err
+	}
+
 	affectedPlanIds := make(map[int]struct{})
 
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	for k, v := range counts {
-		if v > s.snapshot[k] {
-			log.Printf("[INFO] Updated %s: %d > %d", k, v, s.snapshot[k])
-			planIds, err := s.daos.ItemReserves.UpdateItemCount(k, v)
+
+	for _, reserve := range reserves {
+		count := counts[reserve.ItemUID]
+		if count > reserve.Amount {
+			planIds, err := s.daos.ItemReserves.UpdateItemCount(reserve.ItemUID, count)
 			if err != nil {
 				return err
 			}
@@ -69,6 +75,19 @@ func (s *StateUpdater) UpdateState() error {
 			}
 		}
 	}
+
+	// for k, v := range counts {
+	// 	if v > s.snapshot[k] {
+	// 		log.Printf("[INFO] Updated %s: %d > %d", k, v, s.snapshot[k])
+	// 		planIds, err := s.daos.ItemReserves.UpdateItemCount(k, v)
+	// 		if err != nil {
+	// 			return err
+	// 		}
+	// 		for _, planId := range planIds {
+	// 			affectedPlanIds[planId] = struct{}{}
+	// 		}
+	// 	}
+	// }
 	s.snapshot = counts
 
 	for planId := range affectedPlanIds {
