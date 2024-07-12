@@ -59,14 +59,15 @@ func (d *RecipeTypesDao) GetRecipeTypes() ([]RecipeType, error) {
 }
 
 func (d *RecipeTypesDao) GetRecipeType(typeName string) (*RecipeType, error) {
-	row, err := d.db.Query("SELECT name, worker_id FROM recipe_types WHERE name = ?", typeName)
+	rows, err := d.db.Query("SELECT name, worker_id FROM recipe_types WHERE name = ? LIMIT 1", typeName)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	if row.Next() {
+	if rows.Next() {
 		var rt RecipeType
-		err := row.Scan(&rt.Name, &rt.WorkerID)
+		err := rows.Scan(&rt.Name, &rt.WorkerID)
 		if err != nil {
 			return nil, err
 		}

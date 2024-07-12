@@ -131,3 +131,8 @@ func RecipeToURL(recipe *dao.Recipe) string {
 
 	return fmt.Sprintf("/recipes/new?%s", url.Values(params).Encode())
 }
+
+func toPlanUrl(recipe *dao.Recipe) string {
+	params := RecipeItemsToParams(recipe.Ingredients)
+	return fmt.Sprintf("/craft-plans/new/?%s", params.Encode())
+}

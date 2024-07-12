@@ -24,10 +24,10 @@ templ ItemWithAmount(item *dao.Item, amount int) {
 	<div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } class="item-stack">
 		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
 			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
+            if amount > 1 {
+                <span class="stack-count">{ fmt.Sprintf("%d", amount) }</span>
+            }
 		</a>
-		if amount > 1 {
-			<span class="stack-count">{ fmt.Sprintf("%d", amount) }</span>
-		}
 	</div>
 }
 

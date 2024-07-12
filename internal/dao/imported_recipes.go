@@ -124,6 +124,7 @@ func (d *ImportedRecipesDao) FindRecipeById(id int) (*Recipe, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
 	err = rows.Err()
 	if err != nil {
