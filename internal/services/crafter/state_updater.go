@@ -64,6 +64,7 @@ func (s *StateUpdater) UpdateState() error {
 	defer s.mu.Unlock()
 	for _, reserve := range reserves {
 		count := counts[reserve.ItemUID]
+		log.Printf("[INFO] Wait for reserve: %v, count is %d", reserve, count)
 		if count > reserve.Amount {
 			planIds, err := s.daos.ItemReserves.UpdateItemCount(reserve.ItemUID, count)
 

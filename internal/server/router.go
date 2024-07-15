@@ -500,6 +500,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
+		var toTransfer []*crafter.Stack
+		for _, goal := range plan.Goals {
+			toTransfer = append(toTransfer, &crafter.Stack{ItemID: goal.ItemUID, Count: goal.Amount})
+		}
+
+		err = app.PlayerManager.SendItems(toTransfer)
+		if err != nil {
+			return err
+		}
+
 		err = app.Daos.Plans.RemovePlan(plan.ID)
 		if err != nil {
 			return err
@@ -771,6 +781,18 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 		w.Header().Add("HX-Location", "/recipe-types")
 		return nil
+	})
+
+	handleFuncWithError(common, "POST /items/{itemUid}/sendToPlayer/{amount}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		uid := r.PathValue("itemUid")
+
+		amountStr := r.PathValue("amount")
+		amount, err := strconv.Atoi(amountStr)
+		if err != nil {
+			return err
+		}
+
+		return app.PlayerManager.SendItems([]*crafter.Stack{{ItemID: uid, Count: amount}})
 	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

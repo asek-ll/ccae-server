@@ -1,23 +1,27 @@
 package player
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
 type PlayerManager struct {
 	daoProvider    *dao.DaoProvider
 	clientsManager *wsmethods.ClientsManager
+	storage        *storage.Storage
 }
 
-func NewPlayerManager(daoProvider *dao.DaoProvider, clientsManager *wsmethods.ClientsManager) *PlayerManager {
+func NewPlayerManager(daoProvider *dao.DaoProvider, clientsManager *wsmethods.ClientsManager, storage *storage.Storage) *PlayerManager {
 	pm := &PlayerManager{
 		daoProvider:    daoProvider,
 		clientsManager: clientsManager,
+		storage:        storage,
 	}
 	go func() {
 		var slots []int
@@ -78,4 +82,39 @@ func (s *PlayerManager) RemoveItems(slots []int) error {
 	}
 
 	return playerClient.RemoveItems(slots)
+}
+
+func (s *PlayerManager) SendItems(items []*crafter.Stack) error {
+	playerClient, err := wsmethods.GetClientForType[*wsmethods.PlayerClient](s.clientsManager)
+	if err != nil {
+		return err
+	}
+
+	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	if !ok {
+		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+	}
+	log.Printf("[INFO] Send items to buffer: '%s'", bufferName)
+
+	err = s.storage.ImportAll(bufferName)
+	if err != nil {
+		return err
+	}
+
+	slot := 1
+	var targetSlots []int
+	for _, item := range items {
+		for item.Count > 0 {
+			toTransfer := min(item.Count, 64)
+			item.Count -= toTransfer
+			_, err := s.storage.ExportStack(item.ItemID, bufferName, slot, toTransfer)
+			if err != nil {
+				return err
+			}
+			targetSlots = append(targetSlots, slot+17)
+			slot += 1
+		}
+	}
+
+	return playerClient.AddItems(targetSlots)
 }

@@ -2,6 +2,7 @@ package dao
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 )
 
@@ -93,10 +94,17 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 		toAdd := min(freeAmount, required)
 		freeAmount -= toAdd
 
-		_, err = tx.Exec("UPDATE plan_item_state SET amount = amount + ? WHERE plan_id = ? AND item_uid = ?", toAdd, planId, uid)
+		res, err := tx.Exec("UPDATE plan_item_state SET amount = amount + ? WHERE plan_id = ? AND item_uid = ?", toAdd, planId, uid)
 		if err != nil {
 			rows.Close()
 			return nil, err
+		}
+		affected, err := res.RowsAffected()
+		if err != nil {
+			return nil, err
+		}
+		if affected != 1 {
+			return nil, fmt.Errorf("Expected 1 updated plaan items, got %d", affected)
 		}
 
 		planIds = append(planIds, planId)

@@ -39,3 +39,15 @@ func (s *StorageAdapter) ListItems(inventoryName string) ([]StackWithSlot, error
 		return client.ListItems(inventoryName)
 	})
 }
+
+func (s *StorageAdapter) MoveFluid(fromContainer string, toContainer string, amount int, fluidName string) (int, error) {
+	return CallWithClientForType(s.clientsManager, func(client *StorageClient) (int, error) {
+		return client.MoveFluid(fromContainer, toContainer, amount, fluidName)
+	})
+}
+
+func (s *StorageAdapter) GetFluidContainers(prefixes []string) ([]FluidContainer, error) {
+	return CallWithClientForType(s.clientsManager, func(client *StorageClient) ([]FluidContainer, error) {
+		return client.GetFluidContainers(prefixes)
+	})
+}

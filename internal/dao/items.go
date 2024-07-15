@@ -124,7 +124,7 @@ func (d *ItemsDao) FindItemsByUids(uids []string) ([]Item, error) {
 
 func (d *ItemsDao) FindByName(filter string) ([]Item, error) {
 
-	rows, err := d.db.Query("SELECT uid, id, display_name, nbt, meta, icon FROM item WHERE display_name LIKE ? LIMIT 14", "%"+filter+"%")
+	rows, err := d.db.Query("SELECT uid, id, display_name, nbt, meta, icon FROM item WHERE display_name LIKE ? OR uid LIKE ? LIMIT 14", "%"+filter+"%", filter+"%")
 	if err != nil {
 		return nil, err
 	}

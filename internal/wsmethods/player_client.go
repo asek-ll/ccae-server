@@ -47,3 +47,10 @@ func (s *PlayerClient) RemoveItems(slots []int) error {
 	var res int
 	return s.WS.SendRequestSync(ctx, "removeItemFromPlayer", slots, &res)
 }
+
+func (s *PlayerClient) AddItems(slots []int) error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	defer cancel()
+	var res int
+	return s.WS.SendRequestSync(ctx, "addItemToPlayer", slots, &res)
+}

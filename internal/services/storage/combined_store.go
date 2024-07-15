@@ -10,8 +10,10 @@ import (
 )
 
 type CombinedStore struct {
-	coldStorage    *SemiManagedStore
-	warmStorage    *MultipleChestsStore
+	coldStorage  *SemiManagedStore
+	warmStorage  *MultipleChestsStore
+	fluidStorage *MultipleTanksStore
+
 	loadedAt       time.Time
 	storageAdapter *wsmethods.StorageAdapter
 
@@ -24,6 +26,7 @@ func NewCombinedStore(
 	return &CombinedStore{
 		coldStorage:    NewSemiManagedStore(storageAdapter),
 		warmStorage:    NewMultipleChestsStore(storageAdapter),
+		fluidStorage:   NewMultipleTanksStore(storageAdapter),
 		storageAdapter: storageAdapter,
 	}
 }
@@ -48,7 +51,18 @@ func (s *CombinedStore) sync() error {
 			continue
 		}
 	}
-	log.Println("[INFO] Syned!!!")
+	log.Println("[INFO] Items Synked!!!")
+
+	containers, err := s.storageAdapter.GetFluidContainers([]string{client.SingleFluidContainerPrefix})
+	if err != nil {
+		return err
+	}
+	s.fluidStorage.Clear()
+	for _, container := range containers {
+		s.fluidStorage.Add(&container)
+	}
+
+	log.Println("[INFO] Fluid Synked!!!")
 	s.loadedAt = time.Now()
 	return nil
 }
@@ -129,6 +143,14 @@ func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
 
 	for k, v := range warmCount {
 		count[k] += v
+	}
+
+	fluidsCount, err := s.fluidStorage.GetFluidsAmount()
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range fluidsCount {
+		count["fluid:"+k] += v
 	}
 
 	return count, nil

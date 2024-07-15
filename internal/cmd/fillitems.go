@@ -26,14 +26,14 @@ func (s FillItemsCommand) Execute(args []string) error {
 		return err
 	}
 
-	_, err = db.Exec(`
-	DROP TABLE IF EXISTS item;
-	DROP TABLE IF EXISTS item_tag;
-	`)
+	// _, err = db.Exec(`
+	// DROP TABLE IF EXISTS item;
+	// DROP TABLE IF EXISTS item_tag;
+	// `)
 
-	if err != nil {
-		return err
-	}
+	// if err != nil {
+	// 	return err
+	// }
 
 	items, err := dao.NewItemsDao(db)
 	if err != nil {
@@ -58,11 +58,16 @@ func (s FillItemsCommand) Execute(args []string) error {
 		return err
 	}
 
-	for _, d := range data {
+	for i, d := range data {
 		var item dao.Item
 
 		item.ID = d["name"].(string)
+		if id, e := d["id"]; e {
+			item.ID = id.(string)
+		}
+
 		item.DisplayName = d["displayName"].(string)
+
 		if nbtRaw, ok := d["nbt"].(string); ok {
 			item.NBT = &nbtRaw
 		}
@@ -78,6 +83,7 @@ func (s FillItemsCommand) Execute(args []string) error {
 		}
 
 		err = items.InsertItems([]*dao.Item{&item})
+		fmt.Println(i, item.UID, item.ID)
 		if err != nil {
 			return err
 		}

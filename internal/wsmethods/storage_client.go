@@ -12,9 +12,10 @@ import (
 type StorageClient struct {
 	GenericClient
 
-	InputStorages     []string
-	ColdStoragePrefix string
-	WarmStoragePrefix string
+	InputStorages              []string
+	ColdStoragePrefix          string
+	WarmStoragePrefix          string
+	SingleFluidContainerPrefix string
 }
 
 type ItemRef struct {
@@ -71,6 +72,21 @@ type Inventory struct {
 	Size  int             `json:"size"`
 }
 
+type FluidStack struct {
+	Name   string `json:"name"`
+	Amount int    `json:"amount"`
+}
+
+type FluidTank struct {
+	Slot  int        `json:"slot"`
+	Fluid FluidStack `json:"fluid"`
+}
+
+type FluidContainer struct {
+	Name  string      `json:"name"`
+	Tanks []FluidTank `json:"tanks"`
+}
+
 func ItemRefFromUid(uid string) ItemRef {
 	parts := strings.Split(uid, ":")
 	if len(parts) == 3 && len(parts[2]) == 32 {
@@ -110,11 +126,17 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 		return nil, errors.New("Expected warm storage name")
 	}
 
+	singleFluidContainerPrefix, ok := base.Props["single_fluid_container_prefix"].(string)
+	if !ok {
+		return nil, errors.New("Expected single fluid container name")
+	}
+
 	return &StorageClient{
-		GenericClient:     base,
-		InputStorages:     inputNames,
-		ColdStoragePrefix: coldStoragePrefix,
-		WarmStoragePrefix: warmStoragePrefix,
+		GenericClient:              base,
+		InputStorages:              inputNames,
+		ColdStoragePrefix:          coldStoragePrefix,
+		WarmStoragePrefix:          warmStoragePrefix,
+		SingleFluidContainerPrefix: singleFluidContainerPrefix,
 	}, nil
 }
 
@@ -122,6 +144,13 @@ type MoveStackParams struct {
 	From   SlotRef `json:"from"`
 	To     SlotRef `json:"to"`
 	Amount int     `json:"amount"`
+}
+
+type MoveFluidParams struct {
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Fluid  string `json:"fluid"`
+	Amount int    `json:"amount"`
 }
 
 func (s *StorageClient) MoveStack(fromInventory string, fromSlot int, toInventory string, toSlot int, amount int) (int, error) {
@@ -184,4 +213,44 @@ func (s *StorageClient) ListItems(inventoryName string) ([]StackWithSlot, error)
 		return nil, err
 	}
 	return res, nil
+}
+
+func (s *StorageClient) GetTanks(tankName string) ([]FluidTank, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	var res []FluidTank
+	err := s.WS.SendRequestSync(ctx, "getTanks", tankName, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *StorageClient) GetFluidContainers(prefixes []string) ([]FluidContainer, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	var res []FluidContainer
+	err := s.WS.SendRequestSync(ctx, "getFluidContainers", prefixes, &res)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *StorageClient) MoveFluid(fromContainer string, toContainer string, amount int, fluidName string) (int, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
+	var moved int
+	err := s.WS.SendRequestSync(ctx, "moveFluid", MoveFluidParams{
+		From:   fromContainer,
+		To:     toContainer,
+		Amount: amount,
+		Fluid:  fluidName,
+	}, &moved)
+	if err != nil {
+		return 0, err
+	}
+	return moved, nil
 }

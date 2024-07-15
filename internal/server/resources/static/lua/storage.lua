@@ -96,6 +96,27 @@ local function get_inventory_items(storage_name)
     return json_list(storage_items)
 end
 
+local function get_fluid_containers(prefixes)
+    local containers = {}
+    peripheral.find(prefixes[1], function(name, container)
+        local tanks = {}
+
+        for slot, tank in pairs(container.tanks()) do
+            table.insert(tanks, {
+                slot = slot,
+                fluid = tank,
+            })
+        end
+
+        table.insert(containers, {
+            name = name,
+            tanks = json_list(tanks),
+        })
+        return false
+    end)
+    return json_list(containers)
+end
+
 local function measure_time(func)
     return function(...)
         local start_time = os.epoch 'local'
@@ -112,6 +133,7 @@ return function(methods, _, _)
     methods['moveStack'] = measure_time(move_stack)
     methods['getItemDetail'] = measure_time(get_item_detail)
     methods['getInventoryItems'] = measure_time(get_inventory_items)
+    methods['getFluidContainers'] = get_fluid_containers
 
     if cfg_load ~= nil then
         config = cfg_load()

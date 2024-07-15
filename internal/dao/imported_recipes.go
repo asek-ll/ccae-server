@@ -65,7 +65,7 @@ func NewImportedRecipesDao(db *sql.DB) (*ImportedRecipesDao, error) {
 }
 
 func (d *ImportedRecipesDao) InsertTag(name string, itemUID string) error {
-	_, err := d.db.Exec("INSERT INTO item_tag(name, item_uid) VALUES(?, ?)", name, itemUID)
+	_, err := d.db.Exec("INSERT OR REPLACE INTO item_tag(name, item_uid) VALUES(?, ?)", name, itemUID)
 	return err
 }
 

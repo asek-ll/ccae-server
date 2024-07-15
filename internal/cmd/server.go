@@ -38,7 +38,7 @@ func (s ServerCommand) Execute(args []string) error {
 	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients)
 
 	storageService := storage.NewStorage(daos, clientsManager)
-	playerManager := player.NewPlayerManager(daos, clientsManager)
+	playerManager := player.NewPlayerManager(daos, clientsManager, storageService)
 	plannerService := crafter.NewPlanner(daos, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
