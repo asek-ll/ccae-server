@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -65,6 +66,20 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 	}
 
 	sort.Slice(stacks, func(a, b int) bool {
+		sa := stacks[a]
+		sb := stacks[b]
+
+		if strings.HasPrefix(sa.Item.UID, "fluid:") {
+			return true
+		}
+		if strings.HasPrefix(sb.Item.UID, "fluid") {
+			return false
+		}
+
+		if sa.Count == sb.Count {
+			return sa.Item.DisplayName < sb.Item.DisplayName
+		}
+
 		return stacks[a].Count > stacks[b].Count
 	})
 

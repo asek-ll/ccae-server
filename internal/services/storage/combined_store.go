@@ -23,11 +23,26 @@ type CombinedStore struct {
 func NewCombinedStore(
 	storageAdapter *wsmethods.StorageAdapter,
 ) *CombinedStore {
-	return &CombinedStore{
+	store := &CombinedStore{
 		coldStorage:    NewSemiManagedStore(storageAdapter),
 		warmStorage:    NewMultipleChestsStore(storageAdapter),
 		fluidStorage:   NewMultipleTanksStore(storageAdapter),
 		storageAdapter: storageAdapter,
+	}
+
+	go store.syncCycle()
+
+	return store
+}
+
+func (s *CombinedStore) syncCycle() {
+	for {
+		err := s.sync()
+		if err != nil {
+			time.Sleep(time.Second * 10)
+		} else {
+			time.Sleep(time.Second * 30)
+		}
 	}
 }
 
@@ -67,23 +82,7 @@ func (s *CombinedStore) sync() error {
 	return nil
 }
 
-func (s *CombinedStore) checkSync() error {
-	if time.Since(s.loadedAt) > time.Second*30 {
-		s.mu.Lock()
-		defer s.mu.Unlock()
-
-		if time.Since(s.loadedAt) > time.Second*30 {
-			return s.sync()
-		}
-	}
-	return nil
-}
-
 func (s *CombinedStore) ImportStack(uid string, fromInventory string, fromSlot int, amount int) (int, error) {
-	err := s.checkSync()
-	if err != nil {
-		return 0, err
-	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -104,10 +103,6 @@ func (s *CombinedStore) ImportStack(uid string, fromInventory string, fromSlot i
 }
 
 func (s *CombinedStore) ExportStack(uid string, toInventory string, toSlot int, amount int) (int, error) {
-	err := s.checkSync()
-	if err != nil {
-		return 0, err
-	}
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -127,11 +122,6 @@ func (s *CombinedStore) ExportStack(uid string, toInventory string, toSlot int, 
 }
 
 func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
-	err := s.checkSync()
-	if err != nil {
-		return nil, err
-	}
-
 	count, err := s.coldStorage.GetItemsCount()
 	if err != nil {
 		return nil, err
