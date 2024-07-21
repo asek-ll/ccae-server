@@ -12,6 +12,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
+	"github.com/asek-ll/aecc-server/internal/services/worker"
 	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
@@ -47,6 +48,8 @@ func (s ServerCommand) Execute(args []string) error {
 	stateUpdater := crafter.NewStateUpdater(storageService, daos, crafterService)
 	stateUpdater.Start()
 
+	workerManager := worker.NewWorkerManager(daos)
+
 	clientsManager.SetClientListener(workerFactory)
 
 	app := &app.App{
@@ -59,6 +62,7 @@ func (s ServerCommand) Execute(args []string) error {
 		Logger:         log.Default(),
 		ClientsManager: clientsManager,
 		WorkerFactory:  workerFactory,
+		WorkerManager:  workerManager,
 	}
 
 	mux, err := server.CreateMux(app)

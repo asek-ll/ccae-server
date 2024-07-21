@@ -33,7 +33,8 @@ templ CraftingPlan(plan *crafter.Plan) {
 					{ strconv.Itoa(step.Repeats) } X 
 					for _, result := range step.Recipe.Results {
 						@ItemStack(result.ItemUID, result.Amount)
-					} </td>
+					}
+				</td>
 				<td>
 					<a href={ templ.URL(fmt.Sprintf("/recipes/%d", step.Recipe.ID)) }>({ step.Recipe.Name })</a>
 				</td>

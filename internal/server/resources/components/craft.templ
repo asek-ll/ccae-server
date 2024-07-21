@@ -15,11 +15,11 @@ templ CraftList(crafts []CraftItem) {
 				<td>
 					{ strconv.Itoa(craft.Craft.CommitRepeats) } / { strconv.Itoa(craft.Craft.Repeats) }
 				</td>
-                <td>
-                for _, item := range craft.Recipe.Results {
-                    @ItemStack(item.ItemUID, item.Amount)
-                }
-                </td>
+				<td>
+					for _, item := range craft.Recipe.Results {
+						@ItemStack(item.ItemUID, item.Amount)
+					}
+				</td>
 				<td>
 					@RecipesGrid(craft.Recipe)
 				</td>

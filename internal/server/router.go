@@ -795,6 +795,89 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return app.PlayerManager.SendItems([]*crafter.Stack{{ItemID: uid, Count: amount}})
 	})
 
+	handleFuncWithError(common, "GET /workers/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		workers, err := app.WorkerManager.GetWorkers()
+		if err != nil {
+			return err
+		}
+		return components.WorkersPage(workers).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /workers/{key}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		key := r.PathValue("key")
+
+		worker, err := app.WorkerManager.GetWorker(key)
+		if err != nil {
+			return err
+		}
+
+		params, err := app.WorkerManager.WorkerToParams(worker)
+		if err != nil {
+			return err
+		}
+
+		return components.NewWorkerPage(params, "").Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /workers-new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		return components.NewWorkerPage(url.Values{}, "").Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /workers-new/config/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		workerType := r.URL.Query().Get("type")
+		values := make(url.Values)
+		values.Add("type", workerType)
+		return components.NewWorkerConfigForm(values).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "POST /workers-new/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		worker, err := app.WorkerManager.ParseWorker(r.PostForm)
+		if err != nil {
+			return components.NewWorkerPage(r.PostForm, err.Error()).Render(r.Context(), w)
+		}
+		err = app.WorkerManager.CreateWorker(worker)
+		if err != nil {
+			return err
+		}
+
+		http.Redirect(w, r, "/workers/"+worker.Key+"/", http.StatusSeeOther)
+		return nil
+	})
+
+	handleFuncWithError(common, "POST /workers/{key}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		key := r.PathValue("key")
+
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		worker, err := app.WorkerManager.ParseWorker(r.PostForm)
+		if err != nil {
+			return components.NewWorkerPage(r.PostForm, err.Error()).Render(r.Context(), w)
+		}
+		err = app.WorkerManager.UpdateWorker(key, worker)
+		if err != nil {
+			return err
+		}
+
+		http.Redirect(w, r, "/workers/", http.StatusSeeOther)
+		return nil
+	})
+
+	handleFuncWithError(common, "DELETE /workers/{key}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		key := r.PathValue("key")
+		err := app.WorkerManager.DeleteWorker(key)
+		if err != nil {
+			return err
+		}
+		w.Header().Add("HX-Location", "/workers")
+		return nil
+	})
+
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)
 		return components.Page("Not found").Render(r.Context(), w)

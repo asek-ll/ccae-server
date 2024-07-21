@@ -69,7 +69,7 @@ templ RecipeForm(recipe *dao.Recipe) {
 	<button
 		hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
 	>Delete</button>
-        <a href={ templ.URL(toPlanUrl(recipe)) }>To Plan</a>
+	<a href={ templ.URL(toPlanUrl(recipe)) }>To Plan</a>
 	<form method="post">
 		<fieldset>
 			<label>

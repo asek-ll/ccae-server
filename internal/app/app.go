@@ -8,6 +8,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
+	"github.com/asek-ll/aecc-server/internal/services/worker"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
@@ -21,4 +22,5 @@ type App struct {
 	Logger         *log.Logger
 	ClientsManager *wsmethods.ClientsManager
 	WorkerFactory  *crafter.WorkerFactory
+	WorkerManager  *worker.WorkerManager
 }

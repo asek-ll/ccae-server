@@ -17,6 +17,7 @@ type DaoProvider struct {
 	ItemReserves     *ItemReserveDao
 	ImporetedRecipes *ImportedRecipesDao
 	RecipeTypes      *RecipeTypesDao
+	Workers          *WorkersDao
 }
 
 func NewDaoProvider() (*DaoProvider, error) {
@@ -75,6 +76,11 @@ func NewDaoProvider() (*DaoProvider, error) {
 		return nil, err
 	}
 
+	workersDao, err := NewWorkersDao(db)
+	if err != nil {
+		return nil, err
+	}
+
 	return &DaoProvider{
 		Clients:          clientsDao,
 		Seqs:             seqsDao,
@@ -86,5 +92,6 @@ func NewDaoProvider() (*DaoProvider, error) {
 		ItemReserves:     itemReserveDao,
 		ImporetedRecipes: importedRecipesDao,
 		RecipeTypes:      recipeTypesDao,
+		Workers:          workersDao,
 	}, nil
 }

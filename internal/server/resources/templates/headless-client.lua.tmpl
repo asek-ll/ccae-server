@@ -1,0 +1,65 @@
+--vim:ft=lua
+function download(url, file)
+    local content = http.get(url).readAll()
+    if not content then
+        error 'Could not connect to website'
+    end
+    f = fs.open(file, 'w')
+    f.write(content)
+    f.close()
+end
+
+local eventHandlers = {}
+
+local function runLogic()
+    local m = loadfile 'init.lua'
+    if m == false or m == nil then
+        return false
+    end
+    local init = m()
+    return init(eventHandlers)
+end
+
+local function reload(fileUrl)
+    print 'Reload file'
+    download(fileUrl, 'init.lua')
+    return runLogic()
+end
+
+local function run(url, role)
+    pcall(runLogic)
+
+    local reloaded = false
+    local ws = assert(http.websocket(url))
+
+    local timerId = os.startTimer(10)
+
+    while true do
+        local eventData = { os.pullEvent() }
+        local event = eventData[1]
+
+        if event == 'timer' and eventData[2] == timerId then
+            if not reloaded then
+                ws = assert(http.websocket(url))
+            end
+        elseif event == 'websocket_success ' and eventData[2] == url then
+            local status = pcall(reload(fileUrl))
+            if status then
+                reloaded = true
+            else
+                reloaded = false
+                ws.close()
+            end
+        elseif event == 'websocket_failure' and eventData[2] == url then
+            reloaded = false
+            ws.close()
+        elseif event == 'websocket_closed' and eventData[2] == url then
+            reloaded = false
+            ws.close()
+        elseif eventHandlers[event] ~= nil then
+            eventHandlers[event](eventData)
+        end
+    end
+end
+
+run('{{ .wsUrl }}', '{{ .role }}')

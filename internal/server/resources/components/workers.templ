@@ -1,0 +1,127 @@
+package components
+
+import (
+	"net/url"
+    "fmt"
+
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ WorkersPage(workers []dao.Worker) {
+	@Page("Workers") {
+		<a href="/workers-new/">New worker</a>
+		<div id="workers-list">
+			@WorkersList(workers)
+		</div>
+	}
+}
+
+templ NewWorkerConfigForm(values url.Values) {
+    if values.Get("type") == dao.WORKER_TYPE_IMPORTER {
+        @ImporterWorkerConfigFields(values)
+    } else if values.Get("type") == dao.WORKER_TYPE_EXPORTER {
+        @ExporterWorkerConfigFields(values)
+    } else if values.Get("type") == dao.WORKER_TYPE_PROCESSING_CRAFTER {
+        @ProcessingCrafterWorkerConfigFields(values)
+    }
+}
+
+templ ImporterWorkerConfigFields(values url.Values) {
+    <label>
+        Storage for import
+        <input type="text" name="storages" value={ values.Get("storages") }/>
+    </label>
+    <button type="submit">Create</button>
+}
+
+templ ExporterWorkerConfigFields(values url.Values) {
+    <label>
+        Storage for exports
+        <input type="text" name="storages" value={ values.Get("storages") }/>
+    </label>
+    <label>
+        Item for exports
+        <input type="text" name="items" value={ values.Get("items") }/>
+    </label>
+    <button type="submit">Create</button>
+}
+
+templ ProcessingCrafterWorkerConfigFields(values url.Values) {
+    <label>
+        Craft type
+        <input type="text" name="craftType" value={ values.Get("craftType") }/>
+    </label>
+    <label>
+        Ingredient storage
+        <input type="text" name="inputStorage" value={ values.Get("inputStorage") }/>
+    </label>
+    <label>
+        Ingredient mode
+        <select name="reagentMode" required>
+            <option
+                if values.Get("reagentMode") == "ignore" {
+                    selected
+                }
+            >ignore</option>
+            <option
+                if values.Get("reagentMode") == "block" {
+                    selected
+                }
+            >block</option>
+        </select>
+    </label>
+    <button type="submit">Create</button>
+}
+
+templ NewWorkerPage(values url.Values, errMsg string) {
+	@Page("New worker") {
+        if errMsg != "" {
+            <div class="error">{ errMsg }</div>
+        }
+		<form method="post">
+			<label>
+				Key
+				<input type="text" name="key" value={ values.Get("key") }/>
+			</label>
+			<label>
+				Type
+				<select name="type" required
+                hx-get="/workers-new/config"
+                hx-target="#worker-config"
+                >
+						<option></option>
+					for _, t := range dao.WORKER_TYPES {
+						<option
+							value={ t }
+							if t == values.Get("type") {
+								selected
+							}
+						>{ t }</option>
+					}
+				</select>
+			</label>
+            <div id="worker-config">
+                @NewWorkerConfigForm(values)
+            </div>
+		</form>
+	}
+}
+
+templ WorkersList(workers []dao.Worker) {
+	<table>
+		for _, worker := range workers {
+			@WorkersListItem(&worker)
+		}
+	</table>
+}
+
+templ WorkersListItem(worker *dao.Worker) {
+	<tr>
+		<td>
+        <a href={ templ.URL(fmt.Sprintf("/workers/%s", worker.Key)) }> { worker.Key } </a>
+        </td>
+		<td>
+        { worker.Type }
+        </td>
+	</tr>
+}
