@@ -18,12 +18,24 @@ var WORKER_TYPES = []string{
 	WORKER_TYPE_EXPORTER,
 }
 
-type ImporterWorkerConfig struct {
-	Storages []string `json:"storages"`
+type SingleImportConfig struct {
+	Storage string `json:"storage"`
+	Slot    int    `json:"slot"`
 }
+
+type ImporterWorkerConfig struct {
+	Imports []SingleImportConfig `json:"imports"`
+}
+
+type SingleExportConfig struct {
+	Storage string `json:"storage"`
+	Item    string `json:"item"`
+	Slot    int    `json:"slot"`
+	Amount  int    `json:"amount"`
+}
+
 type ExporterWorkerConfig struct {
-	Storages []string `json:"storages"`
-	Items    []string `json:"items"`
+	Exports []SingleExportConfig `json:"exports"`
 }
 type ShapedCrafterWorkerConfig struct {
 	InputStorage  string `json:"inputStorage"`

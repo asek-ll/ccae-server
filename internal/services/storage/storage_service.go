@@ -150,6 +150,18 @@ func (s *Storage) ImportAll(inventoryName string) error {
 	return nil
 }
 
+func (s *Storage) ImportUnknownStack(inventoryName string, slot int) (int, error) {
+	stack, err := s.storageAdapter.GetStackDetail(wsmethods.SlotRef{
+		InventoryName: inventoryName,
+		Slot:          slot,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	return s.ImportStack(stack.GetUID(), inventoryName, slot, stack.Count)
+}
+
 func (s *Storage) GetInput() ([]string, error) {
 	client, err := s.storageAdapter.GetClient()
 	if err != nil {

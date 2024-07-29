@@ -61,6 +61,14 @@ func (s Stack) GetUID() string {
 	return common.MakeUid(s.Name, nbt)
 }
 
+func (s StackDetail) GetUID() string {
+	var nbt *string
+	if s.NBT != "" {
+		nbt = &s.NBT
+	}
+	return common.MakeUid(s.Name, nbt)
+}
+
 type StackWithSlot struct {
 	Item Stack `json:"item"`
 	Slot int   `json:"slot"`

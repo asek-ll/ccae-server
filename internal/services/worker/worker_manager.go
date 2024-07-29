@@ -2,8 +2,10 @@ package worker
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -135,28 +137,71 @@ func (w *WorkerManager) ParseWorker(values url.Values) (*dao.Worker, error) {
 func parseExporterWorkerConfig(values url.Values) (*dao.ExporterWorkerConfig, error) {
 	config := dao.ExporterWorkerConfig{}
 
-	storages := strings.Split(values.Get("storages"), ",")
-	if len(storages) == 0 {
-		return nil, errors.New("exporter storages is required")
-	}
-	config.Storages = storages
+	exportConfigs := make(map[string]*dao.SingleExportConfig)
 
-	items := strings.Split(values.Get("items"), ",")
-	if len(items) == 0 {
-		return nil, errors.New("exporter items is required")
+	for key, values := range values {
+		parts := strings.Split(key, "_")
+		if len(parts) != 2 {
+			continue
+		}
+		key := parts[1]
+		exportConfig, e := exportConfigs[key]
+		if !e {
+			exportConfig = &dao.SingleExportConfig{}
+			exportConfigs[key] = exportConfig
+		}
+		var err error
+		switch parts[0] {
+		case "storage":
+			exportConfig.Storage = values[0]
+		case "item":
+			exportConfig.Item = values[0]
+		case "slot":
+			exportConfig.Slot, err = strconv.Atoi(values[0])
+		case "amount":
+			exportConfig.Amount, err = strconv.Atoi(values[0])
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	config.Items = items
 
+	for _, exportConfig := range exportConfigs {
+		config.Exports = append(config.Exports, *exportConfig)
+	}
 	return &config, nil
 }
 func parseImporterWorkerConfig(values url.Values) (*dao.ImporterWorkerConfig, error) {
 	config := dao.ImporterWorkerConfig{}
 
-	storages := strings.Split(values.Get("storages"), ",")
-	if len(storages) == 0 {
-		return nil, errors.New("exporter storages is required")
+	importConfigs := make(map[string]*dao.SingleImportConfig)
+
+	for key, values := range values {
+		parts := strings.Split(key, "_")
+		if len(parts) != 2 {
+			continue
+		}
+		key := parts[1]
+		importConfig, e := importConfigs[key]
+		if !e {
+			importConfig = &dao.SingleImportConfig{}
+			importConfigs[key] = importConfig
+		}
+		var err error
+		switch parts[0] {
+		case "storage":
+			importConfig.Storage = values[0]
+		case "slot":
+			importConfig.Slot, err = strconv.Atoi(values[0])
+		}
+		if err != nil {
+			return nil, err
+		}
 	}
-	config.Storages = storages
+
+	for _, importConfig := range importConfigs {
+		config.Imports = append(config.Imports, *importConfig)
+	}
 	return &config, nil
 }
 func parseProcessingCrafterWorkerConfig(values url.Values) (*dao.ProcessingCrafterWorkerConfig, error) {
@@ -190,10 +235,9 @@ func (w *WorkerManager) WorkerToParams(worker *dao.Worker) (url.Values, error) {
 
 	switch worker.Type {
 	case dao.WORKER_TYPE_EXPORTER:
-		params.Set("storages", strings.Join(worker.Config.Exporter.Storages, ","))
-		params.Set("items", strings.Join(worker.Config.Exporter.Items, ","))
+		fillExporterParams(params, worker.Config.Exporter)
 	case dao.WORKER_TYPE_IMPORTER:
-		params.Set("storages", strings.Join(worker.Config.Importer.Storages, ","))
+		fillImporterParams(params, worker.Config.Importer)
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
 		params.Set("inputStorage", worker.Config.ProcessingCrafter.InputStorage)
 		params.Set("craftType", worker.Config.ProcessingCrafter.CraftType)
@@ -203,4 +247,22 @@ func (w *WorkerManager) WorkerToParams(worker *dao.Worker) (url.Values, error) {
 	}
 
 	return params, nil
+}
+
+func fillExporterParams(params url.Values, config *dao.ExporterWorkerConfig) {
+	for i, exportConfig := range config.Exports {
+		params.Set(fmt.Sprintf("storage_%d", i), exportConfig.Storage)
+		params.Set(fmt.Sprintf("item_%d", i), exportConfig.Item)
+		params.Set(fmt.Sprintf("slot_%d", i), strconv.Itoa(exportConfig.Slot))
+		params.Set(fmt.Sprintf("amount_%d", i), strconv.Itoa(exportConfig.Amount))
+	}
+
+}
+
+func fillImporterParams(params url.Values, config *dao.ImporterWorkerConfig) {
+	for i, importConfig := range config.Imports {
+		params.Set(fmt.Sprintf("storage_%d", i), importConfig.Storage)
+		params.Set(fmt.Sprintf("slot_%d", i), strconv.Itoa(importConfig.Slot))
+	}
+
 }

@@ -15,9 +15,9 @@ func NewModemClient(base GenericClient) *ModemClient {
 }
 
 // callRemote(remoteName, method, ...)
-func (c *ModemClient) CallRemote(ctx context.Context, result interface{}, method string, params ...any) error {
-	return c.WS.SendRequestSync(ctx, "callRemote", params, &result)
-}
+// func (c *ModemClient) CallRemote(ctx context.Context, result interface{}, method string, params ...any) error {
+// 	return c.WS.SendRequestSync(ctx, "callRemote", params, &result)
+// }
 
 // getNamesRemote()
 func (c *ModemClient) GetNamesRemote(ctx context.Context) ([]string, error) {
