@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
@@ -166,8 +168,15 @@ func parseExporterWorkerConfig(values url.Values) (*dao.ExporterWorkerConfig, er
 		}
 	}
 
-	for _, exportConfig := range exportConfigs {
+	keys := common.MapKeys(exportConfigs)
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		exportConfig := exportConfigs[key]
 		config.Exports = append(config.Exports, *exportConfig)
+	}
+	if len(config.Exports) == 0 {
+		return nil, fmt.Errorf("Empty export configs")
 	}
 	return &config, nil
 }
@@ -265,4 +274,7 @@ func fillImporterParams(params url.Values, config *dao.ImporterWorkerConfig) {
 		params.Set(fmt.Sprintf("slot_%d", i), strconv.Itoa(importConfig.Slot))
 	}
 
+}
+
+type WorkerParams struct {
 }

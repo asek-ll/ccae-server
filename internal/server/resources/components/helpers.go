@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
@@ -135,4 +136,14 @@ func RecipeToURL(recipe *dao.Recipe) string {
 func toPlanUrl(recipe *dao.Recipe) string {
 	params := RecipeItemsToParams(recipe.Ingredients)
 	return fmt.Sprintf("/craft-plans/new/?%s", params.Encode())
+}
+
+func getParamCountWithPrefix(params url.Values, prefix string) int {
+	result := 0
+	for k := range params {
+		if strings.HasPrefix(k, prefix) {
+			result += 1
+		}
+	}
+	return result
 }
