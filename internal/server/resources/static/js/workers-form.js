@@ -1,4 +1,41 @@
 (function () {
+    function debounce(fn, timeout) {
+        let timerId;
+        return function (...params) {
+            if (timerId) {
+                clearTimeout(timerId);
+            }
+            timerId = setTimeout(fn, timeout, ...params);
+        };
+    }
+    function itemIcon(item) {
+        const wrapper = document.createElement("div");
+        wrapper.setAttribute(
+            "data-tooltip",
+            item.uid + " - " + item.displayName,
+        );
+        wrapper.classList.add("item-stack");
+
+        const link = document.createElement("a");
+        link.setAttribute("href", "/items/" + item.uid);
+
+        const image = document.createElement("img");
+        image.setAttribute("src", "data:image/png;base64, " + item.icon);
+        image.style.width = "48px";
+        image.style.height = "48px";
+
+        link.appendChild(image);
+
+        wrapper.appendChild(link);
+        return wrapper;
+    }
+
+    // <div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } class="item-stack">
+    // 	<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
+    // 		<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
+    // 	</a>
+    // </div>
+
     let counter = 1;
     customElements.define(
         "exporter-config",
@@ -29,7 +66,8 @@
                 fieldSet.appendChild(
                     createInput("Storage for exports", "storage"),
                 );
-                fieldSet.appendChild(createInput("Item", "item"));
+                const diag = document.createElement("item-selector");
+                fieldSet.appendChild(diag);
                 fieldSet.appendChild(createInput("Slot", "slot"));
                 fieldSet.appendChild(createInput("Amount", "amount", "64"));
 
@@ -168,6 +206,7 @@
                     this.resolve = resolve;
                     this.reject = reject;
                     this.style.display = "block";
+                    this.querySelector("input").focus();
                 });
             }
             connectedCallback() {
@@ -188,6 +227,61 @@
                         this.resolve = null;
                         this.style.display = "none";
                     },
+                );
+                const content = this.querySelector("#item-popup-items");
+                const input = this.querySelector("input");
+                input.addEventListener(
+                    "keyup",
+                    debounce(async () => {
+                        const response = await fetch(
+                            "/item-suggest/?" +
+                                new URLSearchParams({
+                                    filter: input.value,
+                                }).toString(),
+                        );
+                        const data = await response.json();
+
+                        const table = document.createElement("table");
+                        for (let item of data) {
+                            const row = document.createElement("tr");
+                            const icon = document.createElement("td");
+                            icon.appendChild(itemIcon(item));
+
+                            row.appendChild(icon);
+                            const name = document.createElement("td");
+                            name.innerHTML = item.displayName;
+                            row.appendChild(name);
+                            const buttons = document.createElement("td");
+                            const select = document.createElement("button");
+                            select.innerHTML = "Select";
+                            buttons.appendChild(select);
+                            row.appendChild(buttons);
+
+                            table.appendChild(row);
+                        }
+
+                        content.replaceChildren(table);
+
+                        // <table>
+                        // 	for _, item := range items {
+                        // 		<tr data-tooltip={ item.UID }>
+                        // 			<td>
+                        // 				@ItemIcon(&item)
+                        // 			</td>
+                        // 			<td>{ item.DisplayName }</td>
+                        // 			<td>
+                        // 				<button
+                        // 					hx-get={ fmt.Sprintf("/item-popup/%s", item.UID) }
+                        // 					hx-target="#item-popup"
+                        // 					hx-swap="outerHTML"
+                        // 				>Select</button>
+                        // 			</td>
+                        // 		</tr>
+                        // 	}
+                        // </table>
+
+                        console.log(data);
+                    }, 200),
                 );
             }
         },

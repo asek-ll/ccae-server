@@ -12,6 +12,7 @@ import (
 
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/server/handlers"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
@@ -877,6 +878,8 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		w.Header().Add("HX-Location", "/workers")
 		return nil
 	})
+
+	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)
