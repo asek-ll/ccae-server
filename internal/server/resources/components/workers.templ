@@ -27,18 +27,16 @@ templ NewWorkerConfigForm(values url.Values) {
 }
 
 templ ImporterWorkerConfigFields(values url.Values) {
-	for i := range getParamCountWithPrefix(values, "storage_") {
-		<fieldset>
-			<label>
-				Storage for import
-				<input type="text" name={ fmt.Sprintf("storage_%d", i) } value={ values.Get(fmt.Sprintf("storage_%d", i)) }/>
-			</label>
-			<label>
-				Slot
-				<input type="text" name={ fmt.Sprintf("slot_%d", i) } value={ values.Get(fmt.Sprintf("slot_%d", i)) }/>
-			</label>
-		</fieldset>
-	}
+    <importer-configs>
+		<button class="add-worker">Add</button>
+        for i := range getParamCountWithPrefix(values, "storage_") {
+			<importer-config
+                idx={ fmt.Sprintf("%d", i) }
+				storage={ values.Get(fmt.Sprintf("storage_%d", i)) }
+				slot={ values.Get(fmt.Sprintf("slot_%d", i)) }
+			></importer-config>
+        }
+    </importer-configs>
 	<button type="submit">Create</button>
 }
 
@@ -56,26 +54,6 @@ templ ExporterWorkerConfigFields(values url.Values) {
 		}
 	</exporter-configs>
 	<button type="submit">Create</button>
-	<!--
-		<fieldset>
-			<label>
-				Storage for exports
-				<input type="text" name={ fmt.Sprintf("storage_%d", i) } value={ values.Get(fmt.Sprintf("storage_%d", i)) }/>
-			</label>
-			<label>
-				Item
-				<input type="text" name={ fmt.Sprintf("item_%d", i) } value={ values.Get(fmt.Sprintf("item_%d", i)) }/>
-			</label>
-			<label>
-				Slot
-				<input type="text" name={ fmt.Sprintf("slot_%d", i) } value={ values.Get(fmt.Sprintf("slot_%d", i)) }/>
-			</label>
-			<label>
-				Amount
-				<input type="text" name={ fmt.Sprintf("amount_%d", i) } value={ values.Get(fmt.Sprintf("amount_%d", i)) }/>
-			</label>
-		</fieldset>
-        -->
 }
 
 templ ProcessingCrafterWorkerConfigFields(values url.Values) {
@@ -156,6 +134,9 @@ templ WorkersListItem(worker *dao.Worker) {
 		</td>
 		<td>
 			{ worker.Type }
+		</td>
+		<td>
+            <button hx-delete={ fmt.Sprintf("/workers/%s", worker.Key) }>Del</button>
 		</td>
 	</tr>
 }
