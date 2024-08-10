@@ -5,7 +5,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
-templ ItemPopup(slot string, role string) {
+templ ItemPopup(params string) {
 	<dialog open id="item-popup">
 		<article>
 			<h2>Items</h2>
@@ -22,7 +22,7 @@ templ ItemPopup(slot string, role string) {
 					</label>
 				</fieldset>
 			</form>
-			<div id="item-popup-items" hx-vals={ fmt.Sprintf("{\"slot\": \"%s\", \"role\": \"%s\"}", slot, role) }></div>
+			<div id="item-popup-items" hx-vals={ params }></div>
 			<footer>
 				<button hx-on:click="document.getElementById('item-popup').outerHTML = '';">Cancel</button>
 			</footer>

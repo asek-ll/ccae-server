@@ -16,7 +16,7 @@ templ CraftingPlanPage(plan *crafter.Plan, createUrl string) {
 					for i, recipeItem := range plan.Goals {
 						@ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
 					}
-					<button type="button" hx-get="/item-popup?role=goal" hx-target="this" hx-swap="beforebegin">Add</button>
+					<button type="button" hx-get="/item-popup?role=goal&mode=recipe-item" hx-target="this" hx-swap="beforebegin">Add</button>
 				</div>
 				<input type="submit" value="Apply"/>
 			</form>

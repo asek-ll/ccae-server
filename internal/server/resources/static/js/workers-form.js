@@ -64,6 +64,7 @@
         const diag = document.createElement("item-selector");
         diag.style.display = "block";
         diag.setAttribute("name", "item_" + idx);
+        diag.setAttribute("item", this.getAttribute("item"));
         const label = document.createElement("label");
         label.appendChild(document.createTextNode("Item"));
         label.appendChild(diag);
@@ -288,23 +289,22 @@
       }
 
       connectedCallback() {
-        // const details = document.createElement("details");
-        // details.classList.add("dropdown");
-        // const summary = document.createElement("summary");
-        // const i = document.createElement("input");
-        // summary.appendChild(i);
-
-        // const ul = document.createElement("ul");
-        // details.appendChild(summary);
-        // details.appendChild(ul);
-
-        // const li = document.createElement("li");
-        // li.innerHTML = "TEST";
-        // ul.appendChild(li);
         const wrap = document.createElement("span");
         this.appendChild(wrap);
 
         const name = this.getAttribute("name");
+        const itemJson = this.getAttribute("item");
+        if (itemJson) {
+          const item = JSON.parse(itemJson);
+          if (item) {
+            const input = document.createElement("input");
+            input.setAttribute("type", "hidden");
+            input.setAttribute("name", name);
+            input.setAttribute("value", item.uid);
+
+            wrap.replaceChildren(itemIcon(item), input);
+          }
+        }
 
         const btn = document.createElement("button");
         btn.innerHTML = "Sel";

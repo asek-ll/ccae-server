@@ -3,13 +3,14 @@ package components
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"math"
 	"net/url"
 	"strconv"
-	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/server/handlers"
 )
 
 var quest, _ = base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAMAAABg3Am1AAAB+FBMVEUvLy8vLy8wMDAvLy8wMDAsLCwwMDBHcEwwMDAvLy8vLy8wMDAvLy8vLy8wMDAvLy8sLCwvLy8vLy8vLy8vLy8uLi4tLS0vLy8vLy8vLy8vLy8wMDAsLCwwMDAvLy8wMDAvLy8wMDAwMDAnJycvLy8wMDAvLy8wMDAvLy8vLy8wMDAwMDAvLy8vLy8vLy8wMDAwMDAvLy8wMDAvLy8vLy8rKysvLy8vLy8vLy8vLy8wMDAwMDAwMDAwMDAvLy8qKiovLy8vLy8wMDAwMDAvLy8rKyswMDAtLS0wMDAwMDAwMDAwMDAvLy8uLi4wMDAvLy8vLy8wMDAwMDAwMDAvLy8vLy8wMDAwMDAvLy8wMDAwMDAvLy8uLi4wMDAvLy8tLS0vLy8wMDAwMDAvLy8wMDAvLy8wMDAvLy8vLy8sLCwwMDAvLy8vLy8vLy8wMDAvLy8wMDAvLy8wMDAuLi4vLy8qKiovLy8wMDAwMDAwMDAvLy8vLy8wMDAvLy8qKiowMDAvLy8rKyswMDAvLy8vLy8vLy8vLy8vLy8vLy8wMDAwMDAwMDAvLy8qKiowMDAtLS0vLy8vLy8wMDAvLy8vLy8wMDAvLy8vLy8vLy8vLy8vLy8vLy8vLy8wMDAvLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8vLy8wMDB8kbe9AAAAp3RSTlP+9/ss/QL4AP79+lCxnG4aA7T8Zs0IBF17QijsAdKos/BWGAL1W7fCNtuEZZ1+HGrwIZPLrCPvT/QwO36iQLsI333qiF43ywpK7yvQ6RpPhyXV+dpO1DrAlqHF3g9ooAmBjCpibUOwhskI1Clsr7rym9PeCXYGOMmq7R7n8sgVtIoBdq4tDpTXdeKAHvsFhQcdwlHM1mCiK5K2G+4qNXyLznGp0hM85ideAd8AAAH+SURBVEjHY2DHAHMWLlo8m5Ohx8c4TrgKQ5YBjS82dQHHcoblMMQSzi2DV4PkFAZ0UGuJW4NYIudyJOPBaDkDmz4uDaKC6KrBGpZzOGLXwMrDgAuIY9VgDTQM5tdgu/ooBZgNyxlqurFoSAqCaWBL1wMJ9HJnwTQst8GioRlmP2MqTCg+FybGxY+hwZBlOdQGPoQrM2Vhfs/B0FCyHKpBhBUpTPxgGuQwNMCDyBw51O0ZoaIiGBoKoTYUsaJEbCfUBk0MDe1QDVoo6pU9oRpCMTTwQqzmzEbRUAZzqBqGhglOYBsKUBNjHszTCZjxwOzGwcCkI4qivgMWcRwt2BKfqWsdqvmxQjAN8jgzEDKQgCc+iwAiNAhEcMATnzY7YQ3FafD8sLyBnbCG1omI3ODPTlhDTAY8x3E2sRPW0K8Oz6JMyexEaGiDO0clhJ0IDRossLwqHcZOjAZBmHuqvdiJ0eArBHWPGTM7URpUoe7hUGQnTkMfVIM3O5EaoFmDQZdYDZFQG2yJ1eAM0cDlTqyGpRAXzWQnVgP7fFDClp5OvAZ2yRnT5s1iJ0EDHkAlDUsmic+VIV5DowSoRJ0sRbSGLkg8LFMiUgM/GzSmjYjU4ALLbdFEauCDZbdKIjV4wDSUE6mh1AHqJGFiQ8kqH2yDCSvRESdVYcAZmCKANR4AylXnkqHv7kAAAAAASUVORK5CYII=")
@@ -138,12 +139,16 @@ func toPlanUrl(recipe *dao.Recipe) string {
 	return fmt.Sprintf("/craft-plans/new/?%s", params.Encode())
 }
 
-func getParamCountWithPrefix(params url.Values, prefix string) int {
-	result := 0
-	for k := range params {
-		if strings.HasPrefix(k, prefix) {
-			result += 1
-		}
+func itemJsonByUid(ctx context.Context, itemUid string) string {
+	if itemUid == "" {
+		return ""
 	}
-	return result
+	item := getItem(ctx, itemUid)
+	dto := handlers.ItemToDto(item)
+	result, err := json.Marshal(dto)
+	if err != nil {
+		return ""
+	}
+
+	return string(result)
 }

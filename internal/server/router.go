@@ -2,6 +2,7 @@ package server
 
 import (
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
@@ -371,10 +372,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /item-popup/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		slot := r.URL.Query().Get("slot")
-		role := r.URL.Query().Get("role")
+		paramMap := make(map[string]string)
+		for k := range r.URL.Query() {
+			paramMap[k] = r.URL.Query().Get(k)
+		}
+		data, err := json.Marshal(paramMap)
+		if err != nil {
+			return err
+		}
 
-		return components.ItemPopup(slot, role).Render(r.Context(), w)
+		return components.ItemPopup(string(data)).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "GET /item-popup/items/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -387,32 +394,38 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /item-popup/{uid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		slot := r.URL.Query().Get("slot")
-		role := r.URL.Query().Get("role")
-
-		var slotIdx *int
-
-		if slot != "" {
-			slotValue, err := strconv.Atoi(slot)
-			if err != nil {
-				return err
-			}
-			slotIdx = &slotValue
-		}
-
-		item := dao.RecipeItem{
-			ItemUID: r.PathValue("uid"),
-			Amount:  1,
-			Role:    role,
-			Slot:    slotIdx,
-		}
-
-		ctx, err := app.Daos.Items.NewDeferedLoader().AddUid(item.ItemUID).ToContext(r.Context())
+		mode := r.URL.Query().Get("mode")
+		uid := r.PathValue("uid")
+		ctx, err := app.Daos.Items.NewDeferedLoader().AddUid(uid).ToContext(r.Context())
 		if err != nil {
 			return err
 		}
 
-		return components.ItemInputs(uuid.NewString(), item).Render(ctx, w)
+		if mode == "recipe-item" {
+
+			slot := r.URL.Query().Get("slot")
+			role := r.URL.Query().Get("role")
+
+			var slotIdx *int
+
+			if slot != "" {
+				slotValue, err := strconv.Atoi(slot)
+				if err != nil {
+					return err
+				}
+				slotIdx = &slotValue
+			}
+
+			item := dao.RecipeItem{
+				ItemUID: uid,
+				Amount:  1,
+				Role:    role,
+				Slot:    slotIdx,
+			}
+
+			return components.ItemInputs(uuid.NewString(), item).Render(ctx, w)
+		}
+		return nil
 	})
 
 	handleFuncWithError(common, "PUT /configs/{key}/{value}/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -812,23 +825,34 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		params, err := app.WorkerManager.WorkerToParams(worker)
+		params := app.WorkerManager.WorkerToParams(worker)
+
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+		app.WorkerManager.AddWorkerItemUids(params, itemLoader)
+		ctx, err := itemLoader.ToContext(r.Context())
 		if err != nil {
 			return err
 		}
 
-		return components.NewWorkerPage(params, "").Render(r.Context(), w)
+		return components.NewWorkerPage(params, "").Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /workers-new/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		return components.NewWorkerPage(url.Values{}, "").Render(r.Context(), w)
+		params := app.WorkerManager.ParseWorkerParams(url.Values{})
+
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+		app.WorkerManager.AddWorkerItemUids(params, itemLoader)
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.NewWorkerPage(params, "").Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /workers-new/config/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		workerType := r.URL.Query().Get("type")
-		values := make(url.Values)
-		values.Add("type", workerType)
-		return components.NewWorkerConfigForm(values).Render(r.Context(), w)
+		params := app.WorkerManager.NewWorkerParamsForType(r.URL.Query().Get("type"))
+		return components.NewWorkerConfigForm(params).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "POST /workers-new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -836,9 +860,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-		worker, err := app.WorkerManager.ParseWorker(r.PostForm)
+		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
+		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
-			return components.NewWorkerPage(r.PostForm, err.Error()).Render(r.Context(), w)
+			itemLoader := app.Daos.Items.NewDeferedLoader()
+			app.WorkerManager.AddWorkerItemUids(params, itemLoader)
+			ctx, err := itemLoader.ToContext(r.Context())
+			if err != nil {
+				return err
+			}
+			return components.NewWorkerPage(params, err.Error()).Render(ctx, w)
 		}
 		err = app.WorkerManager.CreateWorker(worker)
 		if err != nil {
@@ -856,9 +887,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-		worker, err := app.WorkerManager.ParseWorker(r.PostForm)
+		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
+		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
-			return components.NewWorkerPage(r.PostForm, err.Error()).Render(r.Context(), w)
+			itemLoader := app.Daos.Items.NewDeferedLoader()
+			app.WorkerManager.AddWorkerItemUids(params, itemLoader)
+			ctx, err := itemLoader.ToContext(r.Context())
+			if err != nil {
+				return err
+			}
+			return components.NewWorkerPage(params, err.Error()).Render(ctx, w)
 		}
 		err = app.WorkerManager.UpdateWorker(key, worker)
 		if err != nil {

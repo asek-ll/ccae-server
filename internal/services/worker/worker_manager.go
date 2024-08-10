@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/url"
-	"sort"
 	"strconv"
-	"strings"
 
-	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
@@ -100,27 +97,25 @@ func (w *WorkerManager) GetWorker(key string) (*dao.Worker, error) {
 	return w.daos.Workers.GetWorker(key)
 }
 
-func (w *WorkerManager) ParseWorker(values url.Values) (*dao.Worker, error) {
-	key := values.Get("key")
-	if key == "" {
+func (w *WorkerManager) ParseWorker(params *WorkerParams) (*dao.Worker, error) {
+	if params.Key == "" {
 		return nil, errors.New("worker key is required")
 	}
 
-	workerType := values.Get("type")
-	if workerType == "" {
+	if params.Type == "" {
 		return nil, errors.New("worker type is required")
 	}
 
 	config := dao.WorkerConfig{}
 
 	var err error
-	switch workerType {
+	switch params.Type {
 	case dao.WORKER_TYPE_EXPORTER:
-		config.Exporter, err = parseExporterWorkerConfig(values)
+		config.Exporter, err = parseExporterWorkerConfig(params.Config.Exporter)
 	case dao.WORKER_TYPE_IMPORTER:
-		config.Importer, err = parseImporterWorkerConfig(values)
+		config.Importer, err = parseImporterWorkerConfig(params.Config.Importer)
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		config.ProcessingCrafter, err = parseProcessingCrafterWorkerConfig(values)
+		config.ProcessingCrafter, err = parseProcessingCrafterWorkerConfig(params.Config.ProcessingCrafter)
 	default:
 		return nil, errors.New("invalid worker type")
 	}
@@ -129,106 +124,88 @@ func (w *WorkerManager) ParseWorker(values url.Values) (*dao.Worker, error) {
 	}
 
 	return &dao.Worker{
-		Key:     key,
-		Type:    workerType,
+		Key:     params.Key,
+		Type:    params.Type,
 		Enabled: true,
 		Config:  config,
 	}, nil
 }
 
-func parseExporterWorkerConfig(values url.Values) (*dao.ExporterWorkerConfig, error) {
+func parseExporterWorkerConfig(params *ExporterWorkerConfigParams) (*dao.ExporterWorkerConfig, error) {
 	config := dao.ExporterWorkerConfig{}
+	for _, exportConfig := range params.Exports {
 
-	exportConfigs := make(map[string]*dao.SingleExportConfig)
+		if exportConfig.Storage == "" {
+			return nil, fmt.Errorf("Empty storage config")
+		}
 
-	for key, values := range values {
-		parts := strings.Split(key, "_")
-		if len(parts) != 2 {
-			continue
+		if exportConfig.Item == "" {
+			return nil, fmt.Errorf("Empty item config")
 		}
-		key := parts[1]
-		exportConfig, e := exportConfigs[key]
-		if !e {
-			exportConfig = &dao.SingleExportConfig{}
-			exportConfigs[key] = exportConfig
-		}
-		var err error
-		switch parts[0] {
-		case "storage":
-			exportConfig.Storage = values[0]
-		case "item":
-			exportConfig.Item = values[0]
-		case "slot":
-			exportConfig.Slot, err = strconv.Atoi(values[0])
-		case "amount":
-			exportConfig.Amount, err = strconv.Atoi(values[0])
-		}
+
+		slot, err := strconv.Atoi(exportConfig.Slot)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	keys := common.MapKeys(exportConfigs)
-	sort.Strings(keys)
+		amount, err := strconv.Atoi(exportConfig.Amount)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, key := range keys {
-		exportConfig := exportConfigs[key]
-		config.Exports = append(config.Exports, *exportConfig)
+		config.Exports = append(config.Exports, dao.SingleExportConfig{
+			Storage: exportConfig.Storage,
+			Item:    exportConfig.Item,
+			Slot:    slot,
+			Amount:  amount,
+		})
 	}
 	if len(config.Exports) == 0 {
 		return nil, fmt.Errorf("Empty export configs")
 	}
 	return &config, nil
 }
-func parseImporterWorkerConfig(values url.Values) (*dao.ImporterWorkerConfig, error) {
+
+func parseImporterWorkerConfig(params *ImporterWorkerConfigParams) (*dao.ImporterWorkerConfig, error) {
 	config := dao.ImporterWorkerConfig{}
 
-	importConfigs := make(map[string]*dao.SingleImportConfig)
+	for _, importConfig := range params.Imports {
 
-	for key, values := range values {
-		parts := strings.Split(key, "_")
-		if len(parts) != 2 {
-			continue
+		if importConfig.Storage == "" {
+			return nil, fmt.Errorf("Empty storage config")
 		}
-		key := parts[1]
-		importConfig, e := importConfigs[key]
-		if !e {
-			importConfig = &dao.SingleImportConfig{}
-			importConfigs[key] = importConfig
-		}
-		var err error
-		switch parts[0] {
-		case "storage":
-			importConfig.Storage = values[0]
-		case "slot":
-			importConfig.Slot, err = strconv.Atoi(values[0])
-		}
+		slot, err := strconv.Atoi(importConfig.Slot)
 		if err != nil {
 			return nil, err
 		}
-	}
 
-	for _, importConfig := range importConfigs {
-		config.Imports = append(config.Imports, *importConfig)
+		config.Imports = append(config.Imports, dao.SingleImportConfig{
+			Storage: importConfig.Storage,
+			Slot:    slot,
+		})
+	}
+	if len(config.Imports) == 0 {
+		return nil, fmt.Errorf("Empty imports configs")
 	}
 	return &config, nil
+
 }
-func parseProcessingCrafterWorkerConfig(values url.Values) (*dao.ProcessingCrafterWorkerConfig, error) {
+func parseProcessingCrafterWorkerConfig(params *dao.ProcessingCrafterWorkerConfig) (*dao.ProcessingCrafterWorkerConfig, error) {
 	config := dao.ProcessingCrafterWorkerConfig{}
 
-	craftType := values.Get("craftType")
+	craftType := params.CraftType
 	if craftType == "" {
 		return nil, errors.New("processing crafter craft type is required")
 	}
 	config.CraftType = craftType
 
-	inputStorage := values.Get("inputStorage")
+	inputStorage := params.InputStorage
 	if inputStorage == "" {
 		return nil, errors.New("processing crafter input storage is required")
 	}
 	config.InputStorage = inputStorage
 
-	reagentMode := values.Get("reagentMode")
+	reagentMode := params.ReagentMode
 	if reagentMode == "" {
 		return nil, errors.New("processing crafter reagent mode is required")
 	}
@@ -237,44 +214,41 @@ func parseProcessingCrafterWorkerConfig(values url.Values) (*dao.ProcessingCraft
 	return &config, nil
 }
 
-func (w *WorkerManager) WorkerToParams(worker *dao.Worker) (url.Values, error) {
-	params := make(url.Values)
-	params.Set("key", worker.Key)
-	params.Set("type", worker.Type)
+func (w *WorkerManager) WorkerToParams(worker *dao.Worker) *WorkerParams {
+	return NewWorkerParams(worker)
+}
 
-	switch worker.Type {
+func (w *WorkerManager) AddWorkerItemUids(params *WorkerParams, itemLoader *dao.ItemDeferedLoader) {
+	if params.Config.Exporter != nil {
+		for _, exportConfig := range params.Config.Exporter.Exports {
+			itemLoader.AddUid(exportConfig.Item)
+		}
+	}
+}
+
+func (w *WorkerManager) ParseWorkerParams(values url.Values) *WorkerParams {
+	return ParseWorkerParams(values)
+}
+
+func (w *WorkerManager) NewWorkerParamsForType(workerType string) *WorkerParams {
+	config := WorkerConfigParams{}
+	switch workerType {
 	case dao.WORKER_TYPE_EXPORTER:
-		fillExporterParams(params, worker.Config.Exporter)
+		config.Exporter = &ExporterWorkerConfigParams{
+			Exports: make([]SingleExportConfigParams, 1),
+		}
 	case dao.WORKER_TYPE_IMPORTER:
-		fillImporterParams(params, worker.Config.Importer)
+		config.Importer = &ImporterWorkerConfigParams{
+			Imports: make([]SingleImportConfigParams, 1),
+		}
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		params.Set("inputStorage", worker.Config.ProcessingCrafter.InputStorage)
-		params.Set("craftType", worker.Config.ProcessingCrafter.CraftType)
-		params.Set("reagentMode", worker.Config.ProcessingCrafter.ReagentMode)
-	default:
-		return nil, errors.New("invalid worker type")
+		config.ProcessingCrafter = &dao.ProcessingCrafterWorkerConfig{}
 	}
 
-	return params, nil
-}
-
-func fillExporterParams(params url.Values, config *dao.ExporterWorkerConfig) {
-	for i, exportConfig := range config.Exports {
-		params.Set(fmt.Sprintf("storage_%d", i), exportConfig.Storage)
-		params.Set(fmt.Sprintf("item_%d", i), exportConfig.Item)
-		params.Set(fmt.Sprintf("slot_%d", i), strconv.Itoa(exportConfig.Slot))
-		params.Set(fmt.Sprintf("amount_%d", i), strconv.Itoa(exportConfig.Amount))
+	return &WorkerParams{
+		Key:     "",
+		Type:    workerType,
+		Enabled: true,
+		Config:  config,
 	}
-
-}
-
-func fillImporterParams(params url.Values, config *dao.ImporterWorkerConfig) {
-	for i, importConfig := range config.Imports {
-		params.Set(fmt.Sprintf("storage_%d", i), importConfig.Storage)
-		params.Set(fmt.Sprintf("slot_%d", i), strconv.Itoa(importConfig.Slot))
-	}
-
-}
-
-type WorkerParams struct {
 }

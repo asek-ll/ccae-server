@@ -1,10 +1,10 @@
 package components
 
 import (
-	"net/url"
 	"fmt"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/worker"
 )
 
 templ WorkersPage(workers []dao.Worker) {
@@ -16,65 +16,65 @@ templ WorkersPage(workers []dao.Worker) {
 	}
 }
 
-templ NewWorkerConfigForm(values url.Values) {
-	if values.Get("type") == dao.WORKER_TYPE_IMPORTER {
-		@ImporterWorkerConfigFields(values)
-	} else if values.Get("type") == dao.WORKER_TYPE_EXPORTER {
-		@ExporterWorkerConfigFields(values)
-	} else if values.Get("type") == dao.WORKER_TYPE_PROCESSING_CRAFTER {
-		@ProcessingCrafterWorkerConfigFields(values)
+templ NewWorkerConfigForm(params *worker.WorkerParams) {
+	if params.Type == dao.WORKER_TYPE_IMPORTER {
+		@ImporterWorkerConfigFields(params.Config.Importer)
+	} else if params.Type == dao.WORKER_TYPE_EXPORTER {
+		@ExporterWorkerConfigFields(params.Config.Exporter)
+	} else if params.Type == dao.WORKER_TYPE_PROCESSING_CRAFTER {
+		@ProcessingCrafterWorkerConfigFields(params.Config.ProcessingCrafter)
 	}
 }
 
-templ ImporterWorkerConfigFields(values url.Values) {
-    <importer-configs>
+templ ImporterWorkerConfigFields(params *worker.ImporterWorkerConfigParams) {
+	<importer-configs>
 		<button class="add-worker">Add</button>
-        for i := range getParamCountWithPrefix(values, "storage_") {
+		for i, importConfig := range params.Imports {
 			<importer-config
-                idx={ fmt.Sprintf("%d", i) }
-				storage={ values.Get(fmt.Sprintf("storage_%d", i)) }
-				slot={ values.Get(fmt.Sprintf("slot_%d", i)) }
+				idx={ fmt.Sprintf("%d", i) }
+				storage={ importConfig.Storage }
+				slot={ importConfig.Slot }
 			></importer-config>
-        }
-    </importer-configs>
+		}
+	</importer-configs>
 	<button type="submit">Create</button>
 }
 
-templ ExporterWorkerConfigFields(values url.Values) {
+templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
 	<exporter-configs>
 		<button class="add-worker">Add</button>
-		for i := range getParamCountWithPrefix(values, "storage_")+1 {
+		for i, exportConfig := range params.Exports {
 			<exporter-config
-                idx={ fmt.Sprintf("%d", i) }
-				storage={ values.Get(fmt.Sprintf("storage_%d", i)) }
-				item={ values.Get(fmt.Sprintf("item_%d", i)) }
-				slot={ values.Get(fmt.Sprintf("slot_%d", i)) }
-				amount={ values.Get(fmt.Sprintf("amount_%d", i)) }
+				idx={ fmt.Sprintf("%d", i) }
+				storage={ exportConfig.Storage }
+				item={ itemJsonByUid(ctx, exportConfig.Item) }
+				slot={ exportConfig.Slot }
+				amount={ exportConfig.Amount }
 			></exporter-config>
 		}
 	</exporter-configs>
 	<button type="submit">Create</button>
 }
 
-templ ProcessingCrafterWorkerConfigFields(values url.Values) {
+templ ProcessingCrafterWorkerConfigFields(params *dao.ProcessingCrafterWorkerConfig) {
 	<label>
 		Craft type
-		<input type="text" name="craftType" value={ values.Get("craftType") }/>
+		<input type="text" name="craftType" value={ params.CraftType }/>
 	</label>
 	<label>
 		Ingredient storage
-		<input type="text" name="inputStorage" value={ values.Get("inputStorage") }/>
+		<input type="text" name="inputStorage" value={ params.InputStorage }/>
 	</label>
 	<label>
 		Ingredient mode
 		<select name="reagentMode" required>
 			<option
-				if values.Get("reagentMode") == "ignore" {
+				if params.ReagentMode == "ignore" {
 					selected
 				}
 			>ignore</option>
 			<option
-				if values.Get("reagentMode") == "block" {
+				if params.ReagentMode == "block" {
 					selected
 				}
 			>block</option>
@@ -83,7 +83,7 @@ templ ProcessingCrafterWorkerConfigFields(values url.Values) {
 	<button type="submit">Create</button>
 }
 
-templ NewWorkerPage(values url.Values, errMsg string) {
+templ NewWorkerPage(params *worker.WorkerParams, errMsg string) {
 	@Page("New worker") {
 		if errMsg != "" {
 			<div class="error">{ errMsg }</div>
@@ -91,7 +91,7 @@ templ NewWorkerPage(values url.Values, errMsg string) {
 		<form method="post" id="worker-form">
 			<label>
 				Key
-				<input type="text" name="key" value={ values.Get("key") }/>
+				<input type="text" name="key" value={ params.Key }/>
 			</label>
 			<label>
 				Type
@@ -105,7 +105,7 @@ templ NewWorkerPage(values url.Values, errMsg string) {
 					for _, t := range dao.WORKER_TYPES {
 						<option
 							value={ t }
-							if t == values.Get("type") {
+							if t == params.Type {
 								selected
 							}
 						>{ t }</option>
@@ -113,7 +113,7 @@ templ NewWorkerPage(values url.Values, errMsg string) {
 				</select>
 			</label>
 			<div id="worker-config">
-				@NewWorkerConfigForm(values)
+				@NewWorkerConfigForm(params)
 			</div>
 		</form>
 	}
@@ -136,7 +136,7 @@ templ WorkersListItem(worker *dao.Worker) {
 			{ worker.Type }
 		</td>
 		<td>
-            <button hx-delete={ fmt.Sprintf("/workers/%s", worker.Key) }>Del</button>
+			<button hx-delete={ fmt.Sprintf("/workers/%s", worker.Key) }>Del</button>
 		</td>
 	</tr>
 }

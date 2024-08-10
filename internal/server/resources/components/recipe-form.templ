@@ -33,7 +33,7 @@ templ shapedRecipeItem(slot int) {
 	</div>
 	<button
 		type="button"
-		hx-get={ fmt.Sprintf("/item-popup?slot=%d&role=ingredient", slot) }
+		hx-get={ fmt.Sprintf("/item-popup?slot=%d&role=ingredient&mode=recipe-item", slot) }
 		hx-target={ fmt.Sprintf("#slot%ditem", slot) }
 		hx-swap="innerHtml"
 	>Set</button>
@@ -88,7 +88,7 @@ templ RecipeForm(recipe *dao.Recipe) {
 		<div>
 			<div>
 				<h2>Results</h2>
-				<button type="button" hx-get="/item-popup?role=result" hx-target="this" hx-swap="beforebegin">Add</button>
+				<button type="button" hx-get="/item-popup?role=result&mode=recipe-item" hx-target="this" hx-swap="beforebegin">Add</button>
 				for i, recipeItem := range recipe.Results {
 					@ItemInputs(fmt.Sprintf("r%d", i), recipeItem)
 				}
@@ -97,7 +97,7 @@ templ RecipeForm(recipe *dao.Recipe) {
 				<h2>Ingredients</h2>
 				<div>
 					<h3>Shapeless</h3>
-					<button type="button" hx-get="/item-popup?role=ingredient" hx-target="this" hx-swap="beforebegin">Add</button>
+					<button type="button" hx-get="/item-popup?role=ingredient&mode=recipe-item" hx-target="this" hx-swap="beforebegin">Add</button>
 					for i, recipeItem := range recipe.Ingredients {
 						if recipeItem.Slot == nil {
 							@ItemInputs(fmt.Sprintf("i%d", i), recipeItem)

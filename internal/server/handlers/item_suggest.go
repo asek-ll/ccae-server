@@ -23,6 +23,17 @@ func WriteJson(w http.ResponseWriter, data any) error {
 	return encoder.Encode(data)
 }
 
+func ItemToDto(item *dao.Item) Item {
+	return Item{
+		UID:         item.UID,
+		ID:          item.ID,
+		DisplayName: item.DisplayName,
+		NBT:         item.NBT,
+		Meta:        item.Meta,
+		Icon:        item.Base64Icon(),
+	}
+}
+
 func ItemSuggest(itemDao *dao.ItemsDao) func(w http.ResponseWriter, r *http.Request) error {
 	return func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
