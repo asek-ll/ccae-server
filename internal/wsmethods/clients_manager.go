@@ -17,6 +17,7 @@ const CLIENT_ROLE_STORAGE = "storage"
 const CLIENT_ROLE_CRAFTER = "crafter"
 const CLIENT_ROLE_PROCESSING = "processing"
 const CLIENT_ROLE_PLAYER = "player"
+const CLIENT_ROLE_MODEM = "modem"
 
 type Client interface {
 	GetID() string
@@ -55,6 +56,8 @@ type ClientsManager struct {
 	clients        map[uint]Client
 	clientListener ClientListener
 
+	clientIdByType map[string]uint
+
 	mu sync.RWMutex
 }
 
@@ -64,6 +67,7 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) 
 		clientsDao:     clientsDao,
 		clients:        make(map[uint]Client),
 		clientListener: DumpCycleListener{},
+		clientIdByType: make(map[string]uint),
 	}
 
 	server.SetDisconnectHandler(func(clientId uint) error {
@@ -117,6 +121,8 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 		client, err = NewCrafterClient(genericClient)
 	case CLIENT_ROLE_PLAYER:
 		client = NewPlayerClient(genericClient)
+	case CLIENT_ROLE_MODEM:
+		client = NewModemClient(genericClient)
 	default:
 		client = &genericClient
 	}
@@ -126,6 +132,7 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 
 	c.mu.Lock()
 	c.clients[webscoketClientId] = client
+	c.clientIdByType[role] = webscoketClientId
 	c.mu.Unlock()
 
 	c.clientListener.HandleClientConnected(client)

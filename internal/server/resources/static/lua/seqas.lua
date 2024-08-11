@@ -10,7 +10,8 @@ local function get_seq(item)
         end
         if recipe['transitionalItem'] == item['id'] then
             local step = item['tag']['SequencedAssembly']['Step']
-            local idx = math.mod(step, recipe['loops']) + 1
+            local seqs = recipe['sequence']
+            local idx = math.mod(step, #seqs) + 1
             return recipe['sequence'][idx]
         end
     end
@@ -57,6 +58,7 @@ local function check(item)
     print('get seq for slot: ' .. slot)
 
     if seq['type'] == 'deploying' then
+        print('deploy to ' .. seq['input'][2])
         return sendToDeploying(slot, seq['input'][2])
     end
 

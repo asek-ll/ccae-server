@@ -375,13 +375,13 @@
         "type": "deploying",
         "input": [
           "kubejs:partial_landscaping_materials",
-          "#minecraft:small_flowers"
+          "minecraft:dandelion"
         ],
         "output": "kubejs:partial_landscaping_materials"
       },
       {
         "type": "deploying",
-        "input": ["kubejs:partial_landscaping_materials", "#minecraft:leaves"],
+        "input": ["kubejs:partial_landscaping_materials", "minecraft:jungle_leaves"],
         "output": "kubejs:partial_landscaping_materials"
       }
     ],
