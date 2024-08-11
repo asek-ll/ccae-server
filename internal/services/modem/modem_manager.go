@@ -12,3 +12,7 @@ func NewModemManager(clientsManager *wsmethods.ClientsManager) *ModemManager {
 		modemAdapter: adapter,
 	}
 }
+
+func (m *ModemManager) GetPeripherals() ([]string, error) {
+	return m.modemAdapter.GetNamesRemote()
+}

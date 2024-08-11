@@ -917,6 +917,14 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return nil
 	})
 
+	handleFuncWithError(common, "GET /remotes/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		peripherals, err := app.ModemManager.GetPeripherals()
+		if err != nil {
+			return err
+		}
+		return components.PeripheralsPage(peripherals).Render(r.Context(), w)
+	})
+
 	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

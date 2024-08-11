@@ -2,6 +2,7 @@ package wsmethods
 
 import (
 	"context"
+	"time"
 )
 
 type ModemClient struct {
@@ -20,7 +21,9 @@ func NewModemClient(base GenericClient) *ModemClient {
 // }
 
 // getNamesRemote()
-func (c *ModemClient) GetNamesRemote(ctx context.Context) ([]string, error) {
+func (c *ModemClient) GetNamesRemote() ([]string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
+	defer cancel()
 	var res []string
 	err := c.WS.SendRequestSync(ctx, "getNamesRemote", nil, &res)
 	if err != nil {

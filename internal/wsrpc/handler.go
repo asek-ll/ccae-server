@@ -109,7 +109,9 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 	}
 
 	if msg.Method == nil && (msg.Result != nil || msg.Error != nil) {
+		h.reqSeqMu.RLock()
 		done, e := h.pending[msg.ID]
+		h.reqSeqMu.RUnlock()
 		if !e {
 			log.Printf("[ERROR] Not found pendition for request id: %d", msg.ID)
 			return nil

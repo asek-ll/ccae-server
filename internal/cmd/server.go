@@ -9,6 +9,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/modem"
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
@@ -44,6 +45,7 @@ func (s ServerCommand) Execute(args []string) error {
 	recipeManager := recipe.NewRecipeManager(daos)
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
 	crafterService := crafter.NewCrafter(daos, plannerService, workerFactory, storageService)
+	modemManager := modem.NewModemManager(clientsManager)
 
 	stateUpdater := crafter.NewStateUpdater(storageService, daos, crafterService)
 	stateUpdater.Start()
@@ -63,6 +65,7 @@ func (s ServerCommand) Execute(args []string) error {
 		ClientsManager: clientsManager,
 		WorkerFactory:  workerFactory,
 		WorkerManager:  workerManager,
+		ModemManager:   modemManager,
 	}
 
 	mux, err := server.CreateMux(app)

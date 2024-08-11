@@ -12,14 +12,14 @@ func NewModemAdapter(clientsManager *ClientsManager) *ModemAdapter {
 	}
 }
 
-func (c *ModemAdapter) GetNamesRemote(ctx context.Context) ([]string, error) {
-	return CallWithClientForType(c.clientsManager, func(client *ModemAdapter) ([]string, error) {
-		return client.GetNamesRemote(ctx)
+func (c *ModemAdapter) GetNamesRemote() ([]string, error) {
+	return CallWithClientForType(c.clientsManager, func(client *ModemClient) ([]string, error) {
+		return client.GetNamesRemote()
 	})
 }
 
 func (c *ModemAdapter) GetMethodsRemote(ctx context.Context, name string) ([]string, error) {
-	return CallWithClientForType(c.clientsManager, func(client *ModemAdapter) ([]string, error) {
+	return CallWithClientForType(c.clientsManager, func(client *ModemClient) ([]string, error) {
 		return client.GetMethodsRemote(ctx, name)
 	})
 }

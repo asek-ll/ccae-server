@@ -5,6 +5,7 @@ import (
 
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/modem"
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
@@ -23,4 +24,5 @@ type App struct {
 	ClientsManager *wsmethods.ClientsManager
 	WorkerFactory  *crafter.WorkerFactory
 	WorkerManager  *worker.WorkerManager
+	ModemManager   *modem.ModemManager
 }
