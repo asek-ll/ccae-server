@@ -324,4 +324,26 @@
       }
     }
   );
+
+  customElements.define(
+    "import-recipe-item-finder",
+    class extends HTMLElement {
+      constructor() {
+        super();
+      }
+
+      connectedCallback() {
+        const input = this.querySelector("input");
+        input.addEventListener("keyup", (e) => {
+          document.querySelectorAll(".item-stack").forEach((stack) => {
+            if (stack.getAttribute("data-tooltip").includes(input.value)) {
+              stack.style.border = "2px solid red";
+            } else {
+              stack.style.border = "none";
+            }
+          });
+        });
+      }
+    }
+  );
 })();
