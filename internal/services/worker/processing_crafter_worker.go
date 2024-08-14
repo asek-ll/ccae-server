@@ -11,7 +11,7 @@ type ProcessingCrafterWorker struct {
 }
 
 func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) error {
-	current, err := w.daos.Crafts.FindCurrent(config.CraftType)
+	// current, err := w.daos.Crafts.FindCurrent(config.CraftType)
 
 	return nil
 }
