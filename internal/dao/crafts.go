@@ -260,21 +260,14 @@ func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 	return crafts[0], nil
 }
 
-func (d *CraftsDao) CompleteCraft(craft *Craft) error {
-	tx, err := d.db.Begin()
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-
+func (d *CraftsDao) CompleteCraftInOuterTx(tx *sql.Tx, craft *Craft) error {
 	row := tx.QueryRow(`UPDATE craft SET 
 	repeats = repeats - commit_repeats, 
 	commit_repeats = 0,
 	status = 'PENDING'
 	WHERE id = ? AND status = 'COMMITED' RETURNING repeats`, craft.ID)
 
-	err = row.Err()
+	err := row.Err()
 	if err != nil {
 		return err
 	}
@@ -296,6 +289,22 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 			return errors.New("Expected commited craft to complete")
 		}
 	}
+	return nil
+}
+
+func (d *CraftsDao) CompleteCraft(craft *Craft) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	err = d.CompleteCraftInOuterTx(tx, craft)
+	if err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 

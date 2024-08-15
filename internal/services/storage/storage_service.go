@@ -69,11 +69,11 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		sa := stacks[a]
 		sb := stacks[b]
 
-		if strings.HasPrefix(sa.Item.UID, "fluid:") {
-			return true
-		}
-		if strings.HasPrefix(sb.Item.UID, "fluid") {
-			return false
+		aisf := strings.HasPrefix(sa.Item.UID, "fluid:")
+		bisf := strings.HasPrefix(sb.Item.UID, "fluid:")
+
+		if aisf != bisf {
+			return aisf
 		}
 
 		if sa.Count == sb.Count {
@@ -135,6 +135,14 @@ func (s *Storage) ExportStack(uid string, toInventory string, toSlot int, amount
 	return s.combinedStore.ExportStack(uid, toInventory, toSlot, amount)
 }
 
+func (s *Storage) ImportFluid(uid string, fromInventory string, amount int) (int, error) {
+	return s.combinedStore.fluidStorage.ImportFluid(uid, fromInventory, amount)
+}
+
+func (s *Storage) ExportFluid(uid string, toInventory string, amount int) (int, error) {
+	return s.combinedStore.fluidStorage.ExportFluid(uid, toInventory, amount)
+}
+
 func (s *Storage) ImportAll(inventoryName string) error {
 	items, err := s.storageAdapter.ListItems(inventoryName)
 	if err != nil {
@@ -143,6 +151,21 @@ func (s *Storage) ImportAll(inventoryName string) error {
 
 	for _, item := range items {
 		_, err := s.ImportStack(item.Item.GetUID(), inventoryName, item.Slot, item.Item.Count)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Storage) ImportAllFluids(inventoryName string) error {
+	tanks, err := s.storageAdapter.GetTanks(inventoryName)
+	if err != nil {
+		return err
+	}
+
+	for _, tank := range tanks {
+		_, err := s.ImportFluid(tank.Fluid.Name, inventoryName, tank.Fluid.Amount)
 		if err != nil {
 			return err
 		}

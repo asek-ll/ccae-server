@@ -51,3 +51,9 @@ func (s *StorageAdapter) GetFluidContainers(prefixes []string) ([]FluidContainer
 		return client.GetFluidContainers(prefixes)
 	})
 }
+
+func (s *StorageAdapter) GetTanks(name string) ([]FluidTank, error) {
+	return CallWithClientForType(s.clientsManager, func(client *StorageClient) ([]FluidTank, error) {
+		return client.GetTanks(name)
+	})
+}
