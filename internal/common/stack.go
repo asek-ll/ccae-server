@@ -23,3 +23,11 @@ func FromUid(uid string) (string, *string) {
 	}
 	return uid, nil
 }
+
+func IsFluid(uid string) bool {
+	return strings.HasPrefix(uid, "fluid:")
+}
+
+func FluidUid(uid string) string {
+	return strings.TrimPrefix(uid, "fluid:")
+}

@@ -14,15 +14,17 @@ import (
 )
 
 type App struct {
-	Daos           *dao.DaoProvider
-	Storage        *storage.Storage
-	Planner        *crafter.Planner
-	Crafter        *crafter.Crafter
-	RecipeManager  *recipe.RecipeManager
-	PlayerManager  *player.PlayerManager
-	Logger         *log.Logger
-	ClientsManager *wsmethods.ClientsManager
-	WorkerFactory  *crafter.WorkerFactory
-	WorkerManager  *worker.WorkerManager
-	ModemManager   *modem.ModemManager
+	Daos                       *dao.DaoProvider
+	Storage                    *storage.Storage
+	Planner                    *crafter.Planner
+	Crafter                    *crafter.Crafter
+	RecipeManager              *recipe.RecipeManager
+	PlayerManager              *player.PlayerManager
+	Logger                     *log.Logger
+	ClientsManager             *wsmethods.ClientsManager
+	WorkerFactory              *crafter.WorkerFactory
+	WorkerManager              *worker.WorkerManager
+	ModemManager               *modem.ModemManager
+	StorageAdapter             *wsmethods.StorageAdapter
+	TransferTransactionManager *storage.TransferTransactionManager
 }

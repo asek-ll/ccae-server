@@ -11,28 +11,51 @@ import (
 )
 
 type WorkerManager struct {
-	workerHandlers *WorkerHandlerManager
-	daos           *dao.DaoProvider
+	workerHandlers       *WorkerHandlerManager
+	daos                 *dao.DaoProvider
+	exporterWorker       *ExporterWorker
+	importerWorker       *ImporterWorker
+	processCrafterWorker *ProcessingCrafterWorker
 }
 
-func NewWorkerManager(daos *dao.DaoProvider) *WorkerManager {
+func NewWorkerManager(
+	daos *dao.DaoProvider,
+	exporterWorker *ExporterWorker,
+	importerWorker *ImporterWorker,
+	processCrafterWorker *ProcessingCrafterWorker,
+) *WorkerManager {
 	wm := &WorkerManager{
-		workerHandlers: NewWorkerHandlerManager(),
-		daos:           daos,
+		workerHandlers:       NewWorkerHandlerManager(),
+		daos:                 daos,
+		exporterWorker:       exporterWorker,
+		importerWorker:       importerWorker,
+		processCrafterWorker: processCrafterWorker,
 	}
 	wm.init()
+
 	return wm
 }
 
 func (w *WorkerManager) getRunner(worker *dao.Worker) func() error {
-	// switch worker.Type {
-	// case dao.WORKER_TYPE_SHAPED_CRAFTER:
-	// 	return func() error {
-	// 		return w.craftWorker(worker)
-	// 	}
-	// }
+	switch worker.Type {
+	case dao.WORKER_TYPE_EXPORTER:
+		return func() error {
+			log.Printf("%s worker tick", worker.Key)
+			return w.exporterWorker.do(worker.Config.Exporter)
+		}
+	case dao.WORKER_TYPE_IMPORTER:
+		return func() error {
+			log.Printf("%s worker tick", worker.Key)
+			return w.importerWorker.do(worker.Config.Importer)
+		}
+	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
+		return func() error {
+			log.Printf("%s worker tick", worker.Key)
+			return w.processCrafterWorker.do(worker.Config.ProcessingCrafter)
+		}
+	}
 	return func() error {
-		log.Printf("%s worker tick", worker.Key)
+		log.Printf("NOP %s worker tick", worker.Key)
 		return nil
 	}
 }

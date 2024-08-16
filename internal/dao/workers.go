@@ -44,6 +44,7 @@ type ShapedCrafterWorkerConfig struct {
 type ProcessingCrafterWorkerConfig struct {
 	CraftType    string `json:"craftType"`
 	InputStorage string `json:"inputStorage"`
+	InputTank    string `json:"inputTank"`
 	ReagentMode  string `json:"reagentMode"`
 }
 

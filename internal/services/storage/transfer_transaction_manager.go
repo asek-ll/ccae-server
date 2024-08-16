@@ -49,6 +49,14 @@ type TransferTransactionManager struct {
 	mu             sync.Mutex
 }
 
+func NewTransferTransactionManager(exportTxDao *dao.StoredTXDao, storageAdapter *wsmethods.StorageAdapter, storage *Storage) *TransferTransactionManager {
+	return &TransferTransactionManager{
+		exportTxDao:    exportTxDao,
+		storageAdapter: storageAdapter,
+		storage:        storage,
+	}
+}
+
 func (tm *TransferTransactionManager) unlock() {
 	tm.mu.Unlock()
 }

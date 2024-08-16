@@ -38,34 +38,41 @@ func (s ServerCommand) Execute(args []string) error {
 	rpcServer := wsrpc.NewServer(wsServer)
 
 	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients)
+	storageAdapter := wsmethods.NewStorageAdapter(clientsManager)
 
-	storageService := storage.NewStorage(daos, clientsManager)
+	storageService := storage.NewStorage(daos, storageAdapter)
 	playerManager := player.NewPlayerManager(daos, clientsManager, storageService)
 	plannerService := crafter.NewPlanner(daos, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
 	crafterService := crafter.NewCrafter(daos, plannerService, workerFactory, storageService)
 	modemManager := modem.NewModemManager(clientsManager)
+	transferTransationManager := storage.NewTransferTransactionManager(daos.StoredTX, storageAdapter, storageService)
 
 	stateUpdater := crafter.NewStateUpdater(storageService, daos, crafterService)
 	stateUpdater.Start()
 
-	workerManager := worker.NewWorkerManager(daos)
+	exporterWorker := worker.NewExporterWorker(*storageService)
+	importerWorker := worker.NewImporterWorker(*storageService)
+	processingCrafterWorker := worker.NewProcessingCrafterWorker(daos, storageService, storageAdapter, transferTransationManager)
+	workerManager := worker.NewWorkerManager(daos, exporterWorker, importerWorker, processingCrafterWorker)
 
 	clientsManager.SetClientListener(workerFactory)
 
 	app := &app.App{
-		Daos:           daos,
-		Storage:        storageService,
-		Planner:        plannerService,
-		Crafter:        crafterService,
-		RecipeManager:  recipeManager,
-		PlayerManager:  playerManager,
-		Logger:         log.Default(),
-		ClientsManager: clientsManager,
-		WorkerFactory:  workerFactory,
-		WorkerManager:  workerManager,
-		ModemManager:   modemManager,
+		Daos:                       daos,
+		Storage:                    storageService,
+		Planner:                    plannerService,
+		Crafter:                    crafterService,
+		RecipeManager:              recipeManager,
+		PlayerManager:              playerManager,
+		Logger:                     log.Default(),
+		ClientsManager:             clientsManager,
+		WorkerFactory:              workerFactory,
+		WorkerManager:              workerManager,
+		ModemManager:               modemManager,
+		StorageAdapter:             storageAdapter,
+		TransferTransactionManager: transferTransationManager,
 	}
 
 	mux, err := server.CreateMux(app)

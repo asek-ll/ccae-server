@@ -27,8 +27,7 @@ templ CraftList(crafts []CraftItem) {
 					{ craft.Craft.Status }
 				</td>
 				<td>
-					<button hx-post={ fmt.Sprintf("/crafts/%d/commit/", craft.Craft.ID) }>COMMIT</button>
-					<button hx-post={ fmt.Sprintf("/crafts/%d/complete/", craft.Craft.ID) }>COMPLETE</button>
+					<button hx-post={ fmt.Sprintf("/crafts/%d/commit/", craft.Craft.ID) }>MANUAL</button>
 					<button hx-post={ fmt.Sprintf("/crafts/%d/cancel/", craft.Craft.ID) }>CANCEL</button>
 				</td>
 			</tr>

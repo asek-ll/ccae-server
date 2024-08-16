@@ -4,7 +4,6 @@ import (
 	"errors"
 	"log"
 	"sort"
-	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -24,12 +23,11 @@ type Storage struct {
 	combinedStore  *CombinedStore
 }
 
-func NewStorage(daoProvider *dao.DaoProvider, clientsManager *wsmethods.ClientsManager) *Storage {
-	adapter := wsmethods.NewStorageAdapter(clientsManager)
+func NewStorage(daoProvider *dao.DaoProvider, storageAdapter *wsmethods.StorageAdapter) *Storage {
 	return &Storage{
 		daoProvider:    daoProvider,
-		storageAdapter: adapter,
-		combinedStore:  NewCombinedStore(adapter),
+		storageAdapter: storageAdapter,
+		combinedStore:  NewCombinedStore(storageAdapter),
 	}
 }
 
@@ -69,8 +67,8 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 		sa := stacks[a]
 		sb := stacks[b]
 
-		aisf := strings.HasPrefix(sa.Item.UID, "fluid:")
-		bisf := strings.HasPrefix(sb.Item.UID, "fluid:")
+		aisf := common.IsFluid(sa.Item.UID)
+		bisf := common.IsFluid(sb.Item.UID)
 
 		if aisf != bisf {
 			return aisf

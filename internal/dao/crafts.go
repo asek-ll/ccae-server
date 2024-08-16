@@ -166,13 +166,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	return nil
 }
 
-func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error {
-	tx, err := d.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
+func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recipe, repeats int) error {
 	res, err := tx.Exec(`
 	UPDATE craft 
 	SET 
@@ -202,6 +196,21 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error
 	}
 
 	craft.CommitRepeats = repeats
+
+	return nil
+}
+
+func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	err = d.CommitCraftInOuterTx(tx, craft, recipe, repeats)
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }

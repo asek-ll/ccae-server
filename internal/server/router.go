@@ -716,22 +716,25 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-
-		return app.Daos.Crafts.CommitCraft(craft, recipe, 1)
-	})
-	handleFuncWithError(common, "POST /crafts/{id}/complete/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		id := r.PathValue("id")
-		craftId, err := strconv.Atoi(id)
+		var stacks []*crafter.Stack
+		for _, ing := range recipe.Ingredients {
+			stacks = append(stacks, &crafter.Stack{
+				ItemID: ing.ItemUID,
+				Count:  ing.Amount,
+			})
+		}
+		err = app.PlayerManager.SendItems(stacks)
 		if err != nil {
 			return err
 		}
 
-		craft, err := app.Daos.Crafts.FindById(craftId)
+		err = app.Daos.Crafts.CommitCraft(craft, recipe, 1)
 		if err != nil {
 			return err
 		}
 
 		return app.Daos.Crafts.CompleteCraft(craft)
+
 	})
 
 	handleFuncWithError(common, "POST /crafts/{id}/cancel/{$}", func(w http.ResponseWriter, r *http.Request) error {
