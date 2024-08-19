@@ -117,6 +117,21 @@ local function get_fluid_containers(prefixes)
     return json_list(containers)
 end
 
+local function get_tanks(name)
+    local result = {}
+    for i, tank in pairs(m.callRemote(name, 'tanks')) do
+        table.insert(result, {
+            slot = i,
+            fluid = tank,
+        })
+    end
+    return json_list(result)
+end
+
+local function move_fluid(params)
+    return m.callRemote(params.from, 'pushFluid', params.to, params.amount, params.fluid)
+end
+
 local function measure_time(func)
     return function(...)
         local start_time = os.epoch 'local'
@@ -134,6 +149,8 @@ return function(methods, _, _)
     methods['getItemDetail'] = measure_time(get_item_detail)
     methods['getInventoryItems'] = measure_time(get_inventory_items)
     methods['getFluidContainers'] = get_fluid_containers
+    methods['getTanks'] = get_tanks
+    methods['moveFluid'] = move_fluid
 
     if cfg_load ~= nil then
         config = cfg_load()

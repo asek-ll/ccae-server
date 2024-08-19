@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
@@ -29,6 +30,11 @@ func (s ServerCommand) Execute(args []string) error {
 
 	l := setupLogger()
 
+	configLoader, err := config.NewConfigLoader()
+	if err != nil {
+		return err
+	}
+
 	daos, err := dao.NewDaoProvider()
 	if err != nil {
 		return err
@@ -47,7 +53,7 @@ func (s ServerCommand) Execute(args []string) error {
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
 	crafterService := crafter.NewCrafter(daos, plannerService, workerFactory, storageService)
 	modemManager := modem.NewModemManager(clientsManager)
-	transferTransationManager := storage.NewTransferTransactionManager(daos.StoredTX, storageAdapter, storageService)
+	transferTransationManager := storage.NewTransferTransactionManager(configLoader, daos.StoredTX, storageAdapter, storageService)
 
 	stateUpdater := crafter.NewStateUpdater(storageService, daos, crafterService)
 	stateUpdater.Start()
@@ -55,7 +61,7 @@ func (s ServerCommand) Execute(args []string) error {
 	exporterWorker := worker.NewExporterWorker(*storageService)
 	importerWorker := worker.NewImporterWorker(*storageService)
 	processingCrafterWorker := worker.NewProcessingCrafterWorker(daos, storageService, storageAdapter, transferTransationManager)
-	workerManager := worker.NewWorkerManager(daos, exporterWorker, importerWorker, processingCrafterWorker)
+	workerManager := worker.NewWorkerManager(configLoader, daos, exporterWorker, importerWorker, processingCrafterWorker)
 
 	clientsManager.SetClientListener(workerFactory)
 
@@ -73,6 +79,7 @@ func (s ServerCommand) Execute(args []string) error {
 		ModemManager:               modemManager,
 		StorageAdapter:             storageAdapter,
 		TransferTransactionManager: transferTransationManager,
+		ConfigLoader:               configLoader,
 	}
 
 	mux, err := server.CreateMux(app)

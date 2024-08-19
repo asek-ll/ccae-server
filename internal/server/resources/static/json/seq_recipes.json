@@ -311,22 +311,34 @@
     "sequence": [
       {
         "type": "deploying",
-        "input": ["kubejs:partial_building_materials", "immersiveengineering:treated_wood_horizontal"],
+        "input": [
+          "kubejs:partial_building_materials",
+          "immersiveengineering:treated_wood_horizontal"
+        ],
         "output": "kubejs:partial_building_materials"
       },
       {
         "type": "deploying",
-        "input": ["kubejs:partial_building_materials", "immersiveengineering:treated_wood_horizontal"],
+        "input": [
+          "kubejs:partial_building_materials",
+          "immersiveengineering:treated_wood_horizontal"
+        ],
         "output": "kubejs:partial_building_materials"
       },
       {
         "type": "deploying",
-        "input": ["kubejs:partial_building_materials", "immersiveengineering:treated_wood_horizontal"],
+        "input": [
+          "kubejs:partial_building_materials",
+          "immersiveengineering:treated_wood_horizontal"
+        ],
         "output": "kubejs:partial_building_materials"
       },
       {
         "type": "deploying",
-        "input": ["kubejs:partial_building_materials", "immersiveengineering:treated_wood_horizontal"],
+        "input": [
+          "kubejs:partial_building_materials",
+          "immersiveengineering:treated_wood_horizontal"
+        ],
         "output": "kubejs:partial_building_materials"
       },
       {
@@ -381,7 +393,10 @@
       },
       {
         "type": "deploying",
-        "input": ["kubejs:partial_landscaping_materials", "minecraft:jungle_leaves"],
+        "input": [
+          "kubejs:partial_landscaping_materials",
+          "minecraft:jungle_leaves"
+        ],
         "output": "kubejs:partial_landscaping_materials"
       }
     ],
@@ -478,7 +493,7 @@
         "type": "deploying",
         "input": [
           "kubejs:partial_foundation_materials",
-          "#immersiveengineering:scaffoldings/steel"
+          "immersiveengineering:steel_scaffolding_standard"
         ],
         "output": "kubejs:partial_foundation_materials"
       },

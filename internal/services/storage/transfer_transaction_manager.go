@@ -4,8 +4,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync"
 
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
@@ -43,14 +45,21 @@ func (tx *TransferTransaction) Rollback() error {
 }
 
 type TransferTransactionManager struct {
+	configLoader   *config.ConfigLoader
 	exportTxDao    *dao.StoredTXDao
 	storageAdapter *wsmethods.StorageAdapter
 	storage        *Storage
 	mu             sync.Mutex
 }
 
-func NewTransferTransactionManager(exportTxDao *dao.StoredTXDao, storageAdapter *wsmethods.StorageAdapter, storage *Storage) *TransferTransactionManager {
+func NewTransferTransactionManager(
+	configLoader *config.ConfigLoader,
+	exportTxDao *dao.StoredTXDao,
+	storageAdapter *wsmethods.StorageAdapter,
+	storage *Storage,
+) *TransferTransactionManager {
 	return &TransferTransactionManager{
+		configLoader:   configLoader,
 		exportTxDao:    exportTxDao,
 		storageAdapter: storageAdapter,
 		storage:        storage,
@@ -95,17 +104,40 @@ func (tm *TransferTransactionManager) restoreIfExists(subjects []string) error {
 }
 
 func (tm *TransferTransactionManager) performTransfer(data *ExportTransactionData) error {
+	storages := make(map[string]struct{})
 	for _, stack := range data.ItemStacks {
 		_, err := tm.storageAdapter.MoveStack(stack.StorageName, stack.Slot, stack.TargetStorage, stack.ToSlot, stack.Amount)
 		if err != nil {
 			return err
 		}
+
+		storages[stack.StorageName] = struct{}{}
+	}
+	for storage := range storages {
+		items, err := tm.storageAdapter.ListItems(storage)
+		if err != nil {
+			return err
+		}
+		if len(items) > 0 {
+			return fmt.Errorf("Transaction non performed (item)")
+		}
 	}
 
+	tanks := make(map[string]struct{})
 	for _, stack := range data.FluidStacks {
 		_, err := tm.storageAdapter.MoveFluid(stack.TankName, stack.TargetTankName, stack.Amount, stack.Uid)
 		if err != nil {
 			return err
+		}
+		tanks[stack.TankName] = struct{}{}
+	}
+	for tank := range tanks {
+		fluids, err := tm.storageAdapter.GetTanks(tank)
+		if err != nil {
+			return err
+		}
+		if len(fluids) > 0 {
+			return fmt.Errorf("Transaction non performed (fluid)")
 		}
 	}
 
@@ -113,26 +145,45 @@ func (tm *TransferTransactionManager) performTransfer(data *ExportTransactionDat
 }
 
 func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidStore string, request ExportRequest) (*TransferTransaction, error) {
-	err := tm.restoreIfExists([]string{itemStore, fluidStore})
+
+	var subjects []string
+	if len(request.RequestItems) > 0 {
+		subjects = append(subjects, itemStore)
+	}
+	if len(request.RequestFluids) > 0 {
+		subjects = append(subjects, fluidStore)
+	}
+
+	log.Printf("Restore", request)
+	err := tm.restoreIfExists(subjects)
 	if err != nil {
 		return nil, err
 	}
 
-	err = tm.storage.ImportAll(itemStore)
-	if err != nil {
-		return nil, err
+	log.Printf("Dump items before", request)
+	if len(request.RequestItems) > 0 {
+		err = tm.storage.ImportAll(itemStore)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	err = tm.storage.ImportAllFluids(fluidStore)
-	if err != nil {
-		return nil, err
+	log.Printf("Dump fluid before", request)
+	if len(request.RequestFluids) > 0 {
+		err = tm.storage.ImportAllFluids(fluidStore)
+		if err != nil {
+			return nil, err
+		}
 	}
-
+	log.Printf("FORM transaction %v", request)
 	data := &ExportTransactionData{}
-	slot := 1
+	slot := 0
 	for _, item := range request.RequestItems {
-		_, err := tm.storage.ExportStack(item.Uid, itemStore, slot, item.Amount)
 		slot += 1
+		amount, err := tm.storage.ExportStack(item.Uid, itemStore, slot, item.Amount)
+		if amount != item.Amount {
+			return nil, fmt.Errorf("Can't move items for stx")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -146,7 +197,10 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 	}
 
 	for _, fluid := range request.RequestFluids {
-		_, err := tm.storage.ExportFluid(fluid.Uid, fluidStore, fluid.Amount)
+		amount, err := tm.storage.ExportFluid(fluid.Uid, fluidStore, fluid.Amount)
+		if amount != fluid.Amount {
+			return nil, fmt.Errorf("Can't move fluid for stx")
+		}
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +221,7 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 		Data: jsonData,
 	}
 
-	dbTx, err := tm.exportTxDao.InsertTransactionUncommitted([]string{itemStore, fluidStore}, stx)
+	dbTx, err := tm.exportTxDao.InsertTransactionUncommitted(subjects, stx)
 	if err != nil {
 		return nil, err
 	}
@@ -181,12 +235,29 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 }
 
 func (tm *TransferTransactionManager) CreateExportTransaction(request ExportRequest) (*TransferTransaction, error) {
+	if len(request.RequestItems) == 0 && len(request.RequestFluids) == 0 {
+		return nil, fmt.Errorf("Empty transaction")
+	}
 	if len(request.RequestItems) > 27 || len(request.RequestFluids) > 1 {
 		return nil, fmt.Errorf("Too huge transaction")
 	}
+	client, err := tm.storageAdapter.GetClient()
+	if err != nil {
+		return nil, err
+	}
+	if len(request.RequestItems) > 0 {
+		if client.TransactionStorage == "" {
+			return nil, fmt.Errorf("No transaction storage specified")
+		}
+	}
+	if len(request.RequestFluids) > 0 {
+		if client.TransactionTank == "" {
+			return nil, fmt.Errorf("No transaction storage specified")
+		}
+	}
 
 	tm.mu.Lock()
-	tx, err := tm.setupTransaction("chest", "tank", request)
+	tx, err := tm.setupTransaction(client.TransactionStorage, client.TransactionTank, request)
 	if err != nil {
 		tm.mu.Unlock()
 		return nil, err

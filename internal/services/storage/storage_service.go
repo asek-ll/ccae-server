@@ -158,11 +158,13 @@ func (s *Storage) ImportAll(inventoryName string) error {
 
 func (s *Storage) ImportAllFluids(inventoryName string) error {
 	tanks, err := s.storageAdapter.GetTanks(inventoryName)
+
 	if err != nil {
 		return err
 	}
 
 	for _, tank := range tanks {
+		log.Printf("DUMP OUT %v", tank)
 		_, err := s.ImportFluid(tank.Fluid.Name, inventoryName, tank.Fluid.Amount)
 		if err != nil {
 			return err
@@ -197,7 +199,6 @@ func (s *Storage) PullInputs() error {
 		return err
 	}
 	for _, inventoryName := range input {
-		log.Printf("[INFO] BEFORE Pull items %s", inventoryName)
 		err = s.ImportAll(inventoryName)
 		if err != nil {
 			return err

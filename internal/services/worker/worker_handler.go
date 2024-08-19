@@ -55,7 +55,7 @@ func (wh *WorkerHandler) work() {
 		select {
 		case <-wh.done:
 			return
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Second * 10):
 			continue
 		case <-wh.ping:
 			continue

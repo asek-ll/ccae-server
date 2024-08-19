@@ -113,6 +113,9 @@ func (d *StoredTXDao) FindLocks(subjects []string) ([]*StoredTX, error) {
 }
 
 func (d *StoredTXDao) FindTransactionsByIds(ids []int) ([]*StoredTX, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
 	rows, err := d.db.Query(fmt.Sprintf(`
 	SELECT id, data
 	FROM stored_tx 

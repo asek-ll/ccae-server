@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
@@ -16,9 +17,11 @@ type WorkerManager struct {
 	exporterWorker       *ExporterWorker
 	importerWorker       *ImporterWorker
 	processCrafterWorker *ProcessingCrafterWorker
+	configLoader         *config.ConfigLoader
 }
 
 func NewWorkerManager(
+	config *config.ConfigLoader,
 	daos *dao.DaoProvider,
 	exporterWorker *ExporterWorker,
 	importerWorker *ImporterWorker,
@@ -26,6 +29,7 @@ func NewWorkerManager(
 ) *WorkerManager {
 	wm := &WorkerManager{
 		workerHandlers:       NewWorkerHandlerManager(),
+		configLoader:         config,
 		daos:                 daos,
 		exporterWorker:       exporterWorker,
 		importerWorker:       importerWorker,
@@ -83,6 +87,30 @@ func (w *WorkerManager) init() error {
 			}
 		}
 	}
+
+	for i, pc := range w.configLoader.Config.Crafters.ProcessCrafters {
+		if pc.Enabled {
+			worker := dao.Worker{
+				Key:     fmt.Sprintf("pc_%d", i),
+				Type:    dao.WORKER_TYPE_PROCESSING_CRAFTER,
+				Enabled: true,
+				Config: dao.WorkerConfig{
+					ProcessingCrafter: &dao.ProcessingCrafterWorkerConfig{
+						CraftType:    pc.CraftType,
+						InputTank:    pc.InputTank,
+						InputStorage: pc.InputInventory,
+						ReagentMode:  pc.ReagentMode,
+					},
+				},
+			}
+			err := w.addAndStart(&worker)
+			log.Printf("Setup worker %s with type %s", worker.Key, worker.Type)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	return nil
 }
 

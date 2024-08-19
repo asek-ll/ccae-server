@@ -3,6 +3,7 @@ package app
 import (
 	"log"
 
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/modem"
@@ -27,4 +28,5 @@ type App struct {
 	ModemManager               *modem.ModemManager
 	StorageAdapter             *wsmethods.StorageAdapter
 	TransferTransactionManager *storage.TransferTransactionManager
+	ConfigLoader               *config.ConfigLoader
 }

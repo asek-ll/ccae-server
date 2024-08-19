@@ -69,7 +69,8 @@ func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) 
 			}
 
 			var req storage.ExportRequest
-			for i, ing := range recipe.Ingredients {
+			slot := 0
+			for _, ing := range recipe.Ingredients {
 				if common.IsFluid(ing.ItemUID) {
 					if config.InputTank == "" {
 						return fmt.Errorf("Input tank not set")
@@ -83,7 +84,7 @@ func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) 
 					if config.InputStorage == "" {
 						return fmt.Errorf("Input storage not set")
 					}
-					slot := i + 1
+					slot += 1
 					if ing.Slot != nil {
 						slot = *ing.Slot
 					}

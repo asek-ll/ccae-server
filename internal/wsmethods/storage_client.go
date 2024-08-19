@@ -16,6 +16,8 @@ type StorageClient struct {
 	ColdStoragePrefix          string
 	WarmStoragePrefix          string
 	SingleFluidContainerPrefix string
+	TransactionStorage         string
+	TransactionTank            string
 }
 
 type ItemRef struct {
@@ -90,6 +92,8 @@ type FluidTank struct {
 	Fluid FluidStack `json:"fluid"`
 }
 
+type FluidTanks map[int]FluidTank
+
 type FluidContainer struct {
 	Name  string      `json:"name"`
 	Tanks []FluidTank `json:"tanks"`
@@ -139,12 +143,17 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 		return nil, errors.New("Expected single fluid container name")
 	}
 
+	transactionTank, _ := base.Props["transaction_tank"].(string)
+	transactionStorage, _ := base.Props["transaction_storage"].(string)
+
 	return &StorageClient{
 		GenericClient:              base,
 		InputStorages:              inputNames,
 		ColdStoragePrefix:          coldStoragePrefix,
 		WarmStoragePrefix:          warmStoragePrefix,
 		SingleFluidContainerPrefix: singleFluidContainerPrefix,
+		TransactionStorage:         transactionStorage,
+		TransactionTank:            transactionTank,
 	}, nil
 }
 

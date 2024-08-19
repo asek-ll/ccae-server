@@ -11,6 +11,7 @@ local function get_seq(item)
         if recipe['transitionalItem'] == item['id'] then
             local step = item['tag']['SequencedAssembly']['Step']
             local seqs = recipe['sequence']
+            print('Step: ' .. tostring(step))
             local idx = math.mod(step, #seqs) + 1
             return recipe['sequence'][idx]
         end
