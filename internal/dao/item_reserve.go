@@ -130,7 +130,7 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 
 func (d *ItemReserveDao) GetReserves() ([]ItemReserve, error) {
 	rows, err := d.db.Query(`
-	SELECT ir.item_uid, ir.amount 
+	SELECT DISTINCT ir.item_uid, ir.amount 
 	FROM item_reserve ir
 	JOIN plan_item_state pis ON pis.item_uid = ir.item_uid 
 	WHERE pis.amount < pis.required_amount

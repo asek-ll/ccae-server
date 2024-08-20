@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -58,12 +59,38 @@ func NewTransferTransactionManager(
 	storageAdapter *wsmethods.StorageAdapter,
 	storage *Storage,
 ) *TransferTransactionManager {
-	return &TransferTransactionManager{
+	manager := &TransferTransactionManager{
 		configLoader:   configLoader,
 		exportTxDao:    exportTxDao,
 		storageAdapter: storageAdapter,
 		storage:        storage,
 	}
+
+	go func() {
+		for {
+			time.Sleep(30 * time.Second)
+			err := manager.pingTransaction()
+			if err != nil {
+				log.Printf("[WARN] transaction ping error %v", err)
+			}
+		}
+	}()
+
+	return manager
+}
+
+func (tm *TransferTransactionManager) pingTransaction() error {
+	txs, err := tm.exportTxDao.FindTransactions()
+	if err != nil {
+		return err
+	}
+	for _, tx := range txs {
+		err := tm.processSTX(tx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (tm *TransferTransactionManager) unlock() {
@@ -154,13 +181,13 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 		subjects = append(subjects, fluidStore)
 	}
 
-	log.Printf("Restore", request)
+	log.Printf("Restore %v", request)
 	err := tm.restoreIfExists(subjects)
 	if err != nil {
 		return nil, err
 	}
 
-	log.Printf("Dump items before", request)
+	log.Printf("Dump items before %v", request)
 	if len(request.RequestItems) > 0 {
 		err = tm.storage.ImportAll(itemStore)
 		if err != nil {
@@ -168,7 +195,7 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 		}
 	}
 
-	log.Printf("Dump fluid before", request)
+	log.Printf("Dump fluid before %v", request)
 	if len(request.RequestFluids) > 0 {
 		err = tm.storage.ImportAllFluids(fluidStore)
 		if err != nil {
@@ -199,7 +226,7 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 	for _, fluid := range request.RequestFluids {
 		amount, err := tm.storage.ExportFluid(fluid.Uid, fluidStore, fluid.Amount)
 		if amount != fluid.Amount {
-			return nil, fmt.Errorf("Can't move fluid for stx")
+			return nil, fmt.Errorf("Can't move fluid for stx, moved %d, but need %d", amount, fluid.Amount)
 		}
 		if err != nil {
 			return nil, err

@@ -7,6 +7,11 @@ type AppConfig struct {
 }
 
 type StorageConfig struct {
+	ColdStoragePrefix          string `json:"coldStoragePrefix"`
+	WarmStoragePrefix          string `json:"warmStoragePrefix"`
+	SingleFluidContainerPrefix string `json:"fluidContainerPrefix"`
+
+	InputStorages []string `json:"inputStorages"`
 }
 
 type CraftersConfig struct {
@@ -34,3 +39,10 @@ type StorageImporterConfig struct {
 // 	Storage string   `json:"storage"`
 // 	Items   []string `json:"items"`
 // }
+
+// InputStorages              []string
+// ColdStoragePrefix          string
+// WarmStoragePrefix          string
+// SingleFluidContainerPrefix string
+// TransactionStorage         string
+// TransactionTank            string

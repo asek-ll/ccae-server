@@ -521,7 +521,9 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 		err = app.PlayerManager.SendItems(toTransfer)
 		if err != nil {
-			return err
+			if r.URL.Query().Get("force") != "true" {
+				return err
+			}
 		}
 
 		err = app.Daos.Plans.RemovePlan(plan.ID)

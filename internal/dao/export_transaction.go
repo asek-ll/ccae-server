@@ -112,21 +112,7 @@ func (d *StoredTXDao) FindLocks(subjects []string) ([]*StoredTX, error) {
 	return d.FindTransactionsByIds(ids)
 }
 
-func (d *StoredTXDao) FindTransactionsByIds(ids []int) ([]*StoredTX, error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
-	rows, err := d.db.Query(fmt.Sprintf(`
-	SELECT id, data
-	FROM stored_tx 
-	WHERE id IN (?%s)`,
-		strings.Repeat(", ?", len(ids)-1)), common.ToArgs(ids)...)
-
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+func readStoredTransactions(rows *sql.Rows) ([]*StoredTX, error) {
 	var txs []*StoredTX
 
 	for rows.Next() {
@@ -142,12 +128,44 @@ func (d *StoredTXDao) FindTransactionsByIds(ids []int) ([]*StoredTX, error) {
 		})
 	}
 
-	err = rows.Err()
+	err := rows.Err()
 	if err != nil {
 		return nil, err
 	}
 
 	return txs, nil
+}
+
+func (d *StoredTXDao) FindTransactionsByIds(ids []int) ([]*StoredTX, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := d.db.Query(fmt.Sprintf(`
+	SELECT id, data
+	FROM stored_tx 
+	WHERE id IN (?%s)`,
+		strings.Repeat(", ?", len(ids)-1)), common.ToArgs(ids)...)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return readStoredTransactions(rows)
+}
+
+func (d *StoredTXDao) FindTransactions() ([]*StoredTX, error) {
+	rows, err := d.db.Query(`
+	SELECT id, data
+	FROM stored_tx 
+	LIMIT 10`)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	return readStoredTransactions(rows)
 }
 
 func (d *StoredTXDao) DropTransaction(stx *StoredTX) error {

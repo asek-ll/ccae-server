@@ -20,6 +20,7 @@ templ PlanList(plans []*dao.PlanState) {
 				</td>
 				<td>
 					<button hx-delete={ fmt.Sprintf("/craft-plans/%d/", plan.ID) }>REMOVE</button>
+					<button hx-delete={ fmt.Sprintf("/craft-plans/%d/?force=true", plan.ID) }>REMOVE FORCE</button>
 				</td>
 			</tr>
 		}
