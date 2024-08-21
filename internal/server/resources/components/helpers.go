@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
 )
@@ -151,4 +152,57 @@ func itemJsonByUid(ctx context.Context, itemUid string) string {
 	}
 
 	return string(result)
+}
+
+func formatItemStackAmount(amount int) string {
+	if amount < 10_000 {
+		return fmt.Sprintf("%d", amount)
+	}
+	if amount < 1_000_000 {
+		return fmt.Sprintf("%dK", amount/1_000)
+	}
+	if amount < 1_000_000_000 {
+		return fmt.Sprintf("%dM", amount/1_000_000)
+	}
+	return "∞"
+}
+
+func formatFluidStackAmount(amount int) string {
+	if amount < 100 {
+		return fmt.Sprintf("%dmb", amount)
+	}
+	if amount < 1_000_000 {
+		return fmt.Sprintf("%sB", limitedString(amount, 1_000, 3))
+	}
+	if amount < 1_000_000_000 {
+		return fmt.Sprintf("%sKB", limitedString(amount, 1_000_000, 2))
+	}
+	return fmt.Sprintf("%d", amount)
+}
+
+func formatStackAmount(amount int, uid string) string {
+	if common.IsFluid(uid) {
+		return formatFluidStackAmount(amount)
+	}
+	return formatItemStackAmount(amount)
+}
+
+func limitedString(amount int, bound int, limit int) string {
+	result := amount / bound
+	part := strconv.Itoa(result)
+
+	secondPartSize := limit - len(part) - 1
+	if secondPartSize <= 0 {
+		return part
+	}
+
+	mult := int(math.Pow10(secondPartSize))
+	decimalPart := (amount - result*bound) / mult
+	if decimalPart == 0 {
+		return part
+	}
+	for decimalPart%10 == 0 {
+		decimalPart /= 10
+	}
+	return part + "." + strconv.Itoa(decimalPart)
 }
