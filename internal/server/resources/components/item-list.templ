@@ -45,3 +45,19 @@ templ ItemsFilter(filter string) {
 		</label>
 	</div>
 }
+
+templ GenericGrid(items []templ.Component) {
+	<table>
+		for row := range GetRowCount(len(items), 9) {
+			<tr>
+				for col := range 7 {
+					<td>
+						if (row*7 + col) < len(items) {
+							@items[row*7+col]
+						}
+					</td>
+				}
+			</tr>
+		}
+	</table>
+}

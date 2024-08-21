@@ -47,22 +47,12 @@ templ CraftingPlan(plan *crafter.Plan) {
 			</tr>
 		}
 	</table>
-	<table>
-		for _, related := range plan.Related {
-			<tr>
-				<td>
-					@ItemIconByUID(related.UID)
-				</td>
-				<td>
-					{ strconv.Itoa(related.Consumed) }
-				</td>
-				<td>
-					{ strconv.Itoa(related.Produced) }
-				</td>
-				<td>
-					{ strconv.Itoa(related.StorageAmount - related.Consumed + related.Produced) }
-				</td>
-			</tr>
-		}
-	</table>
+    Required:
+    @GenericGrid(craftPlanRequired(plan))
+
+    Missing:
+    @GenericGrid(craftPlanMissing(plan))
+
+    Created:
+    @GenericGrid(craftPlanCreated(plan))
 }
