@@ -17,7 +17,7 @@ type StorageClient struct {
 	WarmStoragePrefix          string
 	SingleFluidContainerPrefix string
 	TransactionStorage         string
-	TransactionTank            string
+	TransactionTanks           []string
 }
 
 type ItemRef struct {
@@ -143,7 +143,7 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 		return nil, errors.New("Expected single fluid container name")
 	}
 
-	transactionTank, _ := base.Props["transaction_tank"].(string)
+	transactionTanks, _ := base.Props["transaction_tank"].(string)
 	transactionStorage, _ := base.Props["transaction_storage"].(string)
 
 	return &StorageClient{
@@ -153,7 +153,7 @@ func NewStorageClient(base GenericClient) (*StorageClient, error) {
 		WarmStoragePrefix:          warmStoragePrefix,
 		SingleFluidContainerPrefix: singleFluidContainerPrefix,
 		TransactionStorage:         transactionStorage,
-		TransactionTank:            transactionTank,
+		TransactionTanks:           strings.Split(transactionTanks, ","),
 	}, nil
 }
 

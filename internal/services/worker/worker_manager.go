@@ -18,6 +18,7 @@ type WorkerManager struct {
 	importerWorker       *ImporterWorker
 	processCrafterWorker *ProcessingCrafterWorker
 	configLoader         *config.ConfigLoader
+	fluidImporterWorker  *FluidImporterWorker
 }
 
 func NewWorkerManager(
@@ -26,6 +27,7 @@ func NewWorkerManager(
 	exporterWorker *ExporterWorker,
 	importerWorker *ImporterWorker,
 	processCrafterWorker *ProcessingCrafterWorker,
+	fluidImporterWorker *FluidImporterWorker,
 ) *WorkerManager {
 	wm := &WorkerManager{
 		workerHandlers:       NewWorkerHandlerManager(),
@@ -34,6 +36,7 @@ func NewWorkerManager(
 		exporterWorker:       exporterWorker,
 		importerWorker:       importerWorker,
 		processCrafterWorker: processCrafterWorker,
+		fluidImporterWorker:  fluidImporterWorker,
 	}
 	wm.init()
 
@@ -108,6 +111,19 @@ func (w *WorkerManager) init() error {
 			if err != nil {
 				return err
 			}
+		}
+	}
+
+	if len(w.configLoader.Config.Importers.FluidImporters) > 0 {
+		handler, err := w.workerHandlers.Add("fluidimporter", func() error {
+			return w.fluidImporterWorker.do()
+		})
+		if err != nil {
+			return err
+		}
+		err = handler.Start()
+		if err != nil {
+			return err
 		}
 	}
 

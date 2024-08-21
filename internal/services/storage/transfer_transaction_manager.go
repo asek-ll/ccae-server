@@ -171,14 +171,14 @@ func (tm *TransferTransactionManager) performTransfer(data *ExportTransactionDat
 	return nil
 }
 
-func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidStore string, request ExportRequest) (*TransferTransaction, error) {
+func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidStores []string, request ExportRequest) (*TransferTransaction, error) {
 
 	var subjects []string
 	if len(request.RequestItems) > 0 {
 		subjects = append(subjects, itemStore)
 	}
-	if len(request.RequestFluids) > 0 {
-		subjects = append(subjects, fluidStore)
+	for i := range request.RequestFluids {
+		subjects = append(subjects, fluidStores[i])
 	}
 
 	log.Printf("Restore %v", request)
@@ -196,7 +196,7 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 	}
 
 	log.Printf("Dump fluid before %v", request)
-	if len(request.RequestFluids) > 0 {
+	for _, fluidStore := range fluidStores {
 		err = tm.storage.ImportAllFluids(fluidStore)
 		if err != nil {
 			return nil, err
@@ -223,8 +223,8 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 		})
 	}
 
-	for _, fluid := range request.RequestFluids {
-		amount, err := tm.storage.ExportFluid(fluid.Uid, fluidStore, fluid.Amount)
+	for i, fluid := range request.RequestFluids {
+		amount, err := tm.storage.ExportFluid(fluid.Uid, fluidStores[i], fluid.Amount)
 		if amount != fluid.Amount {
 			return nil, fmt.Errorf("Can't move fluid for stx, moved %d, but need %d", amount, fluid.Amount)
 		}
@@ -232,7 +232,7 @@ func (tm *TransferTransactionManager) setupTransaction(itemStore string, fluidSt
 			return nil, err
 		}
 		data.FluidStacks = append(data.FluidStacks, ExportTransactionTank{
-			TankName:       fluidStore,
+			TankName:       fluidStores[i],
 			TargetTankName: fluid.TargetTankName,
 			Uid:            fluid.Uid,
 			Amount:         fluid.Amount,
@@ -277,14 +277,17 @@ func (tm *TransferTransactionManager) CreateExportTransaction(request ExportRequ
 			return nil, fmt.Errorf("No transaction storage specified")
 		}
 	}
-	if len(request.RequestFluids) > 0 {
-		if client.TransactionTank == "" {
+	if len(request.RequestFluids) > len(client.TransactionTanks) {
+		return nil, fmt.Errorf("No transaction storage specified")
+	}
+	for i := range request.RequestFluids {
+		if client.TransactionTanks[i] == "" {
 			return nil, fmt.Errorf("No transaction storage specified")
 		}
 	}
 
 	tm.mu.Lock()
-	tx, err := tm.setupTransaction(client.TransactionStorage, client.TransactionTank, request)
+	tx, err := tm.setupTransaction(client.TransactionStorage, client.TransactionTanks, request)
 	if err != nil {
 		tm.mu.Unlock()
 		return nil, err

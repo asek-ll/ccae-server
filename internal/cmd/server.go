@@ -60,8 +60,15 @@ func (s ServerCommand) Execute(args []string) error {
 
 	exporterWorker := worker.NewExporterWorker(*storageService)
 	importerWorker := worker.NewImporterWorker(*storageService)
+	fluidImporterWorker := worker.NewFluidImporterWorker(*storageService, configLoader.Config.Importers.FluidImporters)
 	processingCrafterWorker := worker.NewProcessingCrafterWorker(daos, storageService, storageAdapter, transferTransationManager)
-	workerManager := worker.NewWorkerManager(configLoader, daos, exporterWorker, importerWorker, processingCrafterWorker)
+	workerManager := worker.NewWorkerManager(configLoader,
+		daos,
+		exporterWorker,
+		importerWorker,
+		processingCrafterWorker,
+		fluidImporterWorker,
+	)
 
 	clientsManager.SetClientListener(workerFactory)
 
