@@ -13,6 +13,14 @@ return function(network, computer_id)
     local f2 = testnet.createTank(network, {
         type = 'storage_tank',
     })
+    testnet.setFluid(f2, {
+        name = 'minecraft:milk',
+        amount = 750,
+    })
+
+    local f3 = testnet.createTank(network, {
+        type = 'storage_tank',
+    })
 
     local storage_input = testnet.createInventory(network, 'storage_input')
 
@@ -78,6 +86,7 @@ return function(network, computer_id)
 
     local trans_storage = testnet.createInventory(network, 'transaction_storage')
     local trans_tank = testnet.createTank(network, { name = 'transaction_tank' })
+    local trans_tank2 = testnet.createTank(network, { name = 'transaction_tank_2' })
 
     ccemux.openEmu(computer_id)
     testnet.attachPeripheral('top', m1, computer_id)

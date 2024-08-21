@@ -265,7 +265,7 @@ func (tm *TransferTransactionManager) CreateExportTransaction(request ExportRequ
 	if len(request.RequestItems) == 0 && len(request.RequestFluids) == 0 {
 		return nil, fmt.Errorf("Empty transaction")
 	}
-	if len(request.RequestItems) > 27 || len(request.RequestFluids) > 1 {
+	if len(request.RequestItems) > 27 {
 		return nil, fmt.Errorf("Too huge transaction")
 	}
 	client, err := tm.storageAdapter.GetClient()
