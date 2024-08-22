@@ -55,11 +55,6 @@ func (w *WorkerManager) getRunner(worker *dao.Worker) func() error {
 			log.Printf("%s worker tick", worker.Key)
 			return w.importerWorker.do(worker.Config.Importer)
 		}
-	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		return func() error {
-			log.Printf("%s worker tick", worker.Key)
-			return w.processCrafterWorker.do(worker.Config.ProcessingCrafter)
-		}
 	}
 	return func() error {
 		log.Printf("NOP %s worker tick", worker.Key)
@@ -93,21 +88,14 @@ func (w *WorkerManager) init() error {
 
 	for i, pc := range w.configLoader.Config.Crafters.ProcessCrafters {
 		if pc.Enabled {
-			worker := dao.Worker{
-				Key:     fmt.Sprintf("pc_%d", i),
-				Type:    dao.WORKER_TYPE_PROCESSING_CRAFTER,
-				Enabled: true,
-				Config: dao.WorkerConfig{
-					ProcessingCrafter: &dao.ProcessingCrafterWorkerConfig{
-						CraftType:    pc.CraftType,
-						InputTank:    pc.InputTank,
-						InputStorage: pc.InputInventory,
-						ReagentMode:  pc.ReagentMode,
-					},
-				},
+
+			handler, err := w.workerHandlers.Add(fmt.Sprintf("pc_%d", i), func() error {
+				return w.processCrafterWorker.do(pc)
+			})
+			if err != nil {
+				return err
 			}
-			err := w.addAndStart(&worker)
-			log.Printf("Setup worker %s with type %s", worker.Key, worker.Type)
+			err = handler.Start()
 			if err != nil {
 				return err
 			}

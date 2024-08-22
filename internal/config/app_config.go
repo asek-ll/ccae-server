@@ -24,11 +24,15 @@ type ImportersConfig struct {
 }
 
 type ProcessCrafterConfig struct {
-	CraftType      string `json:"craftType"`
-	InputInventory string `json:"inputInventory"`
-	InputTank      string `json:"inputTank"`
-	ReagentMode    string `json:"reagentMode"`
-	Enabled        bool   `json:"enabled"`
+	CraftType       string   `json:"craftType"`
+	InputInventory  string   `json:"inputInventory"`
+	InputTank       string   `json:"inputTank"`
+	ReagentMode     string   `json:"reagentMode"`
+	Enabled         bool     `json:"enabled"`
+	ResultItems     []string `json:"resultItems"`
+	ResultInventory string   `json:"resultInventory"`
+	ResultFluids    []string `json:"resultFluids"`
+	ResultTank      string   `json:"resultTank"`
 }
 
 type StorageImporterConfig struct {

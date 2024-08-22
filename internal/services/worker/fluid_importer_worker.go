@@ -1,6 +1,8 @@
 package worker
 
 import (
+	"log"
+
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 )
@@ -24,6 +26,7 @@ func (w *FluidImporterWorker) do() error {
 
 	for _, importConfig := range w.configs {
 		for _, fluid := range importConfig.Fluids {
+			log.Println("IMPORT", fluid)
 			_, err := w.storage.ImportFluid(fluid, importConfig.Tank, 1000)
 			if err != nil {
 				return err

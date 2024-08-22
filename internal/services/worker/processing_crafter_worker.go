@@ -2,8 +2,10 @@ package worker
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/asek-ll/aecc-server/internal/common"
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
@@ -30,9 +32,71 @@ func NewProcessingCrafterWorker(
 	}
 }
 
-func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) error {
+func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterConfig) error {
+	if config.ResultInventory == "" || len(config.ResultItems) == 0 {
+		return nil
+	}
+	items, err := w.storageAdapter.ListItems(config.ResultInventory)
+
+	if err != nil {
+		return err
+	}
+	for _, item := range items {
+		uid := item.Item.GetUID()
+		for _, resultUid := range config.ResultItems {
+			if uid == resultUid {
+				_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+func (w *ProcessingCrafterWorker) pullFluidResults(config config.ProcessCrafterConfig) error {
+	if config.ResultTank == "" || len(config.ResultFluids) == 0 {
+		return nil
+	}
+	fluids, err := w.storageAdapter.GetTanks(config.ResultTank)
+
+	if err != nil {
+		return err
+	}
+	for _, fluid := range fluids {
+		uid := fluid.Fluid.Name
+		for _, resultUid := range config.ResultFluids {
+			if uid == resultUid {
+				_, err := w.storage.ImportFluid(uid, config.ResultTank, fluid.Fluid.Amount)
+				if err != nil {
+					return err
+				}
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 
 	checkNext := true
+
+	var err error
+
+	err = w.pullItemsResults(config)
+	if err != nil {
+		log.Printf("[WARN] Error on pull items: %v", err)
+	}
+
+	err = w.pullFluidResults(config)
+	if err != nil {
+		log.Printf("[WARN] Error on pull fluids: %v", err)
+	}
 
 	for checkNext {
 		checkNext = false
@@ -43,8 +107,8 @@ func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) 
 		for _, craft := range crafts {
 
 			if config.ReagentMode == "block" {
-				if config.InputStorage != "" {
-					items, err := w.storageAdapter.ListItems(config.InputStorage)
+				if config.InputInventory != "" {
+					items, err := w.storageAdapter.ListItems(config.InputInventory)
 					if err != nil {
 						return err
 					}
@@ -81,7 +145,7 @@ func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) 
 						Amount:         ing.Amount,
 					})
 				} else {
-					if config.InputStorage == "" {
+					if config.InputInventory == "" {
 						return fmt.Errorf("Input storage not set")
 					}
 					slot += 1
@@ -89,7 +153,7 @@ func (w *ProcessingCrafterWorker) do(config *dao.ProcessingCrafterWorkerConfig) 
 						slot = *ing.Slot
 					}
 					req.RequestItems = append(req.RequestItems, storage.ExportRequestItems{
-						TargetStorage: config.InputStorage,
+						TargetStorage: config.InputInventory,
 						Uid:           ing.ItemUID,
 						ToSlot:        slot,
 						Amount:        ing.Amount,
