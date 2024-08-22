@@ -32,8 +32,20 @@ func NewProcessingCrafterWorker(
 	}
 }
 
+func isMatch(values []string, value string) bool {
+	if len(values) == 0 {
+		return true
+	}
+	for _, v := range values {
+		if v == value {
+			return true
+		}
+	}
+	return false
+}
+
 func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterConfig) error {
-	if config.ResultInventory == "" || len(config.ResultItems) == 0 {
+	if config.ResultInventory == "" {
 		return nil
 	}
 	items, err := w.storageAdapter.ListItems(config.ResultInventory)
@@ -43,13 +55,10 @@ func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterC
 	}
 	for _, item := range items {
 		uid := item.Item.GetUID()
-		for _, resultUid := range config.ResultItems {
-			if uid == resultUid {
-				_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
-				if err != nil {
-					return err
-				}
-				break
+		if isMatch(config.ResultItems, uid) {
+			_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
+			if err != nil {
+				return err
 			}
 		}
 	}
@@ -58,7 +67,7 @@ func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterC
 }
 
 func (w *ProcessingCrafterWorker) pullFluidResults(config config.ProcessCrafterConfig) error {
-	if config.ResultTank == "" || len(config.ResultFluids) == 0 {
+	if config.ResultTank == "" {
 		return nil
 	}
 	fluids, err := w.storageAdapter.GetTanks(config.ResultTank)
@@ -68,18 +77,74 @@ func (w *ProcessingCrafterWorker) pullFluidResults(config config.ProcessCrafterC
 	}
 	for _, fluid := range fluids {
 		uid := fluid.Fluid.Name
-		for _, resultUid := range config.ResultFluids {
-			if uid == resultUid {
-				_, err := w.storage.ImportFluid(uid, config.ResultTank, fluid.Fluid.Amount)
-				if err != nil {
-					return err
-				}
-				break
+
+		if isMatch(config.ResultFluids, uid) {
+			_, err := w.storage.ImportFluid(uid, config.ResultTank, fluid.Fluid.Amount)
+			if err != nil {
+				return err
 			}
 		}
 	}
 
 	return nil
+}
+
+func (w *ProcessingCrafterWorker) canProcess(config config.ProcessCrafterConfig, recipe *dao.Recipe) (bool, error) {
+	if config.ReagentMode == "block" {
+		if config.InputInventory != "" {
+			items, err := w.storageAdapter.ListItems(config.InputInventory)
+			if err != nil {
+				return false, err
+			}
+			if len(items) > 0 {
+				return false, nil
+			}
+		}
+		if config.InputTank != "" {
+			fluids, err := w.storageAdapter.GetTanks(config.InputTank)
+			if err != nil {
+				return false, err
+			}
+			if len(fluids) > 0 {
+				return false, nil
+			}
+		}
+		return true, nil
+	}
+	if config.ReagentMode == "same" {
+		recipeFluids := make(map[string]struct{})
+		recipeItems := make(map[string]struct{})
+		for _, ing := range recipe.Ingredients {
+			if common.IsFluid(ing.ItemUID) {
+				recipeFluids[ing.ItemUID] = struct{}{}
+			} else {
+				recipeItems[ing.ItemUID] = struct{}{}
+			}
+		}
+		if config.InputInventory != "" && len(recipeItems) > 0 {
+			items, err := w.storageAdapter.ListItems(config.InputInventory)
+			if err != nil {
+				return false, err
+			}
+			for _, item := range items {
+				if _, e := recipeItems[item.Item.GetUID()]; !e {
+					return false, nil
+				}
+			}
+		}
+		if config.InputTank != "" && len(recipeFluids) > 0 {
+			tanks, err := w.storageAdapter.GetTanks(config.InputTank)
+			if err != nil {
+				return false, err
+			}
+			for _, fluid := range tanks {
+				if _, e := recipeFluids[fluid.Fluid.Name]; !e {
+					return false, nil
+				}
+			}
+		}
+	}
+	return true, nil
 }
 
 func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {

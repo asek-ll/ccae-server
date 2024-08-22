@@ -18,11 +18,6 @@ type CraftersConfig struct {
 	ProcessCrafters []ProcessCrafterConfig `json:"processCrafters"`
 }
 
-type ImportersConfig struct {
-	StorageImporters []StorageImporterConfig `json:"storage"`
-	FluidImporters   []FluidImporterConfig   `json:"fluid"`
-}
-
 type ProcessCrafterConfig struct {
 	CraftType       string   `json:"craftType"`
 	InputInventory  string   `json:"inputInventory"`
@@ -33,6 +28,11 @@ type ProcessCrafterConfig struct {
 	ResultInventory string   `json:"resultInventory"`
 	ResultFluids    []string `json:"resultFluids"`
 	ResultTank      string   `json:"resultTank"`
+}
+
+type ImportersConfig struct {
+	StorageImporters []StorageImporterConfig `json:"storage"`
+	FluidImporters   []FluidImporterConfig   `json:"fluid"`
 }
 
 type StorageImporterConfig struct {
