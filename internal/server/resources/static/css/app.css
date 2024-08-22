@@ -14,3 +14,7 @@
     height: 48px;
     display: inline-block;
 }
+
+[data-tooltip].item-stack {
+    border-bottom: none
+}
