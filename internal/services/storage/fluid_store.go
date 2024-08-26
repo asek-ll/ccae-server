@@ -98,14 +98,16 @@ func (s *MultipleTanksStore) ExportFluid(uid string, toContainer string, amount 
 
 	remain := amount
 	for container, count := range stacks {
-		moved, err := s.storageAdapter.MoveFluid(container, toContainer, remain, uid)
-		if err != nil {
-			return 0, err
+		for remain > 0 && stacks[container] > 0 {
+			moved, err := s.storageAdapter.MoveFluid(container, toContainer, remain, uid)
+			if err != nil {
+				return 0, err
+			}
+			s.itemStats[uid] -= moved
+			stacks[container] = count - moved
+			remain -= moved
 		}
-		s.itemStats[uid] -= moved
-		stacks[container] = count - moved
-		remain -= moved
-		if amount == 0 {
+		if remain == 0 {
 			break
 		}
 	}

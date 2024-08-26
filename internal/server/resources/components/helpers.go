@@ -217,12 +217,12 @@ func mapToComponents[T any](items []T, f func(item T) templ.ComponentFunc) []tem
 	return result
 }
 
-func craftPlanRequired(plan *crafter.Plan) []templ.Component {
+func craftPlanConsumed(plan *crafter.Plan) []templ.Component {
 	var result []templ.Component
 	for _, related := range plan.Related {
-		required := related.Consumed - related.Produced
-		if required > 0 {
-			result = append(result, ItemStack(related.UID, required))
+		consumed := min(related.Consumed-related.Produced, related.StorageAmount)
+		if consumed > 0 {
+			result = append(result, ItemStack(related.UID, consumed))
 		}
 	}
 	return result

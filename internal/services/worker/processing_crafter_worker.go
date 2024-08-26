@@ -32,7 +32,7 @@ func NewProcessingCrafterWorker(
 	}
 }
 
-func isMatch(values []string, value string) bool {
+func isMatch[T comparable](values []T, value T) bool {
 	if len(values) == 0 {
 		return true
 	}
@@ -55,7 +55,7 @@ func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterC
 	}
 	for _, item := range items {
 		uid := item.Item.GetUID()
-		if isMatch(config.ResultItems, uid) {
+		if isMatch(config.ResultInventorySlots, item.Slot) && isMatch(config.ResultItems, uid) {
 			_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
 			if err != nil {
 				return err

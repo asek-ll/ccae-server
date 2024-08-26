@@ -47,8 +47,8 @@ templ CraftingPlan(plan *crafter.Plan) {
 			</tr>
 		}
 	</table>
-    Required:
-    @GenericGrid(craftPlanRequired(plan))
+    Consumed:
+    @GenericGrid(craftPlanConsumed(plan))
 
     Missing:
     @GenericGrid(craftPlanMissing(plan))

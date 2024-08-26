@@ -1,0 +1,67 @@
+{
+  "crafters": {
+    "processCrafters": [
+      {
+        "craftType": "mixing",
+        "inputInventory": "create:basin_1",
+        "inputTank": "create:basin_1",
+        "reagentMode": "nonblock",
+        "resultTank": "create:basin_1",
+        "resultFluids": ["create:tea", "immersiveengineering:concrete"],
+        "enabled": true
+      },
+      {
+        "craftType": "compacting",
+        "inputInventory": "create:basin_0",
+        "inputTank": "create:basin_0",
+        "enabled": true
+      },
+      {
+        "craftType": "spout",
+        "inputInventory": "create:depot_3",
+        "inputTank": "industrialforegoing:common_black_hole_tank_2",
+        "resultInventory": "create:depot_3",
+        "resultItems": ["create:builders_tea"],
+        "reagentMode": "block",
+        "enabled": true
+      },
+      {
+        "craftType": "brewer",
+        "inputInventory": "minecraft:barrel_22",
+        "resultInventory": "minecraft:barrel_21",
+        "reagentMode": "block",
+        "enabled": true
+      },
+      {
+        "craftType": "squeezer",
+        "inputInventory": "minecraft:barrel_24",
+        "resultInventory": "minecraft:barrel_23",
+        "reagentMode": "block",
+        "enabled": true
+      },
+      {
+        "craftType": "energizer",
+        "inputInventory": "minecraft:barrel_25",
+        "resultInventory": "minecraft:barrel_26",
+        "reagentMode": "block",
+        "enabled": true
+      },
+      {
+        "craftType": "crucible",
+        "inputInventory": "thermal:machine_crucible_0",
+        "resultTank": "thermal:machine_crucible_0",
+        "reagentMode": "block",
+        "enabled": true
+      },
+      {
+        "craftType": "encapsulator",
+        "inputTank": "thermal:machine_bottler_0",
+        "inputInventory": "thermal:machine_bottler_0",
+        "resultInventory": "thermal:machine_bottler_0",
+        "resultInventorySlots": [2],
+        "reagentMode": "block",
+        "enabled": true
+      }
+    ]
+  }
+}
