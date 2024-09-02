@@ -81,7 +81,16 @@ func (s *PlayerManager) RemoveItems(slots []int) error {
 		return err
 	}
 
-	return playerClient.RemoveItems(slots)
+	err = playerClient.RemoveItems(slots)
+	if err != nil {
+		return err
+	}
+
+	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	if !ok {
+		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+	}
+	return s.storage.ImportAll(bufferName)
 }
 
 func (s *PlayerManager) SendItems(items []*crafter.Stack) error {
