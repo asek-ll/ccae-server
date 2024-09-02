@@ -5,23 +5,28 @@ import (
 	"strings"
 )
 
-var anynbt = make(map[string]struct{})
+var customNbt = make(map[string]string)
 var nbtReplace = make(map[string]string)
 
 func init() {
-	anynbt["pneumaticcraft:liquid_compressor"] = struct{}{}
-	anynbt["pneumaticcraft:advanced_liquid_compressor"] = struct{}{}
+	customNbt["pneumaticcraft:liquid_compressor"] = ""
+	customNbt["pneumaticcraft:advanced_liquid_compressor"] = ""
+	customNbt["bloodmagic:soulgempetty"] = "e523ac9950fc5deae9f856f304481b2e"
+	customNbt["bloodmagic:soulgemlesser"] = "6b919a4b9544aeea009b20dc5162e16a"
 
 	nbtReplace["fa498b90c4fe78d5a4e7185cfbeecb99"] = "b729bba220cd3bbe2881bb0f71b31f54"
 	nbtReplace["21326e7bd59842698f7ea18b0b3d8a7e"] = "c79f7e2cdc4552303fb8e490b6e3f958"
 }
 
 func MakeUid(name string, nbt *string) string {
-	if nbt == nil {
+	if correctNbt, e := customNbt[name]; e {
+		if correctNbt != "" {
+			return fmt.Sprintf("%s:%s", name, correctNbt)
+		}
 		return name
 	}
 
-	if _, e := anynbt[name]; e {
+	if nbt == nil {
 		return name
 	}
 

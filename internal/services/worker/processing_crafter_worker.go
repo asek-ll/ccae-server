@@ -155,12 +155,12 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 
 	err = w.pullItemsResults(config)
 	if err != nil {
-		log.Printf("[WARN] Error on pull items: %v", err)
+		log.Printf("[WARN] %s Error on pull items: %v", config.CraftType, err)
 	}
 
 	err = w.pullFluidResults(config)
 	if err != nil {
-		log.Printf("[WARN] Error on pull fluids: %v", err)
+		log.Printf("[WARN] %s Error on pull fluids: %v", config.CraftType, err)
 	}
 
 	for checkNext {

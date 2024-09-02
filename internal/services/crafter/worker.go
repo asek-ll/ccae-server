@@ -2,6 +2,7 @@ package crafter
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"time"
 
@@ -172,12 +173,12 @@ func (c *CraftWorker) Craft(craft *dao.Craft) (bool, error) {
 func (c *CraftWorker) process() error {
 	current, err := c.daos.Crafts.FindCurrent(c.workerId)
 	if err != nil {
-		return err
+		return fmt.Errorf("Can't find current craft: %w", err)
 	}
 	if current != nil {
 		done, err := c.Restore(current)
 		if err != nil {
-			return err
+			return fmt.Errorf("Can't restore current craft: %w", err)
 		}
 		if !done {
 			return nil

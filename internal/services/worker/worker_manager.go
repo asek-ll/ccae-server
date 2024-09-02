@@ -86,10 +86,9 @@ func (w *WorkerManager) init() error {
 		}
 	}
 
-	for i, pc := range w.configLoader.Config.Crafters.ProcessCrafters {
+	for _, pc := range w.configLoader.Config.Crafters.ProcessCrafters {
 		if pc.Enabled {
-
-			handler, err := w.workerHandlers.Add(fmt.Sprintf("pc_%d", i), func() error {
+			handler, err := w.workerHandlers.Add(fmt.Sprintf("pc_%s", pc.CraftType), func() error {
 				return w.processCrafterWorker.do(pc)
 			})
 			if err != nil {
