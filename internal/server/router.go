@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	cmn "github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
@@ -637,6 +638,22 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		slotIngredients := make(map[int][]dao.RecipeItem)
 		for _, item := range recipe.Ingredients {
 			slotIngredients[*item.Slot] = append(slotIngredients[*item.Slot], item)
+		}
+
+		hasSelectors := false
+		for slot := range slotIngredients {
+			slotIngredients[slot] = cmn.Unique(slotIngredients[slot], func(i dao.RecipeItem) string {
+				return i.ItemUID
+			})
+			if len(slotIngredients[slot]) > 1 {
+				hasSelectors = true
+			}
+		}
+
+		if !hasSelectors {
+			url := components.RecipeToURL(recipe)
+			http.Redirect(w, r, url, http.StatusSeeOther)
+			return nil
 		}
 
 		return components.Page(fmt.Sprintf("Imported Recipe for %s", recipe.Name), components.ImportRecipeSlotsSelector(slotIngredients)).Render(ctx, w)

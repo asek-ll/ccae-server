@@ -28,7 +28,6 @@ templ ItemPage(info *storage.RichItemInfo, createUrl string) {
 									}
 								</div>
 							</td>
-							<td><a href={ templ.URL(RecipeToURL(recipe)) }>USE</a></td>
 							<td><a href={ templ.URL(fmt.Sprintf("/imported-recipe/%d/configure", recipe.ID)) }>Configure</a></td>
 						</tr>
 					}

@@ -41,3 +41,18 @@ func CopyMap[K comparable, V any](m map[K]V) map[K]V {
 	}
 	return cp
 }
+
+func Unique[K comparable, V any](s []V, key func(v V) K) []V {
+	set := make(map[K]struct{})
+	j := 0
+
+	for _, i := range s {
+		k := key(i)
+		if _, e := set[k]; !e {
+			s[j] = i
+			set[k] = struct{}{}
+			j += 1
+		}
+	}
+	return s[0:j]
+}
