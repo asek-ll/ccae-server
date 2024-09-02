@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/common"
@@ -18,6 +19,8 @@ type StorageClient struct {
 	SingleFluidContainerPrefix string
 	TransactionStorage         string
 	TransactionTanks           []string
+
+	mu sync.Mutex
 }
 
 type ItemRef struct {
@@ -171,6 +174,9 @@ type MoveFluidParams struct {
 }
 
 func (s *StorageClient) MoveStack(fromInventory string, fromSlot int, toInventory string, toSlot int, amount int) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	var moved int
@@ -186,6 +192,9 @@ func (s *StorageClient) MoveStack(fromInventory string, fromSlot int, toInventor
 }
 
 func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	var detail StackDetail
@@ -196,19 +205,10 @@ func (s *StorageClient) GetStackDetail(slotRef SlotRef) (*StackDetail, error) {
 	return &detail, nil
 }
 
-// func (s *StorageClient) ExportStack(params []ExportParams) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-// 	defer cancel()
-// 	return s.WS.SendRequestSync(ctx, "exportStack", params, nil)
-// }
-
-// func (s *StorageClient) ImportStack(params []ImportParams) error {
-// 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
-// 	defer cancel()
-// 	return s.WS.SendRequestSync(ctx, "importStack", params, nil)
-// }
-
 func (s *StorageClient) GetItems(prefixes []string) ([]Inventory, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
@@ -221,6 +221,9 @@ func (s *StorageClient) GetItems(prefixes []string) ([]Inventory, error) {
 }
 
 func (s *StorageClient) ListItems(inventoryName string) ([]StackWithSlot, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
@@ -233,6 +236,9 @@ func (s *StorageClient) ListItems(inventoryName string) ([]StackWithSlot, error)
 }
 
 func (s *StorageClient) GetTanks(tankName string) ([]FluidTank, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
@@ -245,6 +251,9 @@ func (s *StorageClient) GetTanks(tankName string) ([]FluidTank, error) {
 }
 
 func (s *StorageClient) GetFluidContainers(prefixes []string) ([]FluidContainer, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 	defer cancel()
 
@@ -257,6 +266,9 @@ func (s *StorageClient) GetFluidContainers(prefixes []string) ([]FluidContainer,
 }
 
 func (s *StorageClient) MoveFluid(fromContainer string, toContainer string, amount int, fluidName string) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*1)
 	defer cancel()
 	var moved int
