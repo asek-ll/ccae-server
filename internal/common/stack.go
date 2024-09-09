@@ -13,6 +13,10 @@ func init() {
 	customNbt["pneumaticcraft:advanced_liquid_compressor"] = ""
 	customNbt["bloodmagic:soulgempetty"] = "e523ac9950fc5deae9f856f304481b2e"
 	customNbt["bloodmagic:soulgemlesser"] = "6b919a4b9544aeea009b20dc5162e16a"
+	customNbt["occultism:satchel"] = "ef92b33b731066e4c3d98dbbcbc40b80"
+	customNbt["enderstorage:ender_chest"] = ""
+	customNbt["astralsorcery:rock_crystal"] = "b9c70089b3f99aafa3164a74864ad8ca"
+	customNbt["astralsorcery:celestial_gateway"] = "b9c70089b3f99aafa3164a74864ad8ca"
 
 	nbtReplace["fa498b90c4fe78d5a4e7185cfbeecb99"] = "b729bba220cd3bbe2881bb0f71b31f54"
 	nbtReplace["21326e7bd59842698f7ea18b0b3d8a7e"] = "c79f7e2cdc4552303fb8e490b6e3f958"

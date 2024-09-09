@@ -8,8 +8,23 @@ import (
 templ ItemPage(info *storage.RichItemInfo, createUrl string) {
 	@Page(fmt.Sprintf("%s %s", info.Item.DisplayName, info.Item.ID)) {
 		<section>
-			<a href={ templ.URL(createUrl) }>Craft</a>
-			@ItemIcon(info.Item)
+			<table>
+				<tr>
+					<td>
+						<a href={ templ.URL(createUrl) }>Craft</a>
+						@ItemIcon(info.Item)
+					</td>
+					<td>
+						<form>
+							<input name="amount" value="1"/>
+							<button
+								hx-post={ fmt.Sprintf("/items/%s/sendToPlayer/", info.Item.UID) }
+								hx-include="[name='amount']"
+							>Send To Player</button>
+						</form>
+					</td>
+				</tr>
+			</table>
 			<h3>Recipes</h3>
 			@RecipesList(info.Recipes)
 			<a href={ templ.URL(fmt.Sprintf("/recipes/new?item_1=%s&role_1=result&amount_1=1&name=%s", info.Item.UID, info.Item.DisplayName)) }>Add craft recipe</a>

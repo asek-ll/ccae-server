@@ -47,12 +47,10 @@ templ CraftingPlan(plan *crafter.Plan) {
 			</tr>
 		}
 	</table>
-    Consumed:
-    @GenericGrid(craftPlanConsumed(plan))
-
-    Missing:
-    @GenericGrid(craftPlanMissing(plan))
-
-    Created:
-    @GenericGrid(craftPlanCreated(plan))
+	Consumed:
+	@GenericGrid(craftPlanConsumed(plan))
+	Missing:
+	@GenericGrid(craftPlanMissing(plan))
+	Created:
+	@GenericGrid(craftPlanCreated(plan))
 }

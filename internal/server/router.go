@@ -651,6 +651,25 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		if !hasSelectors {
+			items := make(map[string]*dao.Item)
+			for _, ing := range recipe.Ingredients {
+				items[ing.ItemUID] = nil
+			}
+			err = app.Daos.Items.FindItemsIndexed(items)
+			if err != nil {
+				return err
+			}
+
+			filteredRecipeItems := make([]dao.RecipeItem, 0, len(recipe.Ingredients))
+			for _, item := range recipe.Ingredients {
+				if items[item.ItemUID] == nil {
+					continue
+				}
+				filteredRecipeItems = append(filteredRecipeItems, item)
+			}
+
+			recipe.Ingredients = filteredRecipeItems
+
 			url := components.RecipeToURL(recipe)
 			http.Redirect(w, r, url, http.StatusSeeOther)
 			return nil
@@ -819,10 +838,15 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return nil
 	})
 
-	handleFuncWithError(common, "POST /items/{itemUid}/sendToPlayer/{amount}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	handleFuncWithError(common, "POST /items/{itemUid}/sendToPlayer/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		uid := r.PathValue("itemUid")
 
-		amountStr := r.PathValue("amount")
+		err := r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		amountStr := r.FormValue("amount")
 		amount, err := strconv.Atoi(amountStr)
 		if err != nil {
 			return err

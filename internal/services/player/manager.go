@@ -72,7 +72,24 @@ func (s *PlayerManager) RemoveItem(slot int) (int, error) {
 		return 0, err
 	}
 
-	return playerClient.RemoveItem(slot)
+	amount, err := playerClient.RemoveItem(slot)
+	if err != nil {
+		return 0, err
+	}
+
+	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	if !ok {
+		return 0, fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+	}
+
+	log.Printf("[INFO] Drop items to buffer: '%s'", bufferName)
+
+	err = s.storage.ImportAll(bufferName)
+	if err != nil {
+		return 0, err
+	}
+
+	return amount, nil
 }
 
 func (s *PlayerManager) RemoveItems(slots []int) error {
@@ -90,6 +107,9 @@ func (s *PlayerManager) RemoveItems(slots []int) error {
 	if !ok {
 		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
 	}
+
+	log.Printf("[INFO] Drop items to buffer: '%s'", bufferName)
+
 	return s.storage.ImportAll(bufferName)
 }
 

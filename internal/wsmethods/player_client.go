@@ -2,6 +2,7 @@ package wsmethods
 
 import (
 	"context"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,8 @@ type ItemStack struct {
 
 type PlayerClient struct {
 	GenericClient
+
+	mu sync.Mutex
 }
 
 func NewPlayerClient(base GenericClient) *PlayerClient {
@@ -34,6 +37,9 @@ func (s *PlayerClient) GetItems() (map[int]ItemStack, error) {
 }
 
 func (s *PlayerClient) RemoveItem(slot int) (int, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res int
@@ -42,6 +48,9 @@ func (s *PlayerClient) RemoveItem(slot int) (int, error) {
 }
 
 func (s *PlayerClient) RemoveItems(slots []int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res int
@@ -49,6 +58,9 @@ func (s *PlayerClient) RemoveItems(slots []int) error {
 }
 
 func (s *PlayerClient) AddItems(slots []int) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
 	defer cancel()
 	var res int
