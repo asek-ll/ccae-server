@@ -18,6 +18,11 @@ func init() {
 	customNbt["astralsorcery:rock_crystal"] = "b9c70089b3f99aafa3164a74864ad8ca"
 	customNbt["astralsorcery:celestial_gateway"] = "b9c70089b3f99aafa3164a74864ad8ca"
 
+	customNbt["bloodmagic:firescribetool"] = "552887824c43124013fd24f6edcde0fb"
+	customNbt["bloodmagic:airscribetool"] = "552887824c43124013fd24f6edcde0fb"
+	customNbt["bloodmagic:earthscribetool"] = "552887824c43124013fd24f6edcde0fb"
+	customNbt["bloodmagic:waterscribetool"] = "552887824c43124013fd24f6edcde0fb"
+
 	nbtReplace["fa498b90c4fe78d5a4e7185cfbeecb99"] = "b729bba220cd3bbe2881bb0f71b31f54"
 	nbtReplace["21326e7bd59842698f7ea18b0b3d8a7e"] = "c79f7e2cdc4552303fb8e490b6e3f958"
 }

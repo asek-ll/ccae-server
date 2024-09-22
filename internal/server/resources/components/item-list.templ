@@ -50,10 +50,10 @@ templ GenericGrid(items []templ.Component) {
 	<table>
 		for row := range GetRowCount(len(items), 9) {
 			<tr>
-				for col := range 7 {
+				for col := range 9 {
 					<td>
-						if (row*7 + col) < len(items) {
-							@items[row*7+col]
+						if (row*9 + col) < len(items) {
+							@items[row*9+col]
 						}
 					</td>
 				}

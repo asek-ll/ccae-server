@@ -1,5 +1,29 @@
 [
   {
+    "input": "emendatusenigmatica:gold_plate",
+    "outputs": ["create:precision_mechanism"],
+    "transitionalItem": "create:incomplete_precision_mechanism",
+    "loops": 6,
+    "sequence": [
+      {
+        "type": "deploying",
+        "input": ["create:incomplete_precision_mechanism", "create:cogwheel"],
+        "output": "create:incomplete_precision_mechanism"
+      },
+      {
+        "type": "deploying",
+        "input": ["create:incomplete_precision_mechanism", "create:large_cogwheel"],
+        "output": "create:incomplete_precision_mechanism"
+      },
+      {
+        "type": "deploying",
+        "input": ["create:incomplete_precision_mechanism", "minecraft:iron_nugget"],
+        "output": "create:incomplete_precision_mechanism"
+      }
+    ],
+    "id": "prec"
+  },
+  {
     "input": "minecraft:leather",
     "outputs": ["minecraft:book"],
     "transitionalItem": "kubejs:incomplete_book",
