@@ -20,6 +20,9 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
+	"github.com/go-pkgz/auth"
+	"github.com/go-pkgz/auth/avatar"
+	"github.com/go-pkgz/auth/token"
 	"github.com/google/uuid"
 )
 
@@ -72,6 +75,21 @@ func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 }
 
 func CreateMux(app *app.App) (http.Handler, error) {
+
+	authService := auth.NewService(auth.Opts{
+		SecretReader: token.SecretFunc(func(id string) (string, error) {
+			return app.ConfigLoader.Config.Auth.TokenSecret, nil
+		}),
+		TokenDuration:  time.Minute * 5, // token expires in 5 minutes
+		CookieDuration: time.Hour * 24,  // cookie expires in 1 day and will enforce re-login
+		Issuer:         "bookrawl-site",
+		URL:            "http://127.0.0.1:3000",
+		AvatarStore:    avatar.NewLocalFS("/tmp"),
+		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
+			return claims.User != nil // && strings.HasPrefix(claims.User.Name, "dev_")
+		}),
+	})
+	authService.AddProvider("yandex", app.ConfigLoader.Config.Auth.OAuthClient, app.ConfigLoader.Config.Auth.OAuthSecret)
 
 	templatesFs, err := fs.Sub(resources, "resources/templates")
 	if err != nil {
