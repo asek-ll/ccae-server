@@ -80,20 +80,20 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 	authService := auth.NewService(auth.Opts{
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
-			return app.ConfigLoader.Config.Auth.TokenSecret, nil
+			return app.ConfigLoader.Config.WebServer.Auth.TokenSecret, nil
 		}),
 		TokenDuration:  time.Minute * 5,
 		CookieDuration: time.Hour * 24,
 		Issuer:         "ccae",
-		URL:            app.ConfigLoader.Config.ServerUrl,
+		URL:            app.ConfigLoader.Config.WebServer.Url,
 		AvatarStore:    avatar.NewLocalFS("/tmp"),
 		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
-			return claims.User != nil && slices.Contains(app.ConfigLoader.Config.Auth.Admins, claims.User.Name)
+			return claims.User != nil && slices.Contains(app.ConfigLoader.Config.WebServer.Auth.Admins, claims.User.Name)
 		}),
 		XSRFIgnoreMethods: []string{"GET"},
 		Logger:            lg.Func(func(format string, args ...interface{}) { app.Logger.Printf(format, args...) }),
 	})
-	authService.AddProvider("yandex", app.ConfigLoader.Config.Auth.OAuthClient, app.ConfigLoader.Config.Auth.OAuthSecret)
+	authService.AddProvider("yandex", app.ConfigLoader.Config.WebServer.Auth.OAuthClient, app.ConfigLoader.Config.WebServer.Auth.OAuthSecret)
 
 	templatesFs, err := fs.Sub(resources, "resources/templates")
 	if err != nil {
@@ -235,7 +235,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 		return tmpls.Render("client.lua", []string{"client.lua.tmpl"}, w, map[string]any{
 			"role":  role,
-			"wsUrl": "ws://localhost:12526",
+			"wsUrl": app.ConfigLoader.Config.ClientServer.Url,
 			"id":    id,
 		})
 	})

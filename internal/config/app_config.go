@@ -4,8 +4,9 @@ type AppConfig struct {
 	Storage   StorageConfig   `json:"storage"`
 	Crafters  CraftersConfig  `json:"crafters"`
 	Importers ImportersConfig `json:"importers"`
-	Auth      AuthConfig      `json:"auth"`
-	ServerUrl string          `json:"serverUrl"`
+
+	WebServer    WebServerConfig    `json:"webServer"`
+	ClientServer ClientServerConfig `json:"clientServer"`
 }
 
 type StorageConfig struct {
@@ -67,4 +68,15 @@ type AuthConfig struct {
 	OAuthSecret string   `json:"oauthSecret"`
 	TokenSecret string   `json:"tokenSecret"`
 	Admins      []string `json:"admins"`
+}
+
+type ClientServerConfig struct {
+	Url        string `json:"url"`
+	ListenAddr string `json:"addr"`
+}
+
+type WebServerConfig struct {
+	Url        string     `json:"url"`
+	ListenAddr string     `json:"addr"`
+	Auth       AuthConfig `json:"auth"`
 }
