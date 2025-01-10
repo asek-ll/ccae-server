@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/go-pkgz/auth"
 	"github.com/go-pkgz/auth/avatar"
+	lg "github.com/go-pkgz/auth/logger"
 	"github.com/go-pkgz/auth/token"
 	"github.com/google/uuid"
 )
@@ -80,14 +82,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
 			return app.ConfigLoader.Config.Auth.TokenSecret, nil
 		}),
-		TokenDuration:  time.Minute * 5, // token expires in 5 minutes
-		CookieDuration: time.Hour * 24,  // cookie expires in 1 day and will enforce re-login
-		Issuer:         "bookrawl-site",
-		URL:            "http://127.0.0.1:3000",
+		TokenDuration:  time.Minute * 5,
+		CookieDuration: time.Hour * 24,
+		Issuer:         "ccae",
+		URL:            app.ConfigLoader.Config.ServerUrl,
 		AvatarStore:    avatar.NewLocalFS("/tmp"),
 		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
-			return claims.User != nil // && strings.HasPrefix(claims.User.Name, "dev_")
+			return claims.User != nil && slices.Contains(app.ConfigLoader.Config.Auth.Admins, claims.User.Name)
 		}),
+		XSRFIgnoreMethods: []string{"GET"},
+		Logger:            lg.Func(func(format string, args ...interface{}) { app.Logger.Printf(format, args...) }),
 	})
 	authService.AddProvider("yandex", app.ConfigLoader.Config.Auth.OAuthClient, app.ConfigLoader.Config.Auth.OAuthSecret)
 
@@ -106,15 +110,22 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 	tmpls := template.NewTemplates(templatesFs)
 
-	static := root.Group()
-	common := root.Group().Use(loggingMiddleware(app.Logger))
+	authRoutes, avaRoutes := authService.Handlers()
+	am := authService.Middleware()
 
+	logm := loggingMiddleware(app.Logger)
+
+	static := root.Group()
 	static.HandleFunc("GET /static/", createStaticHandler(staticsFs))
 
-	handleFuncWithError(common, "GET /{$}", func(w http.ResponseWriter, r *http.Request) error {
-		return components.Page("INDEX").Render(r.Context(), w)
+	anon := root.Group().Use(logm)
+	anon.Handle("/auth/{path...}", authRoutes)
+	anon.Handle("/avatar/{path...}", avaRoutes)
+	anon.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		components.Page("INDEX").Render(r.Context(), w)
 	})
 
+	common := root.Group().Use(logm).Use(am.Auth)
 	handleFuncWithError(common, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients := app.ClientsManager.GetClients()
 		return components.ClientsPage(clients).Render(r.Context(), w)

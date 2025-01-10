@@ -25,6 +25,10 @@ func (mg *MiddlewaresGroup) HandleFunc(pattern string, handler http.HandlerFunc)
 	mg.mux.Handle(pattern, mg.wrap(handler))
 }
 
+func (mg *MiddlewaresGroup) Handle(pattern string, handler http.Handler) {
+	mg.mux.Handle(pattern, mg.wrap(handler))
+}
+
 func (mg *MiddlewaresGroup) Group() *MiddlewaresGroup {
 	middlewares := make([]func(http.Handler) http.Handler, len(mg.middlewares))
 	copy(middlewares, mg.middlewares)

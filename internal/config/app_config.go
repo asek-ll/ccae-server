@@ -63,7 +63,8 @@ type FluidImporterConfig struct {
 // TransactionTank            string
 
 type AuthConfig struct {
-	OAuthClient string `json:"oauthClient"`
-	OAuthSecret string `json:"oauthSecret"`
-	TokenSecret string `json:"tokenSecret"`
+	OAuthClient string   `json:"oauthClient"`
+	OAuthSecret string   `json:"oauthSecret"`
+	TokenSecret string   `json:"tokenSecret"`
+	Admins      []string `json:"admins"`
 }
