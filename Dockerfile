@@ -1,4 +1,4 @@
-FROM golang:1.22 as build
+FROM golang:1.22 AS build
 
 COPY cmd /src/cmd
 COPY pkg /src/pkg
@@ -6,6 +6,9 @@ COPY internal /src/internal
 COPY go.mod /src/go.mod
 COPY go.sum /src/go.sum
 WORKDIR /src
+
+RUN go install github.com/a-h/templ/cmd/templ@v0.2.793
+RUN templ generate
 
 # ENV GOOS=linux
 # ENV GOARCH=${GOARCH} 
