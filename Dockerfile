@@ -10,14 +10,14 @@ WORKDIR /src
 RUN go install github.com/a-h/templ/cmd/templ@v0.2.793
 RUN templ generate
 
-# ENV GOOS=linux
-# ENV GOARCH=${GOARCH} 
 ENV CGO_ENABLED=1
 
 RUN go build -o aecc-server cmd/main.go
 
 
-FROM golang:1.22
+FROM alpine:3.21
+
+RUN apk add libc6-compat
 
 COPY --from=build /src/aecc-server /app/server
 
