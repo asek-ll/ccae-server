@@ -21,8 +21,8 @@ type DaoProvider struct {
 	StoredTX         *StoredTXDao
 }
 
-func NewDaoProvider() (*DaoProvider, error) {
-	db, err := sql.Open("sqlite3", "data.db")
+func NewDaoProvider(databaseFile string) (*DaoProvider, error) {
+	db, err := sql.Open("sqlite3", databaseFile)
 	if err != nil {
 		return nil, err
 	}

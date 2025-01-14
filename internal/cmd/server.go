@@ -21,21 +21,32 @@ import (
 	"github.com/jessevdk/go-flags"
 )
 
-var _ flags.Commander = ServerCommand{}
+var _ flags.Commander = &ServerCommand{}
 
-type ServerCommand struct {
+type ServerCommandParameters struct {
+	Config string
+	DB     string
 }
 
-func (s ServerCommand) Execute(args []string) error {
+type ServerCommand struct {
+	params *ServerCommandParameters
+}
+
+func (s *ServerCommand) SetParams(params *ServerCommandParameters) {
+	s.params = params
+
+}
+
+func (s *ServerCommand) Execute(args []string) error {
 
 	l := setupLogger()
 
-	configLoader, err := config.NewConfigLoader()
+	configLoader, err := config.NewConfigLoader(s.params.Config)
 	if err != nil {
 		return err
 	}
 
-	daos, err := dao.NewDaoProvider()
+	daos, err := dao.NewDaoProvider(s.params.DB)
 	if err != nil {
 		return err
 	}

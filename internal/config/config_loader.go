@@ -9,8 +9,8 @@ type ConfigLoader struct {
 	Config AppConfig
 }
 
-func NewConfigLoader() (*ConfigLoader, error) {
-	jsonFile, err := os.Open("config.json")
+func NewConfigLoader(configFile string) (*ConfigLoader, error) {
+	jsonFile, err := os.Open(configFile)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return &ConfigLoader{}, nil
