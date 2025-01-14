@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/common"
+	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
@@ -61,7 +62,7 @@ type ClientsManager struct {
 	mu sync.RWMutex
 }
 
-func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) *ClientsManager {
+func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao, configLoader *config.ConfigLoader) *ClientsManager {
 	clientsManager := &ClientsManager{
 		server:         server,
 		clientsDao:     clientsDao,
@@ -75,7 +76,7 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) 
 	})
 
 	server.AddMethod("login", wsrpc.Typed(func(clientId uint, params LoginParams) (any, error) {
-		url := fmt.Sprintf("http://localhost:3001/static/lua/%s.lua", params.Role)
+		url := fmt.Sprintf("%s/static/lua/%s.lua", configLoader.Config.WebServer.Url, params.Role)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 		defer cancel()

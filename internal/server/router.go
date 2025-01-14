@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"slices"
 	"strconv"
 	"time"
 
@@ -20,6 +21,10 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
+	"github.com/go-pkgz/auth"
+	"github.com/go-pkgz/auth/avatar"
+	lg "github.com/go-pkgz/auth/logger"
+	"github.com/go-pkgz/auth/token"
 	"github.com/google/uuid"
 )
 
@@ -73,6 +78,23 @@ func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 
 func CreateMux(app *app.App) (http.Handler, error) {
 
+	authService := auth.NewService(auth.Opts{
+		SecretReader: token.SecretFunc(func(id string) (string, error) {
+			return app.ConfigLoader.Config.WebServer.Auth.TokenSecret, nil
+		}),
+		TokenDuration:  time.Minute * 5,
+		CookieDuration: time.Hour * 24,
+		Issuer:         "ccae",
+		URL:            app.ConfigLoader.Config.WebServer.Url,
+		AvatarStore:    avatar.NewLocalFS("/tmp"),
+		Validator: token.ValidatorFunc(func(_ string, claims token.Claims) bool {
+			return claims.User != nil && slices.Contains(app.ConfigLoader.Config.WebServer.Auth.Admins, claims.User.Name)
+		}),
+		XSRFIgnoreMethods: []string{"GET"},
+		Logger:            lg.Func(func(format string, args ...interface{}) { app.Logger.Printf(format, args...) }),
+	})
+	authService.AddProvider("yandex", app.ConfigLoader.Config.WebServer.Auth.OAuthClient, app.ConfigLoader.Config.WebServer.Auth.OAuthSecret)
+
 	templatesFs, err := fs.Sub(resources, "resources/templates")
 	if err != nil {
 		return nil, err
@@ -88,15 +110,22 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 	tmpls := template.NewTemplates(templatesFs)
 
-	static := root.Group()
-	common := root.Group().Use(loggingMiddleware(app.Logger))
+	authRoutes, avaRoutes := authService.Handlers()
+	am := authService.Middleware()
 
+	logm := loggingMiddleware(app.Logger)
+
+	static := root.Group()
 	static.HandleFunc("GET /static/", createStaticHandler(staticsFs))
 
-	handleFuncWithError(common, "GET /{$}", func(w http.ResponseWriter, r *http.Request) error {
-		return components.Page("INDEX").Render(r.Context(), w)
+	anon := root.Group().Use(logm)
+	anon.Handle("/auth/{path...}", authRoutes)
+	anon.Handle("/avatar/{path...}", avaRoutes)
+	anon.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
+		components.Page("INDEX").Render(r.Context(), w)
 	})
 
+	common := root.Group().Use(logm).Use(am.Auth)
 	handleFuncWithError(common, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients := app.ClientsManager.GetClients()
 		return components.ClientsPage(clients).Render(r.Context(), w)
@@ -206,7 +235,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 		return tmpls.Render("client.lua", []string{"client.lua.tmpl"}, w, map[string]any{
 			"role":  role,
-			"wsUrl": "ws://localhost:12526",
+			"wsUrl": app.ConfigLoader.Config.ClientServer.Url,
 			"id":    id,
 		})
 	})

@@ -40,10 +40,10 @@ func (s ServerCommand) Execute(args []string) error {
 		return err
 	}
 
-	wsServer := ws.NewServer(":12526", 128, 1, time.Millisecond*1000)
+	wsServer := ws.NewServer(configLoader.Config.ClientServer.ListenAddr, 128, 1, time.Millisecond*1000)
 	rpcServer := wsrpc.NewServer(wsServer)
 
-	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients)
+	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader)
 	storageAdapter := wsmethods.NewStorageAdapter(clientsManager)
 
 	storageService := storage.NewStorage(daos, storageAdapter)
@@ -99,7 +99,7 @@ func (s ServerCommand) Execute(args []string) error {
 
 	go func() {
 		l.Println("INFO Start http server")
-		err := http.ListenAndServe(":3001", mux)
+		err := http.ListenAndServe(configLoader.Config.WebServer.ListenAddr, mux)
 		if err != nil {
 			errors <- err
 		} else {

@@ -25,7 +25,7 @@ var logOptions = []logger.Option{
 		}
 		return color.GreenString(l.Padded())
 	}),
-	logger.WithLevel(logger.INFO),
+	logger.WithLevel(logger.DEBUG),
 }
 
 func setupLogger() *log.Logger {

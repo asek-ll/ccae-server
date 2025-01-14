@@ -4,6 +4,9 @@ type AppConfig struct {
 	Storage   StorageConfig   `json:"storage"`
 	Crafters  CraftersConfig  `json:"crafters"`
 	Importers ImportersConfig `json:"importers"`
+
+	WebServer    WebServerConfig    `json:"webServer"`
+	ClientServer ClientServerConfig `json:"clientServer"`
 }
 
 type StorageConfig struct {
@@ -59,3 +62,21 @@ type FluidImporterConfig struct {
 // SingleFluidContainerPrefix string
 // TransactionStorage         string
 // TransactionTank            string
+
+type AuthConfig struct {
+	OAuthClient string   `json:"oauthClient"`
+	OAuthSecret string   `json:"oauthSecret"`
+	TokenSecret string   `json:"tokenSecret"`
+	Admins      []string `json:"admins"`
+}
+
+type ClientServerConfig struct {
+	Url        string `json:"url"`
+	ListenAddr string `json:"addr"`
+}
+
+type WebServerConfig struct {
+	Url        string     `json:"url"`
+	ListenAddr string     `json:"addr"`
+	Auth       AuthConfig `json:"auth"`
+}
