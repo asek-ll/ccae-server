@@ -1,23 +1,23 @@
-FROM golang:1.22 AS build
+FROM alpine:3.21 AS build
+
+RUN apk add --no-cache --update go gcc g++
+
+WORKDIR /src
+ENV GOPATH /src
 
 COPY cmd /src/cmd
 COPY pkg /src/pkg
 COPY internal /src/internal
 COPY go.mod /src/go.mod
 COPY go.sum /src/go.sum
-WORKDIR /src
 
 RUN go install github.com/a-h/templ/cmd/templ@v0.2.793
-RUN templ generate
+RUN /src/bin/templ generate
 
-ENV CGO_ENABLED=1
-
-RUN go build -o aecc-server cmd/main.go
+RUN CGO_ENABLED=1 go build -o aecc-server cmd/main.go
 
 
 FROM alpine:3.21
-
-RUN apk add libc6-compat
 
 COPY --from=build /src/aecc-server /app/server
 
