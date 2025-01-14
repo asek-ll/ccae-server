@@ -19,6 +19,11 @@ RUN CGO_ENABLED=1 go build -o aecc-server cmd/main.go
 
 FROM alpine:3.21
 
-COPY --from=build /src/aecc-server /app/server
+RUN adduser -D srv
+
+COPY --from=build --chown=srv:srv /src/aecc-server /app/server
+
+USER srv
+WORKDIR /home/srv
 
 ENTRYPOINT ["/app/server"]
