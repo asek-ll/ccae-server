@@ -21,4 +21,4 @@ FROM alpine:3.21
 
 COPY --from=build /src/aecc-server /app/server
 
-CMD ["/app/server", "server"]
+ENTRYPOINT ["/app/server"]
