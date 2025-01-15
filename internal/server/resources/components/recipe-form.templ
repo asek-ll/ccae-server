@@ -67,12 +67,20 @@ func ip2a(i *int) string {
 	return fmt.Sprintf("%d", *i)
 }
 
-templ RecipeForm(recipe *dao.Recipe) {
+templ CreateRecipeForm(recipe *dao.Recipe) {
+    @RecipeForm(recipe, "/recipes/new/")
+}
+
+templ EditRecipeForm(recipe *dao.Recipe) {
 	<button
-		hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
+		hx-delete={ fmt.Sprintf("/recipes/%d/", recipe.ID) }
 	>Delete</button>
 	<a href={ templ.URL(toPlanUrl(recipe)) }>To Plan</a>
-	<form method="post">
+    @RecipeForm(recipe, fmt.Sprintf("/recipes/%d/", recipe.ID))
+}
+
+templ RecipeForm(recipe *dao.Recipe, url string) {
+	<form hx-post={ url }>
 		<fieldset>
 			<label>
 				Name

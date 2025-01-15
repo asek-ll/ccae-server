@@ -7,7 +7,7 @@ import (
 
 templ RecipeTypesPage(types []dao.RecipeType) {
 	@Page("RecipeTypes") {
-		<form method="post">
+		<form hx-post="/recipe-types/">
 			<table>
 				<tr>
 					<td>
