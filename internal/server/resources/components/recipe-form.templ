@@ -68,15 +68,15 @@ func ip2a(i *int) string {
 }
 
 templ CreateRecipeForm(recipe *dao.Recipe) {
-    @RecipeForm(recipe, "/recipes/new"))
+    @RecipeForm(recipe, "/recipes/new/")
 }
 
 templ EditRecipeForm(recipe *dao.Recipe) {
 	<button
-		hx-delete={ fmt.Sprintf("/recipes/%d", recipe.ID) }
+		hx-delete={ fmt.Sprintf("/recipes/%d/", recipe.ID) }
 	>Delete</button>
 	<a href={ templ.URL(toPlanUrl(recipe)) }>To Plan</a>
-    @RecipeForm(recipe, fmt.Sprintf("/recipes/%d", recipe.ID))
+    @RecipeForm(recipe, fmt.Sprintf("/recipes/%d/", recipe.ID))
 }
 
 templ RecipeForm(recipe *dao.Recipe, url string) {
