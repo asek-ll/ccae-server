@@ -300,7 +300,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -324,7 +324,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.Page("Recipe!!!", components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page("Recipe!!!", components.EditRecipeForm(recipe)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -355,7 +355,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -374,7 +374,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.RecipeForm(recipe)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.EditRecipeForm(recipe)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "DELETE /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
