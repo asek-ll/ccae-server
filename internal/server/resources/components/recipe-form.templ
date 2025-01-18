@@ -1,11 +1,11 @@
 package components
 
 import (
+	"context"
 	"fmt"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"io"
 	"strconv"
-    "context"
-    "io"
 )
 
 func groupId(id string) string {
@@ -68,7 +68,7 @@ func ip2a(i *int) string {
 }
 
 templ CreateRecipeForm(recipe *dao.Recipe) {
-    @RecipeForm(recipe, "/recipes/new/")
+	@RecipeForm(recipe, "/recipes/new/")
 }
 
 templ EditRecipeForm(recipe *dao.Recipe) {
@@ -76,7 +76,7 @@ templ EditRecipeForm(recipe *dao.Recipe) {
 		hx-delete={ fmt.Sprintf("/recipes/%d/", recipe.ID) }
 	>Delete</button>
 	<a href={ templ.URL(toPlanUrl(recipe)) }>To Plan</a>
-    @RecipeForm(recipe, fmt.Sprintf("/recipes/%d/", recipe.ID))
+	@RecipeForm(recipe, fmt.Sprintf("/recipes/%d/", recipe.ID))
 }
 
 templ RecipeForm(recipe *dao.Recipe, url string) {
