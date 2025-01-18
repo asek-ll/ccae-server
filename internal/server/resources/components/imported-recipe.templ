@@ -2,7 +2,6 @@ package components
 
 import (
 	"fmt"
-
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
@@ -26,14 +25,14 @@ templ ImportItemSelector(slot int, items []dao.RecipeItem) {
 	</fieldset>
 }
 
-templ ImportRecipeSlotsSelector(itemsBySlot map[int][]dao.RecipeItem) {
+templ ImportRecipeSlotsSelector(recipeId int, itemsBySlot map[int][]dao.RecipeItem) {
 	<import-recipe-item-finder>
 		<label>
 			Search:
 			<input type="text"/>
 		</label>
 	</import-recipe-item-finder>
-	<form method="post">
+	<form hx-post={ fmt.Sprintf("/imported-recipe/%d/configure/", recipeId) }>
 		for slot, items := range itemsBySlot {
 			if len(items) > 1 {
 				@ImportItemSelector(slot, items)

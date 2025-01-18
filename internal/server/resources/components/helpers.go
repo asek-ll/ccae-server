@@ -134,7 +134,7 @@ func RecipeToURL(recipe *dao.Recipe) string {
 		params.Set(fmt.Sprintf("amount_%d", slot), strconv.Itoa(item.Amount))
 	}
 
-	return fmt.Sprintf("/recipes/new?%s", url.Values(params).Encode())
+	return fmt.Sprintf("/recipes/new/?%s", url.Values(params).Encode())
 }
 
 func toPlanUrl(recipe *dao.Recipe) string {

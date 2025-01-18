@@ -132,12 +132,19 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /storageItems/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		items, err := app.Storage.GetItems()
+		filter := r.URL.Query().Get("filter")
+		view := r.URL.Query().Get("view")
+
+		items, err := app.Storage.GetItems(filter)
 		if err != nil {
 			return err
 		}
 
-		return components.ItemsInventory(items, 9).Render(r.Context(), w)
+		if view == "list" {
+			return components.ItemsInventory(items, 9).Render(r.Context(), w)
+		}
+
+		return components.ItemsInventoryPage(filter, items).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -696,11 +703,11 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			recipe.Ingredients = filteredRecipeItems
 
 			url := components.RecipeToURL(recipe)
-			http.Redirect(w, r, url, http.StatusSeeOther)
+			w.Header().Add("HX-Location", url)
 			return nil
 		}
 
-		return components.Page(fmt.Sprintf("Imported Recipe for %s", recipe.Name), components.ImportRecipeSlotsSelector(slotIngredients)).Render(ctx, w)
+		return components.Page(fmt.Sprintf("Imported Recipe for %s", recipe.Name), components.ImportRecipeSlotsSelector(recipeId, slotIngredients)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "POST /imported-recipe/{recipeId}/configure/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -758,9 +765,9 @@ func CreateMux(app *app.App) (http.Handler, error) {
 
 		url := components.RecipeToURL(recipe)
 
-		http.Redirect(w, r, url, http.StatusSeeOther)
-
+		w.Header().Add("HX-Location", url)
 		return nil
+
 	})
 
 	handleFuncWithError(common, "POST /crafts/{id}/commit/{$}", func(w http.ResponseWriter, r *http.Request) error {

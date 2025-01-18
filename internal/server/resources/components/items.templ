@@ -1,27 +1,49 @@
 package components
 
-import (
-	"github.com/asek-ll/aecc-server/internal/services/storage"
-)
+import "github.com/asek-ll/aecc-server/internal/services/storage"
 
 templ ItemsInventory(stacks []storage.AggregateStacks, width int) {
+	<section>
+		<table>
+			for _, row := range ToTable(stacks, width) {
+				<tr>
+					for i := 0; i < width; i++ {
+						<td>
+							if i < len(row) {
+								@ItemWithAmount(&row[i].Item, row[i].Count)
+							}
+						</td>
+					}
+				</tr>
+			}
+		</table>
+	</section>
+}
+
+templ ItemsInventoryPage(filter string, stacks []storage.AggregateStacks) {
 	@Page("Items") {
-		<section>
-			<table>
-				for _, row := range ToTable(stacks, width) {
-					<tr>
-						for i := 0; i < width; i++ {
-							<td>
-								if i < len(row) {
-									@ItemWithAmount(&row[i].Item, row[i].Count)
-								}
-							</td>
-						}
-					</tr>
-				}
-			</table>
-		</section>
+		@ItemsInventoryFilter(filter)
+		<div id="items-result">
+			@ItemsInventory(stacks, 9)
+		</div>
 	}
+}
+
+templ ItemsInventoryFilter(filter string) {
+	<div>
+		<label>
+			Filter
+			<input
+				id="filter"
+				name="filter"
+				value={ filter }
+				hx-get="/storageItems/?view=list"
+				hx-trigger="keyup changed delay:500ms"
+				hx-target="#items-result"
+				placeholder="Search..."
+			/>
+		</label>
+	</div>
 }
 
 templ ItemsPage(stacks []storage.AggregateStacks) {

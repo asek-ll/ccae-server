@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log"
 	"sort"
+	"strings"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
@@ -40,7 +41,7 @@ func (s *Storage) GetItemsCount() (map[string]int, error) {
 	return s.combinedStore.GetItemsCount()
 }
 
-func (s *Storage) GetItems() ([]AggregateStacks, error) {
+func (s *Storage) GetItems(filter string) ([]AggregateStacks, error) {
 	log.Println("[INFO] Get items")
 	uniqueItems, err := s.combinedStore.GetItemsCount()
 	if err != nil {
@@ -57,10 +58,12 @@ func (s *Storage) GetItems() ([]AggregateStacks, error) {
 	var stacks []AggregateStacks
 
 	for _, item := range items {
-		stacks = append(stacks, AggregateStacks{
-			Item:  item,
-			Count: uniqueItems[item.UID],
-		})
+		if len(filter) == 0 || strings.Contains(item.DisplayName, filter) {
+			stacks = append(stacks, AggregateStacks{
+				Item:  item,
+				Count: uniqueItems[item.UID],
+			})
+		}
 	}
 
 	sort.Slice(stacks, func(a, b int) bool {
