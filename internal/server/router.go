@@ -703,7 +703,8 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			recipe.Ingredients = filteredRecipeItems
 
 			url := components.RecipeToURL(recipe)
-			w.Header().Add("HX-Location", url)
+			// w.Header().Add("HX-Location", url)
+			http.Redirect(w, r, url, http.StatusSeeOther)
 			return nil
 		}
 
