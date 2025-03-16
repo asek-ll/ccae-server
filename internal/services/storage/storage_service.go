@@ -57,8 +57,10 @@ func (s *Storage) GetItems(filter string) ([]AggregateStacks, error) {
 
 	var stacks []AggregateStacks
 
+	filter = strings.ToLower(filter)
+
 	for _, item := range items {
-		if len(filter) == 0 || strings.Contains(item.DisplayName, filter) {
+		if len(filter) == 0 || strings.Contains(strings.ToLower(item.DisplayName), filter) {
 			stacks = append(stacks, AggregateStacks{
 				Item:  item,
 				Count: uniqueItems[item.UID],
