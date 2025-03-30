@@ -104,6 +104,13 @@ templ RecipeForm(recipe *dao.Recipe, url string) {
 				}
 			</div>
 			<div>
+				<h2>Catalysts</h2>
+				<div>
+					<button type="button" hx-get="/item-popup?role=catalyst&mode=recipe-item" hx-target="this" hx-swap="beforebegin">Add</button>
+					for i, recipeItem := range recipe.Catalysts {
+						@ItemInputs(fmt.Sprintf("i%d", i), recipeItem)
+					}
+				</div>
 				<h2>Ingredients</h2>
 				<div>
 					<h3>Shapeless</h3>

@@ -54,6 +54,10 @@ func (p *Planner) expandRecipes(itemIds []string) (*ExpandState, error) {
 				nextItems[ing.ItemUID] = struct{}{}
 				deps[result] = append(deps[result], ing.ItemUID)
 			}
+			for _, catalyst := range recipe.Catalysts {
+				nextItems[catalyst.ItemUID] = struct{}{}
+				deps[result] = append(deps[result], catalyst.ItemUID)
+			}
 		}
 		layer = common.MapKeys(nextItems)
 	}
@@ -117,6 +121,7 @@ func (p *Planner) GetPlanForItem(goals []Stack) (*Plan, error) {
 
 	var steps []Step
 
+	usedCatalysts := make(map[string]int)
 	for _, item := range expandState.Items {
 		if state[item] >= 0 {
 			continue
@@ -144,6 +149,25 @@ func (p *Planner) GetPlanForItem(goals []Stack) (*Plan, error) {
 				related[ing.ItemUID] = r
 			}
 			r.Consumed += ingredientCount
+		}
+
+		for _, catalyst := range recipe.Catalysts {
+			if usedCatalysts[catalyst.ItemUID] >= catalyst.Amount {
+				continue
+			}
+			diff := catalyst.Amount - usedCatalysts[catalyst.ItemUID]
+			state[catalyst.ItemUID] -= diff
+			usedCatalysts[catalyst.ItemUID] = catalyst.Amount
+
+			r, e := related[catalyst.ItemUID]
+			if !e {
+				r = &Related{
+					UID:           catalyst.ItemUID,
+					StorageAmount: storageCounts[catalyst.ItemUID],
+				}
+				related[catalyst.ItemUID] = r
+			}
+			r.Consumed += diff
 		}
 
 		for _, ing := range recipe.Results {

@@ -62,6 +62,11 @@ func (c *Crafter) CheckNextSteps(plan *dao.PlanState) error {
 		}
 
 		minRepeats := step.Repeats
+		for _, catalyst := range recipe.Catalysts {
+			recipeIngredients[catalyst.ItemUID] += catalyst.Amount
+			minRepeats = min(minRepeats, 1)
+		}
+
 		for ing, amount := range recipeIngredients {
 			minRepeats = min(minRepeats, store[ing]/amount)
 		}

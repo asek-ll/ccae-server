@@ -226,6 +226,22 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 				}
 			}
 
+			for _, ing := range recipe.Catalysts {
+				if config.InputInventory == "" {
+					return fmt.Errorf("Input storage not set")
+				}
+				slot += 1
+				if ing.Slot != nil {
+					slot = *ing.Slot
+				}
+				req.RequestItems = append(req.RequestItems, storage.ExportRequestItems{
+					TargetStorage: config.InputInventory,
+					Uid:           ing.ItemUID,
+					ToSlot:        slot,
+					Amount:        ing.Amount,
+				})
+			}
+
 			tx, err := w.tm.CreateExportTransaction(req)
 			if err != nil {
 				return err

@@ -57,8 +57,8 @@ func NewCraftsDao(db *sql.DB) (*CraftsDao, error) {
 
 func (d *CraftsDao) GetAllCrafts() ([]*Craft, error) {
 	rows, err := d.db.Query(`
-	SELECT ` + craftsFieldList + ` 
-	FROM craft 
+	SELECT ` + craftsFieldList + `
+	FROM craft
 	LIMIT 50`)
 	if err != nil {
 		return nil, err
@@ -102,8 +102,8 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	}
 	defer tx.Rollback()
 
-	_, err = tx.Exec(`INSERT INTO 
-	craft (plan_id, recipe_type, status, created, recipe_id, repeats, commit_repeats) 
+	_, err = tx.Exec(`INSERT INTO
+	craft (plan_id, recipe_type, status, created, recipe_id, repeats, commit_repeats)
 	VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		planId, recipeType, "PENDING", time.Now(), recipe.ID, repeats, 0)
 	if err != nil {
@@ -112,11 +112,11 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	}
 
 	res, err := tx.Exec(`
-	UPDATE 
-		plan_step_state 
-	SET 
-		repeats = repeats - ? 
-	WHERE 
+	UPDATE
+		plan_step_state
+	SET
+		repeats = repeats - ?
+	WHERE
 		plan_id = ? and recipe_id = ? and repeats >= ?`, repeats, planId, recipe.ID, repeats)
 
 	if err != nil {
@@ -134,11 +134,11 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	for _, ing := range recipe.Ingredients {
 		amount := ing.Amount * repeats
 		res, err := tx.Exec(`
-		UPDATE plan_item_state 
-		SET 
+		UPDATE plan_item_state
+		SET
 			amount = amount - ?,
 			required_amount = required_amount - ?
-		WHERE 
+		WHERE
 			item_uid = ? AND plan_id = ? AND amount >= ?`,
 			amount, amount, ing.ItemUID, planId, amount)
 		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, ing.ItemUID, planId)
@@ -156,6 +156,31 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 		}
 	}
 
+	for _, cat := range recipe.Catalysts {
+		amount := cat.Amount
+		res, err := tx.Exec(`
+		UPDATE plan_item_state
+		SET
+			amount = amount - ?,
+			required_amount = required_amount - ?
+		WHERE
+			item_uid = ? AND plan_id = ? AND amount >= ?`,
+			amount, amount, cat.ItemUID, planId, amount)
+		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, ing.ItemUID, planId)
+		if err != nil {
+			log.Printf("[ERROR] Plan item step: %v", err)
+			return err
+		}
+		afftected, err := res.RowsAffected()
+		if err != nil {
+			log.Printf("[ERROR] Affected rows: %v", err)
+			return err
+		}
+		if afftected == 0 {
+			return errors.New("Can't acquire catalysts")
+		}
+	}
+
 	log.Printf("[INFO] Commit transaction INSERT")
 	err = tx.Commit()
 	if err != nil {
@@ -168,10 +193,10 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 
 func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recipe, repeats int) error {
 	res, err := tx.Exec(`
-	UPDATE craft 
-	SET 
+	UPDATE craft
+	SET
 		status = 'COMMITED',
-		commit_repeats = ? 
+		commit_repeats = ?
 	WHERE
 		id = ? AND status = 'PENDING' AND commit_repeats = 0`, repeats, craft.ID)
 	if err != nil {
@@ -190,6 +215,13 @@ func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recip
 
 	for _, ing := range recipe.Ingredients {
 		err = ReleaseItems(tx, ing.ItemUID, ing.Amount*repeats)
+		if err != nil {
+			return err
+		}
+	}
+
+	for _, catalyst := range recipe.Catalysts {
+		err = ReleaseItems(tx, catalyst.ItemUID, catalyst.Amount)
 		if err != nil {
 			return err
 		}
@@ -248,8 +280,8 @@ func (d *CraftsDao) CancelCraft(craft *Craft, recipe *Recipe) error {
 
 func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 	rows, err := d.db.Query(`
-	SELECT `+craftsFieldList+` 
-	FROM craft 
+	SELECT `+craftsFieldList+`
+	FROM craft
 	WHERE worker_id = ?
 	LIMIT 1`, workerId)
 	if err != nil {
@@ -270,8 +302,8 @@ func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 }
 
 func (d *CraftsDao) CompleteCraftInOuterTx(tx *sql.Tx, craft *Craft) error {
-	row := tx.QueryRow(`UPDATE craft SET 
-	repeats = repeats - commit_repeats, 
+	row := tx.QueryRow(`UPDATE craft SET
+	repeats = repeats - commit_repeats,
 	commit_repeats = 0,
 	status = 'PENDING'
 	WHERE id = ? AND status = 'COMMITED' RETURNING repeats`, craft.ID)
@@ -319,9 +351,9 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 
 func (d *CraftsDao) FindById(craftId int) (*Craft, error) {
 	rows, err := d.db.Query(`
-	SELECT `+craftsFieldList+` 
-	FROM craft 
-	WHERE id = ? 
+	SELECT `+craftsFieldList+`
+	FROM craft
+	WHERE id = ?
 	LIMIT 1`, craftId)
 	if err != nil {
 		return nil, err
@@ -350,8 +382,8 @@ func (d *CraftsDao) FindNextByTypes(types []string, workerId string) ([]*Craft, 
 	}
 
 	rows, err := d.db.Query(fmt.Sprintf(`
-	SELECT `+craftsFieldList+` 
-	FROM craft 
+	SELECT `+craftsFieldList+`
+	FROM craft
 	WHERE worker_id = ? OR recipe_type IN (?%s)
 	LIMIT 50`, strings.Repeat(",?", len(types)-1),
 	), args...)

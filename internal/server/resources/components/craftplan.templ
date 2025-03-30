@@ -29,7 +29,7 @@ templ CraftingPlan(plan *crafter.Plan) {
 		for _, step := range plan.Steps {
 			<tr>
 				<td>
-					{ strconv.Itoa(step.Repeats) } X 
+					{ strconv.Itoa(step.Repeats) } X
 					for _, result := range step.Recipe.Results {
 						@ItemStack(result.ItemUID, result.Amount)
 					}
@@ -39,6 +39,11 @@ templ CraftingPlan(plan *crafter.Plan) {
 				</td>
 				<td>
 					{ step.Recipe.Type }
+				</td>
+				<td>
+					for _, catalyst := range step.Recipe.Catalysts {
+						@ItemStack(catalyst.ItemUID, catalyst.Amount)
+					}
 				</td>
 				<td>
 					@RecipesGrid(step.Recipe)

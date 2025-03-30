@@ -201,6 +201,7 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 
 	var results []dao.RecipeItem
 	var ingredients []dao.RecipeItem
+	var catalysts []dao.RecipeItem
 
 	isShapeless := -1
 
@@ -229,6 +230,8 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 			ingredients = append(ingredients, recipeItem)
 		case dao.RESULT_ROLE:
 			results = append(results, recipeItem)
+		case dao.CATALYST_ROLE:
+			catalysts = append(catalysts, recipeItem)
 		default:
 			return nil, fmt.Errorf("Unsupported role '%s'", item.Role)
 		}
@@ -243,6 +246,7 @@ func (m *RecipeManager) validateCreateParams(params *CreateRecipeParams) (*dao.R
 		Type:        params.Type,
 		Results:     results,
 		Ingredients: ingredients,
+		Catalysts:   catalysts,
 		MaxRepeats:  params.MaxRepeats,
 	}
 

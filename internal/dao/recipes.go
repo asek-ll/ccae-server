@@ -10,6 +10,7 @@ import (
 
 const RESULT_ROLE = "result"
 const INGREDIENT_ROLE = "ingredient"
+const CATALYST_ROLE = "catalyst"
 
 type RecipeItem struct {
 	ItemUID string
@@ -25,6 +26,7 @@ type Recipe struct {
 	MaxRepeats  *int
 	Results     []RecipeItem
 	Ingredients []RecipeItem
+	Catalysts   []RecipeItem
 }
 
 type RecipesDao struct {
@@ -99,6 +101,13 @@ func readRecipes(rows *sql.Rows) ([]*Recipe, error) {
 				})
 			} else if *role == INGREDIENT_ROLE {
 				recipe.Ingredients = append(recipe.Ingredients, RecipeItem{
+					ItemUID: *item_uid,
+					Amount:  *amount,
+					Role:    *role,
+					Slot:    slot,
+				})
+			} else if *role == CATALYST_ROLE {
+				recipe.Catalysts = append(recipe.Catalysts, RecipeItem{
 					ItemUID: *item_uid,
 					Amount:  *amount,
 					Role:    *role,
@@ -188,6 +197,14 @@ func (r *RecipesDao) InsertRecipe(recipe *Recipe) error {
 		}
 	}
 
+	for _, item := range recipe.Catalysts {
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, CATALYST_ROLE, item.Slot)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = tx.Commit()
 
 	return err
@@ -201,12 +218,12 @@ func (r *RecipesDao) UpdateRecipe(recipe *Recipe) error {
 	defer tx.Rollback()
 
 	_, err = tx.Exec(`
-	UPDATE recipes 
-	SET 
+	UPDATE recipes
+	SET
 		name = ?,
 		type = ? ,
 		max_repeats = ?
-	WHERE 
+	WHERE
 		id = ?`, recipe.Name, recipe.Type, recipe.MaxRepeats, recipe.ID)
 	if err != nil {
 		return err
@@ -233,6 +250,14 @@ func (r *RecipesDao) UpdateRecipe(recipe *Recipe) error {
 		}
 	}
 
+	for _, item := range recipe.Catalysts {
+		_, err := tx.Exec("INSERT INTO recipe_items (recipe_id, item_uid, amount, role, slot) VALUES (?, ?, ?, ?, ?)",
+			recipe.ID, item.ItemUID, item.Amount, CATALYST_ROLE, item.Slot)
+		if err != nil {
+			return err
+		}
+	}
+
 	err = tx.Commit()
 
 	return err
@@ -244,7 +269,7 @@ func (r *RecipesDao) GetRecipesByResults(itemUIDs []string) ([]*Recipe, error) {
 	}
 
 	query := fmt.Sprintf(`
-	SELECT ri.recipe_id FROM recipe_items ri 
+	SELECT ri.recipe_id FROM recipe_items ri
 	WHERE ri.item_uid IN (?%s) AND ri.role = 'result'
 	`, strings.Repeat(", ?", len(itemUIDs)-1))
 
@@ -278,8 +303,8 @@ func (r *RecipesDao) GetRecipesById(ids []int) ([]*Recipe, error) {
 	}
 
 	query := fmt.Sprintf(`
-	SELECT r.id, r.name, r.type, r.max_repeats, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r 
-	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id 
+	SELECT r.id, r.name, r.type, r.max_repeats, ri.item_uid, ri.amount, ri.role, ri.slot FROM recipes r
+	LEFT JOIN recipe_items ri ON r.id = ri.recipe_id
 	WHERE r.id IN (?%s)
 	`, strings.Repeat(", ?", len(ids)-1))
 

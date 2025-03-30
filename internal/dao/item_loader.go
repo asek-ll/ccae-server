@@ -33,6 +33,9 @@ func (l *ItemDeferedLoader) FromRecipe(r *Recipe) *ItemDeferedLoader {
 	for _, i := range r.Ingredients {
 		l.AddUid(i.ItemUID)
 	}
+	for _, i := range r.Catalysts {
+		l.AddUid(i.ItemUID)
+	}
 	for _, i := range r.Results {
 		l.AddUid(i.ItemUID)
 	}
