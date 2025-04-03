@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
@@ -244,26 +245,18 @@ func parseImporterWorkerConfig(params *ImporterWorkerConfigParams) (*dao.Importe
 	return &config, nil
 
 }
-func parseProcessingCrafterWorkerConfig(params *dao.ProcessingCrafterWorkerConfig) (*dao.ProcessingCrafterWorkerConfig, error) {
+func parseProcessingCrafterWorkerConfig(params *string) (*dao.ProcessingCrafterWorkerConfig, error) {
 	config := dao.ProcessingCrafterWorkerConfig{}
 
-	craftType := params.CraftType
-	if craftType == "" {
-		return nil, errors.New("processing crafter craft type is required")
+	if params == nil || *params == "" {
+		return nil, errors.New("empty processing crafter config")
 	}
-	config.CraftType = craftType
 
-	inputStorage := params.InputStorage
-	if inputStorage == "" {
-		return nil, errors.New("processing crafter input storage is required")
-	}
-	config.InputStorage = inputStorage
+	err := json.Unmarshal([]byte(*params), &config)
 
-	reagentMode := params.ReagentMode
-	if reagentMode == "" {
-		return nil, errors.New("processing crafter reagent mode is required")
+	if err != nil {
+		return nil, fmt.Errorf("processing crafter config parse error: %v", err)
 	}
-	config.ReagentMode = reagentMode
 
 	return &config, nil
 }
@@ -296,7 +289,7 @@ func (w *WorkerManager) NewWorkerParamsForType(workerType string) *WorkerParams 
 			Imports: make([]SingleImportConfigParams, 1),
 		}
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		config.ProcessingCrafter = &dao.ProcessingCrafterWorkerConfig{}
+		config.ProcessingCrafter = nil
 	}
 
 	return &WorkerParams{

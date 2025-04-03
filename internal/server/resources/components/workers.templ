@@ -55,31 +55,45 @@ templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
 	<button type="submit">Create</button>
 }
 
-templ ProcessingCrafterWorkerConfigFields(params *dao.ProcessingCrafterWorkerConfig) {
+templ ProcessingCrafterWorkerConfigFields(params *string) {
 	<label>
-		Craft type
-		<input type="text" name="craftType" value={ params.CraftType }/>
-	</label>
-	<label>
-		Ingredient storage
-		<input type="text" name="inputStorage" value={ params.InputStorage }/>
-	</label>
-	<label>
-		Ingredient mode
-		<select name="reagentMode" required>
-			<option
-				if params.ReagentMode == "ignore" {
-					selected
-				}
-			>ignore</option>
-			<option
-				if params.ReagentMode == "block" {
-					selected
-				}
-			>block</option>
-		</select>
+		Raw Config
+		<textarea name="config">
+			if params != nil {
+				{ *params }
+			}
+		</textarea>
 	</label>
 	<button type="submit">Create</button>
+}
+
+templ WorkerFormContent(params *worker.WorkerParams) {
+	<label>
+		Key
+		<input type="text" name="key" value={ params.Key }/>
+	</label>
+	<label>
+		Type
+		<select
+			name="type"
+			required
+			hx-get="/workers-new/config"
+			hx-target="#worker-config"
+		>
+			<option></option>
+			for _, t := range dao.WORKER_TYPES {
+				<option
+					value={ t }
+					if t == params.Type {
+						selected
+					}
+				>{ t }</option>
+			}
+		</select>
+	</label>
+	<div id="worker-config">
+		@NewWorkerConfigForm(params)
+	</div>
 }
 
 templ NewWorkerPage(params *worker.WorkerParams, errMsg string) {
@@ -87,33 +101,19 @@ templ NewWorkerPage(params *worker.WorkerParams, errMsg string) {
 		if errMsg != "" {
 			<div class="error">{ errMsg }</div>
 		}
-		<form method="post" id="worker-form">
-			<label>
-				Key
-				<input type="text" name="key" value={ params.Key }/>
-			</label>
-			<label>
-				Type
-				<select
-					name="type"
-					required
-					hx-get="/workers-new/config"
-					hx-target="#worker-config"
-				>
-					<option></option>
-					for _, t := range dao.WORKER_TYPES {
-						<option
-							value={ t }
-							if t == params.Type {
-								selected
-							}
-						>{ t }</option>
-					}
-				</select>
-			</label>
-			<div id="worker-config">
-				@NewWorkerConfigForm(params)
-			</div>
+		<form hx-post="/workers-new/">
+			@WorkerFormContent(params)
+		</form>
+	}
+}
+
+templ EditWorkerPage(params *worker.WorkerParams, errMsg string) {
+	@Page(fmt.Sprintf("Edit worker: %s", params.Key)) {
+		if errMsg != "" {
+			<div class="error">{ errMsg }</div>
+		}
+		<form hx-post={ fmt.Sprintf("/workers/%s", params.Key) }>
+			@WorkerFormContent(params)
 		</form>
 	}
 }

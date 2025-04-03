@@ -42,10 +42,17 @@ type ShapedCrafterWorkerConfig struct {
 	OutputStorage string `json:"outputStorage"`
 }
 type ProcessingCrafterWorkerConfig struct {
-	CraftType    string `json:"craftType"`
-	InputStorage string `json:"inputStorage"`
-	InputTank    string `json:"inputTank"`
-	ReagentMode  string `json:"reagentMode"`
+	CraftType      string `json:"craftType"`
+	InputInventory string `json:"inputInventory"`
+	InputTank      string `json:"inputTank"`
+	ReagentMode    string `json:"reagentMode"`
+
+	ResultItems          []string `json:"resultItems"`
+	ResultInventory      string   `json:"resultInventory"`
+	ResultInventorySlots []int    `json:"resultInventorySlots"`
+
+	ResultFluids []string `json:"resultFluids"`
+	ResultTank   string   `json:"resultTank"`
 }
 
 type WorkerConfig struct {

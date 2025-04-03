@@ -905,6 +905,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		params := app.WorkerManager.WorkerToParams(worker)
+		log.Println("WARN", "params: %v", *params.Config.ProcessingCrafter)
 
 		itemLoader := app.Daos.Items.NewDeferedLoader()
 		app.WorkerManager.AddWorkerItemUids(params, itemLoader)
@@ -913,7 +914,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.NewWorkerPage(params, "").Render(ctx, w)
+		return components.EditWorkerPage(params, "").Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /workers-new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -955,7 +956,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		http.Redirect(w, r, "/workers/"+worker.Key+"/", http.StatusSeeOther)
+		w.Header().Add("HX-Location", fmt.Sprintf("/workers/%s", worker.Key))
 		return nil
 	})
 
@@ -975,14 +976,14 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			if err != nil {
 				return err
 			}
-			return components.NewWorkerPage(params, err.Error()).Render(ctx, w)
+			return components.EditWorkerPage(params, err.Error()).Render(ctx, w)
 		}
 		err = app.WorkerManager.UpdateWorker(key, worker)
 		if err != nil {
 			return err
 		}
 
-		http.Redirect(w, r, "/workers/", http.StatusSeeOther)
+		w.Header().Add("HX-Location", fmt.Sprintf("/workers/%s", key))
 		return nil
 	})
 

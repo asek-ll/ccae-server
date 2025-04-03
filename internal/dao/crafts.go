@@ -166,7 +166,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 		WHERE
 			item_uid = ? AND plan_id = ? AND amount >= ?`,
 			amount, amount, cat.ItemUID, planId, amount)
-		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, ing.ItemUID, planId)
+		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, cat.ItemUID, planId)
 		if err != nil {
 			log.Printf("[ERROR] Plan item step: %v", err)
 			return err
