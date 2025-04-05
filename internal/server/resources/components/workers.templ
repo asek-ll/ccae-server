@@ -36,7 +36,6 @@ templ ImporterWorkerConfigFields(params *worker.ImporterWorkerConfigParams) {
 			></importer-config>
 		}
 	</importer-configs>
-	<button type="submit">Create</button>
 }
 
 templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
@@ -52,19 +51,17 @@ templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
 			></exporter-config>
 		}
 	</exporter-configs>
-	<button type="submit">Create</button>
 }
 
 templ ProcessingCrafterWorkerConfigFields(params *string) {
 	<label>
 		Raw Config
-		<textarea name="config">
+		<textarea name="config" rows="16">
 			if params != nil {
 				{ *params }
 			}
 		</textarea>
 	</label>
-	<button type="submit">Create</button>
 }
 
 templ WorkerFormContent(params *worker.WorkerParams) {
@@ -114,6 +111,7 @@ templ NewWorkerPage(params *worker.WorkerParams, errMsg string) {
 		}
 		<form hx-post="/workers-new/">
 			@WorkerFormContent(params)
+			<button type="submit">Create</button>
 		</form>
 	}
 }
@@ -125,6 +123,7 @@ templ EditWorkerPage(params *worker.WorkerParams, errMsg string) {
 		}
 		<form hx-post={ fmt.Sprintf("/workers/%s/", params.Key) }>
 			@WorkerFormContent(params)
+			<button type="submit">Update</button>
 		</form>
 	}
 }
