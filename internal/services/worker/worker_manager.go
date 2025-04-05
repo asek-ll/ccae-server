@@ -56,6 +56,26 @@ func (w *WorkerManager) getRunner(worker *dao.Worker) func() error {
 			log.Printf("%s worker tick", worker.Key)
 			return w.importerWorker.do(worker.Config.Importer)
 		}
+	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
+		cfg := worker.Config.ProcessingCrafter
+		workerConfig := config.ProcessCrafterConfig{
+			CraftType:      cfg.CraftType,
+			InputInventory: cfg.InputInventory,
+			InputTank:      cfg.InputTank,
+			ReagentMode:    cfg.ReagentMode,
+			Enabled:        true,
+
+			ResultItems:          cfg.ResultItems,
+			ResultInventory:      cfg.ResultInventory,
+			ResultInventorySlots: cfg.ResultInventorySlots,
+
+			ResultFluids: cfg.ResultFluids,
+			ResultTank:   cfg.ResultTank,
+		}
+		return func() error {
+			log.Printf("%s processer crafter tick tick", worker.Key)
+			return w.processCrafterWorker.do(workerConfig)
+		}
 	}
 	return func() error {
 		log.Printf("NOP %s worker tick", worker.Key)
@@ -131,7 +151,15 @@ func (w *WorkerManager) UpdateWorker(key string, worker *dao.Worker) error {
 	if err != nil {
 		return err
 	}
-	return w.addAndStart(worker)
+
+	handler, err := w.workerHandlers.Add(worker.Key, w.getRunner(worker))
+	if err != nil {
+		return err
+	}
+	if worker.Enabled {
+		handler.Start()
+	}
+	return nil
 }
 
 func (w *WorkerManager) DeleteWorker(key string) error {
