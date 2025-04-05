@@ -91,6 +91,17 @@ templ WorkerFormContent(params *worker.WorkerParams) {
 			}
 		</select>
 	</label>
+	<label>
+		Enabled
+		<input
+			type="checkbox"
+			name="enabled"
+			value="true"
+			if params.Enabled {
+				checked
+			}
+		/>
+	</label>
 	<div id="worker-config">
 		@NewWorkerConfigForm(params)
 	</div>
@@ -112,7 +123,7 @@ templ EditWorkerPage(params *worker.WorkerParams, errMsg string) {
 		if errMsg != "" {
 			<div class="error">{ errMsg }</div>
 		}
-		<form hx-post={ fmt.Sprintf("/workers/%s", params.Key) }>
+		<form hx-post={ fmt.Sprintf("/workers/%s/", params.Key) }>
 			@WorkerFormContent(params)
 		</form>
 	}

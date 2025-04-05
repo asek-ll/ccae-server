@@ -181,7 +181,7 @@ func (w *WorkerManager) ParseWorker(params *WorkerParams) (*dao.Worker, error) {
 	return &dao.Worker{
 		Key:     params.Key,
 		Type:    params.Type,
-		Enabled: true,
+		Enabled: params.Enabled,
 		Config:  config,
 	}, nil
 }

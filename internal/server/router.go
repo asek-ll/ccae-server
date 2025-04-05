@@ -905,7 +905,6 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		params := app.WorkerManager.WorkerToParams(worker)
-		log.Println("WARN", "params: %v", *params.Config.ProcessingCrafter)
 
 		itemLoader := app.Daos.Items.NewDeferedLoader()
 		app.WorkerManager.AddWorkerItemUids(params, itemLoader)
@@ -968,6 +967,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
+		log.Println("WARN", "params: %v", *params)
 		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
 			itemLoader := app.Daos.Items.NewDeferedLoader()

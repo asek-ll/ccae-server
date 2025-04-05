@@ -2,6 +2,7 @@ package worker
 
 import (
 	"encoding/json"
+	"log"
 	"net/url"
 	"sort"
 	"strconv"
@@ -48,6 +49,9 @@ func ParseWorkerParams(values url.Values) *WorkerParams {
 	key := values.Get("key")
 	workerType := values.Get("type")
 
+	enabled := values.Get("enabled") == "true"
+	log.Println("WARN enabled is %v", enabled)
+
 	config := WorkerConfigParams{}
 	switch workerType {
 	case dao.WORKER_TYPE_EXPORTER:
@@ -61,7 +65,7 @@ func ParseWorkerParams(values url.Values) *WorkerParams {
 	return &WorkerParams{
 		Key:     key,
 		Type:    workerType,
-		Enabled: true,
+		Enabled: enabled,
 		Config:  config,
 	}
 }
