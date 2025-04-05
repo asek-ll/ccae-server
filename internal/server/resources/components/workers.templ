@@ -56,7 +56,7 @@ templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
 templ ProcessingCrafterWorkerConfigFields(params *string) {
 	<label>
 		Raw Config
-		<textarea name="config" rows="16">
+		<textarea name="config" rows="16" style="font-family: monospace;" spellcheck="false">
 			if params != nil {
 				{ *params }
 			}
