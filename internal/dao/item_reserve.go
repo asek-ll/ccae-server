@@ -104,7 +104,7 @@ func (d *ItemReserveDao) UpdateItemCount(uid string, count int) ([]int, error) {
 			return nil, err
 		}
 		if affected != 1 {
-			return nil, fmt.Errorf("Expected 1 updated plaan items, got %d", affected)
+			return nil, fmt.Errorf("expected 1 updated plaan items, got %d", affected)
 		}
 
 		planIds = append(planIds, planId)

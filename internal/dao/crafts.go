@@ -128,7 +128,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 		return err
 	}
 	if afftected == 0 {
-		return errors.New("Can't find plan step")
+		return errors.New("can't find plan step")
 	}
 
 	for _, ing := range recipe.Ingredients {
@@ -152,7 +152,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 			return err
 		}
 		if afftected == 0 {
-			return errors.New("Can't acquire ingredients")
+			return errors.New("can't acquire ingredients")
 		}
 	}
 
@@ -177,7 +177,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 			return err
 		}
 		if afftected == 0 {
-			return errors.New("Can't acquire catalysts")
+			return errors.New("can't acquire catalysts")
 		}
 	}
 
@@ -210,7 +210,7 @@ func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recip
 		return err
 	}
 	if afftected != 1 {
-		return errors.New("Expected craft in PENDING state")
+		return errors.New("expected craft in PENDING state")
 	}
 
 	for _, ing := range recipe.Ingredients {
@@ -264,7 +264,7 @@ func (d *CraftsDao) CancelCraft(craft *Craft, recipe *Recipe) error {
 		return err
 	}
 	if afftected != 1 {
-		return errors.New("Expected craft")
+		return errors.New("expected craft")
 	}
 
 	repeats := craft.Repeats - craft.CommitRepeats
@@ -327,7 +327,7 @@ func (d *CraftsDao) CompleteCraftInOuterTx(tx *sql.Tx, craft *Craft) error {
 			return err
 		}
 		if affected != 1 {
-			return errors.New("Expected commited craft to complete")
+			return errors.New("expected commited craft to complete")
 		}
 	}
 	return nil
@@ -414,7 +414,7 @@ func (d *CraftsDao) AssignCraftToWorker(craft *Craft, workerId string) (bool, er
 		return false, nil
 	}
 	if affected > 1 {
-		return false, errors.New("More than one craft updated")
+		return false, errors.New("more than one craft updated")
 	}
 
 	return true, nil

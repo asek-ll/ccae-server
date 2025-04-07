@@ -53,12 +53,16 @@ templ ExporterWorkerConfigFields(params *worker.ExporterWorkerConfigParams) {
 	</exporter-configs>
 }
 
-templ ProcessingCrafterWorkerConfigFields(params *string) {
+templ ProcessingCrafterWorkerConfigFields(params *worker.ProcessingCrafterWorkerConfigParams) {
+	<label>
+		Craft Type
+		<input type="text" name="craft_type" value={ params.CraftType }/>
+	</label>
 	<label>
 		Raw Config
 		<textarea name="config" rows="16" style="font-family: monospace;" spellcheck="false">
 			if params != nil {
-				{ *params }
+				{ params.RawConfig }
 			}
 		</textarea>
 	</label>
@@ -104,28 +108,36 @@ templ WorkerFormContent(params *worker.WorkerParams) {
 	</div>
 }
 
-templ NewWorkerPage(params *worker.WorkerParams, errMsg string) {
+templ NewWorkerPage(params *worker.WorkerParams) {
 	@Page("New worker") {
-		if errMsg != "" {
-			<div class="error">{ errMsg }</div>
-		}
-		<form hx-post="/workers-new/">
-			@WorkerFormContent(params)
-			<button type="submit">Create</button>
-		</form>
+		@NewWorkerPageContent(params, "")
 	}
 }
 
-templ EditWorkerPage(params *worker.WorkerParams, errMsg string) {
-	@Page(fmt.Sprintf("Edit worker: %s", params.Key)) {
-		if errMsg != "" {
-			<div class="error">{ errMsg }</div>
-		}
-		<form hx-post={ fmt.Sprintf("/workers/%s/", params.Key) }>
-			@WorkerFormContent(params)
-			<button type="submit">Update</button>
-		</form>
+templ NewWorkerPageContent(params *worker.WorkerParams, errMsg string) {
+	if errMsg != "" {
+		<div class="error">{ errMsg }</div>
 	}
+	<form hx-post="/workers-new/"  hx-target="main.container">
+		@WorkerFormContent(params)
+		<button type="submit">Create</button>
+	</form>
+}
+
+templ EditWorkerPage(params *worker.WorkerParams) {
+	@Page(fmt.Sprintf("Edit worker: %s", params.Key)) {
+		@EditWorkerPageContent(params, "")
+	}
+}
+
+templ EditWorkerPageContent(params *worker.WorkerParams, errMsg string) {
+	if errMsg != "" {
+		<div class="error">{ errMsg }</div>
+	}
+	<form hx-post={ fmt.Sprintf("/workers/%s/", params.Key) } hx-target="main.container">
+		@WorkerFormContent(params)
+		<button type="submit">Update</button>
+	</form>
 }
 
 templ WorkersList(workers []dao.Worker) {

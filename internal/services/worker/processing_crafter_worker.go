@@ -202,7 +202,7 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 			for _, ing := range recipe.Ingredients {
 				if common.IsFluid(ing.ItemUID) {
 					if config.InputTank == "" {
-						return fmt.Errorf("Input tank not set")
+						return fmt.Errorf("input tank not set")
 					}
 					req.RequestFluids = append(req.RequestFluids, storage.ExportRequestFluids{
 						TargetTankName: config.InputTank,
@@ -211,7 +211,7 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 					})
 				} else {
 					if config.InputInventory == "" {
-						return fmt.Errorf("Input storage not set")
+						return fmt.Errorf("input storage not set")
 					}
 					slot += 1
 					if ing.Slot != nil {
@@ -228,7 +228,7 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 
 			for _, ing := range recipe.Catalysts {
 				if config.InputInventory == "" {
-					return fmt.Errorf("Input storage not set")
+					return fmt.Errorf("input storage not set")
 				}
 				slot += 1
 				if ing.Slot != nil {

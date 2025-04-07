@@ -87,7 +87,7 @@ func (d *PlansDao) GetPlanById(id int) (*PlanState, error) {
 	}
 
 	if len(states) == 0 {
-		return nil, errors.New("Plan not found")
+		return nil, errors.New("plan not found")
 	}
 
 	plan := states[0]

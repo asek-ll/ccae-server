@@ -198,7 +198,7 @@ func (w *WorkerManager) ParseWorker(params *WorkerParams) (*dao.Worker, error) {
 	case dao.WORKER_TYPE_IMPORTER:
 		config.Importer, err = parseImporterWorkerConfig(params.Config.Importer)
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		config.ProcessingCrafter, err = parseProcessingCrafterWorkerConfig(params.Config.ProcessingCrafter)
+		config.ProcessingCrafter, err = w.parseProcessingCrafterWorkerConfig(params.Config.ProcessingCrafter)
 	default:
 		return nil, errors.New("invalid worker type")
 	}
@@ -219,11 +219,11 @@ func parseExporterWorkerConfig(params *ExporterWorkerConfigParams) (*dao.Exporte
 	for _, exportConfig := range params.Exports {
 
 		if exportConfig.Storage == "" {
-			return nil, fmt.Errorf("Empty storage config")
+			return nil, fmt.Errorf("empty storage config")
 		}
 
 		if exportConfig.Item == "" {
-			return nil, fmt.Errorf("Empty item config")
+			return nil, fmt.Errorf("empty item config")
 		}
 
 		slot, err := strconv.Atoi(exportConfig.Slot)
@@ -244,7 +244,7 @@ func parseExporterWorkerConfig(params *ExporterWorkerConfigParams) (*dao.Exporte
 		})
 	}
 	if len(config.Exports) == 0 {
-		return nil, fmt.Errorf("Empty export configs")
+		return nil, fmt.Errorf("empty export configs")
 	}
 	return &config, nil
 }
@@ -255,7 +255,7 @@ func parseImporterWorkerConfig(params *ImporterWorkerConfigParams) (*dao.Importe
 	for _, importConfig := range params.Imports {
 
 		if importConfig.Storage == "" {
-			return nil, fmt.Errorf("Empty storage config")
+			return nil, fmt.Errorf("empty storage config")
 		}
 		slot, err := strconv.Atoi(importConfig.Slot)
 		if err != nil {
@@ -268,22 +268,33 @@ func parseImporterWorkerConfig(params *ImporterWorkerConfigParams) (*dao.Importe
 		})
 	}
 	if len(config.Imports) == 0 {
-		return nil, fmt.Errorf("Empty imports configs")
+		return nil, fmt.Errorf("empty imports configs")
 	}
 	return &config, nil
 
 }
-func parseProcessingCrafterWorkerConfig(params *string) (*dao.ProcessingCrafterWorkerConfig, error) {
+func (w *WorkerManager) parseProcessingCrafterWorkerConfig(params *ProcessingCrafterWorkerConfigParams) (*dao.ProcessingCrafterWorkerConfig, error) {
 	config := dao.ProcessingCrafterWorkerConfig{}
 
-	if params == nil || *params == "" {
+	if params == nil || params.RawConfig == "" {
 		return nil, errors.New("empty processing crafter config")
 	}
 
-	err := json.Unmarshal([]byte(*params), &config)
+	err := json.Unmarshal([]byte(params.RawConfig), &config)
 
 	if err != nil {
 		return nil, fmt.Errorf("processing crafter config parse error: %v", err)
+	}
+
+	config.CraftType = params.CraftType
+
+	recipeType, err := w.daos.RecipeTypes.GetRecipeType(config.CraftType)
+	if err != nil {
+		return nil, fmt.Errorf("recipe type get: %v", err)
+	}
+
+	if recipeType == nil {
+		return nil, fmt.Errorf("recipe type not found")
 	}
 
 	return &config, nil
@@ -317,7 +328,10 @@ func (w *WorkerManager) NewWorkerParamsForType(workerType string) *WorkerParams 
 			Imports: make([]SingleImportConfigParams, 1),
 		}
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
-		config.ProcessingCrafter = nil
+		config.ProcessingCrafter = &ProcessingCrafterWorkerConfigParams{
+			CraftType: "",
+			RawConfig: "",
+		}
 	}
 
 	return &WorkerParams{

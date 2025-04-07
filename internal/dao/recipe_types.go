@@ -3,7 +3,6 @@ package dao
 import (
 	"database/sql"
 	"fmt"
-	"log"
 )
 
 type RecipeTypesDao struct {
@@ -81,12 +80,35 @@ func (d *RecipeTypesDao) DeleteRecipeType(typeName string) error {
 	var exists int
 	err := d.db.QueryRow("SELECT EXISTS (SELECT 1 FROM recipes WHERE type = ?)", typeName).Scan(&exists)
 	if exists == 1 {
-		log.Printf("Type %s is used by recipes. Can't delete it", typeName)
-		return fmt.Errorf("Type %s is used by recipes. Can't delete it", typeName)
+		return fmt.Errorf("type %s is used by recipes. Can't delete it", typeName)
 	}
 	if err != nil {
 		return err
 	}
 	_, err = d.db.Exec("DELETE FROM recipe_types WHERE name = ?", typeName)
 	return err
+}
+
+func SetWorkerForRecipeType(tx *sql.Tx, craftType string, workerKey string) (bool, error) {
+	res, err := tx.Exec("UPDATE recipe_types SET worker_id = ? WHERE name = ? AND worker_id = ''", workerKey, craftType)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
+}
+
+func UnSetWorkerForRecipeType(tx *sql.Tx, craftType string, workerKey string) (bool, error) {
+	res, err := tx.Exec("UPDATE recipe_types SET worker_id = '' WHERE name = ? AND worker_id = ?", craftType, workerKey)
+	if err != nil {
+		return false, err
+	}
+	rows, err := res.RowsAffected()
+	if err != nil {
+		return false, err
+	}
+	return rows == 1, nil
 }

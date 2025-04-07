@@ -2,7 +2,6 @@ package worker
 
 import (
 	"encoding/json"
-	"log"
 	"net/url"
 	"sort"
 	"strconv"
@@ -32,10 +31,15 @@ type ImporterWorkerConfigParams struct {
 	Imports []SingleImportConfigParams
 }
 
+type ProcessingCrafterWorkerConfigParams struct {
+	CraftType string
+	RawConfig string
+}
+
 type WorkerConfigParams struct {
 	Exporter          *ExporterWorkerConfigParams
 	Importer          *ImporterWorkerConfigParams
-	ProcessingCrafter *string
+	ProcessingCrafter *ProcessingCrafterWorkerConfigParams
 }
 
 type WorkerParams struct {
@@ -50,7 +54,6 @@ func ParseWorkerParams(values url.Values) *WorkerParams {
 	workerType := values.Get("type")
 
 	enabled := values.Get("enabled") == "true"
-	log.Println("WARN enabled is %v", enabled)
 
 	config := WorkerConfigParams{}
 	switch workerType {
@@ -138,9 +141,11 @@ func parseImporterWorkerConfigParams(values url.Values) *ImporterWorkerConfigPar
 	return &config
 }
 
-func parseProcessingCrafterWorkerConfigParams(values url.Values) *string {
-	rawConfig := values.Get("config")
-	return &rawConfig
+func parseProcessingCrafterWorkerConfigParams(values url.Values) *ProcessingCrafterWorkerConfigParams {
+	return &ProcessingCrafterWorkerConfigParams{
+		CraftType: values.Get("craft_type"),
+		RawConfig: values.Get("config"),
+	}
 }
 
 func NewWorkerParams(worker *dao.Worker) *WorkerParams {
@@ -173,7 +178,10 @@ func NewWorkerParams(worker *dao.Worker) *WorkerParams {
 			result, err := json.MarshalIndent(*worker.Config.ProcessingCrafter, "", "  ")
 			if err == nil {
 				rawConfig := string(result)
-				config.ProcessingCrafter = &rawConfig
+				config.ProcessingCrafter = &ProcessingCrafterWorkerConfigParams{
+					CraftType: worker.Config.ProcessingCrafter.CraftType,
+					RawConfig: rawConfig,
+				}
 			}
 		}
 	}

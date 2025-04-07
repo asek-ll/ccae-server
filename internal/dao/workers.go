@@ -139,8 +139,8 @@ func readWorkers(rows *sql.Rows) ([]Worker, error) {
 	return workers, nil
 }
 
-func (w *WorkersDao) GetWorker(key string) (*Worker, error) {
-	rows, err := w.db.Query("SELECT key, type, enabled, config FROM worker WHERE key = ?", key)
+func getWorker(tx *sql.Tx, key string) (*Worker, error) {
+	rows, err := tx.Query("SELECT key, type, enabled, config FROM worker WHERE key = ?", key)
 	if err != nil {
 		return nil, err
 	}
@@ -156,13 +156,48 @@ func (w *WorkersDao) GetWorker(key string) (*Worker, error) {
 	return &workers[0], nil
 }
 
+func (w *WorkersDao) GetWorker(key string) (*Worker, error) {
+	tx, err := w.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	worker, err := getWorker(tx, key)
+	if err != nil {
+		return nil, err
+	}
+	return worker, tx.Commit()
+}
+
 func (w *WorkersDao) CreateWorker(worker *Worker) error {
 	config, err := json.Marshal(worker.Config)
 	if err != nil {
 		return err
 	}
-	_, err = w.db.Exec("INSERT INTO worker (key, type, enabled, config) VALUES (?, ?, ?, ?)", worker.Key, worker.Type, worker.Enabled, string(config))
-	return err
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if worker.Config.ProcessingCrafter != nil {
+		succ, err := SetWorkerForRecipeType(tx, worker.Config.ProcessingCrafter.CraftType, worker.Key)
+		if err != nil {
+			return err
+		}
+		if !succ {
+			return errors.New("no valid recipe_types exists")
+		}
+	}
+
+	_, err = tx.Exec("INSERT INTO worker (key, type, enabled, config) VALUES (?, ?, ?, ?)", worker.Key, worker.Type, worker.Enabled, string(config))
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (w *WorkersDao) UpdateWorker(key string, worker *Worker) error {
@@ -170,11 +205,71 @@ func (w *WorkersDao) UpdateWorker(key string, worker *Worker) error {
 	if err != nil {
 		return err
 	}
-	_, err = w.db.Exec("UPDATE worker SET key = ?, type = ?, enabled = ?, config = ? WHERE key = ?", worker.Key, worker.Type, worker.Enabled, string(config), key)
-	return err
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	prev, err := getWorker(tx, key)
+	if err != nil {
+		return err
+	}
+	if prev.Config.ProcessingCrafter != nil {
+		succ, err := UnSetWorkerForRecipeType(tx, prev.Config.ProcessingCrafter.CraftType, prev.Key)
+		if err != nil {
+			return err
+		}
+		if !succ {
+			return errors.New("can't unset recipe_type")
+		}
+	}
+
+	if worker.Config.ProcessingCrafter != nil {
+		succ, err := SetWorkerForRecipeType(tx, worker.Config.ProcessingCrafter.CraftType, worker.Key)
+		if err != nil {
+			return err
+		}
+		if !succ {
+			return errors.New("can't set recipe_type")
+		}
+	}
+
+	_, err = tx.Exec("UPDATE worker SET key = ?, type = ?, enabled = ?, config = ? WHERE key = ?", worker.Key, worker.Type, worker.Enabled, string(config), key)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (w *WorkersDao) DeleteWorker(key string) error {
-	_, err := w.db.Exec("DELETE FROM worker WHERE key = ?", key)
-	return err
+
+	worker, err := w.GetWorker(key)
+	if err != nil {
+		return err
+	}
+
+	tx, err := w.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	if worker.Config.ProcessingCrafter != nil {
+		succ, err := UnSetWorkerForRecipeType(tx, worker.Config.ProcessingCrafter.CraftType, worker.Key)
+		if err != nil {
+			return err
+		}
+		if !succ {
+			return errors.New("can't unset recipe_type")
+		}
+	}
+
+	_, err = tx.Exec("DELETE FROM worker WHERE key = ?", key)
+	if err != nil {
+		return err
+	}
+	return tx.Commit()
 }

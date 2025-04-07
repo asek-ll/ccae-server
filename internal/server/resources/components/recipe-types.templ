@@ -16,12 +16,6 @@ templ RecipeTypesPage(types []dao.RecipeType) {
 							<input name="name" placeholder="Name"/>
 						</label>
 					</td>
-					<td>
-						<label>
-							WorkerId
-							<input name="worker_id" placeholder="WorkerId"/>
-						</label>
-					</td>
 				</tr>
 			</table>
 			<button type="submit">Add</button>
@@ -40,12 +34,23 @@ templ RecipeTypesList(types []dao.RecipeType) {
 					{ t.Name }
 				</td>
 				<td>
-					{ t.WorkerID }
-				</td>
-				<td>
 					<button hx-delete={ fmt.Sprintf("/recipe-types/%s/", t.Name) }>DELETE</button>
 				</td>
 			</tr>
 		}
 	</table>
+}
+
+templ RecipeTypeSelector(types []dao.RecipeType, selected string) {
+	<select>
+		for _, t := range types {
+			<option
+				value
+				if t.Name == selected {
+					selected
+				}
+				name={ t.Name }
+			>{ t.Name }</option>
+		}
+	</select>
 }
