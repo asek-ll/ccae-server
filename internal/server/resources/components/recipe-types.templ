@@ -42,7 +42,7 @@ templ RecipeTypesList(types []dao.RecipeType) {
 }
 
 templ RecipeTypeSelector(types []dao.RecipeType, selected string) {
-	<select>
+	<select name="type">
 		for _, t := range types {
 			<option
 				value

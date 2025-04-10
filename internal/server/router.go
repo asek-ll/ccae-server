@@ -307,7 +307,12 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe)).Render(ctx, w)
+		recipeTypes, err := app.Daos.RecipeTypes.GetRecipeTypes()
+		if err != nil {
+			return err
+		}
+
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe, recipeTypes)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -331,7 +336,12 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		return components.Page("Recipe!!!", components.EditRecipeForm(recipe)).Render(ctx, w)
+		recipeTypes, err := app.Daos.RecipeTypes.GetRecipeTypes()
+		if err != nil {
+			return err
+		}
+
+		return components.Page("Recipe!!!", components.EditRecipeForm(recipe, recipeTypes)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "POST /recipes/{recipeId}/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -362,7 +372,12 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe)).Render(ctx, w)
+
+		recipeTypes, err := app.Daos.RecipeTypes.GetRecipeTypes()
+		if err != nil {
+			return err
+		}
+		return components.Page(fmt.Sprintf("Recipe for %s", recipe.Name), components.CreateRecipeForm(recipe, recipeTypes)).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "POST /recipes/new/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -944,11 +959,11 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		if err != nil {
 			itemLoader := app.Daos.Items.NewDeferedLoader()
 			app.WorkerManager.AddWorkerItemUids(params, itemLoader)
-			ctx, loadErr := itemLoader.ToContext(r.Context())
-			if loadErr != nil {
-				return loadErr
+			ctx, err := itemLoader.ToContext(r.Context())
+			if err != nil {
+				return err
 			}
-			return components.NewWorkerPageContent(params, err.Error()).Render(ctx, w)
+			return components.NewWorkerPage(params).Render(ctx, w)
 		}
 		err = app.WorkerManager.CreateWorker(worker)
 		if err != nil {
@@ -967,7 +982,6 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
-		log.Println("WARN", "params: %v", *params)
 		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
 			itemLoader := app.Daos.Items.NewDeferedLoader()
@@ -976,7 +990,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			if err != nil {
 				return err
 			}
-			return components.EditWorkerPageContent(params, err.Error()).Render(ctx, w)
+			return components.EditWorkerPage(params).Render(ctx, w)
 		}
 		err = app.WorkerManager.UpdateWorker(key, worker)
 		if err != nil {
