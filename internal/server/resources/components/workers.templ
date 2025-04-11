@@ -118,7 +118,7 @@ templ NewWorkerPageContent(params *worker.WorkerParams, errMsg string) {
 	if errMsg != "" {
 		<div class="error">{ errMsg }</div>
 	}
-	<form hx-post="/workers-new/"  hx-target="main.container">
+	<form hx-post="/workers-new/" hx-target="main.container">
 		@WorkerFormContent(params)
 		<button type="submit">Create</button>
 	</form>
