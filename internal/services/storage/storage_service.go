@@ -96,7 +96,11 @@ type RichItemInfo struct {
 }
 
 func (s *Storage) GetItemCount(uid string) (int, error) {
-	return 0, nil
+	counts, err := s.GetItemsCount()
+	if err != nil {
+		return 0, err
+	}
+	return counts[uid], nil
 }
 
 func (s *Storage) GetItem(uid string) (*RichItemInfo, error) {

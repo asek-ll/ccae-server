@@ -18,6 +18,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
@@ -218,6 +219,11 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
+		itemCount, err := app.Storage.GetItemCount(uid)
+		if err != nil {
+			return err
+		}
+
 		ctx, err := app.Daos.Items.NewDeferedLoader().FromRecipes(item.Recipes).FromRecipes(item.ImportedRecipes).ToContext(r.Context())
 		if err != nil {
 			return err
@@ -229,7 +235,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		createParams.Add("role_g1", "goal")
 		createUrl := fmt.Sprintf("/craft-plans/new/?%s", createParams.Encode())
 
-		return components.ItemPage(item, createUrl).Render(ctx, w)
+		return components.ItemPage(item, createUrl, itemCount).Render(ctx, w)
 	})
 
 	handleFuncWithError(common, "GET /lua/client/{role}", func(w http.ResponseWriter, r *http.Request) error {
@@ -901,6 +907,30 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		}
 
 		return app.PlayerManager.SendItems([]*crafter.Stack{{ItemID: uid, Count: amount}})
+	})
+
+	handleFuncWithError(common, "POST /items/{itemUid}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		uid := r.PathValue("itemUid")
+
+		err := r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		newUid := r.FormValue("newUid")
+		displayName := r.FormValue("displayName")
+
+		item, err := app.ItemManager.UpdateItem(uid, &item.ItemParams{
+			NewUID:      newUid,
+			DisplayName: displayName,
+		})
+
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/items/%s", item.UID))
+		return nil
 	})
 
 	handleFuncWithError(common, "GET /workers/{$}", func(w http.ResponseWriter, r *http.Request) error {

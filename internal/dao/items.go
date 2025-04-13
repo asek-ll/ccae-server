@@ -55,6 +55,8 @@ func (d *ItemsDao) InsertItems(items []*Item) error {
 		return err
 	}
 
+	defer tx.Rollback()
+
 	stmt, err := tx.Prepare("INSERT OR REPLACE INTO item (uid, id, display_name, nbt, meta, icon) VALUES (?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
@@ -63,6 +65,42 @@ func (d *ItemsDao) InsertItems(items []*Item) error {
 	for _, item := range items {
 		item.UID = common.MakeUid(item.ID, item.NBT)
 		_, err = stmt.Exec(item.UID, item.ID, item.DisplayName, item.NBT, item.Meta, item.Icon)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = tx.Commit()
+
+	return err
+}
+
+func (d *ItemsDao) UpdateItem(uid string, item *Item) error {
+	tx, err := d.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	sqlStmt := `UPDATE item SET uid = ?, id = ?, display_name = ?, nbt = ?, meta = ? WHERE uid = ?`
+	result, err := tx.Exec(sqlStmt, item.UID, item.ID, item.DisplayName, item.NBT, item.Meta, uid)
+
+	if err != nil {
+		return err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+
+	if rowsAffected != 1 {
+		return fmt.Errorf("item with uid '%s' not found", uid)
+	}
+
+	if uid != item.UID {
+		sqlStmt := `UPDATE recipe_items SET item_uid = ? WHERE item_uid = ?`
+		result, err = tx.Exec(sqlStmt, item.UID, uid)
 		if err != nil {
 			return err
 		}

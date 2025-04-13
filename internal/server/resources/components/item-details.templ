@@ -5,14 +5,17 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 )
 
-templ ItemPage(info *storage.RichItemInfo, createUrl string) {
+templ ItemPage(info *storage.RichItemInfo, createUrl string, itemCount int) {
 	@Page(fmt.Sprintf("%s %s", info.Item.DisplayName, info.Item.ID)) {
 		<section>
 			<table>
 				<tr>
 					<td>
 						<a href={ templ.URL(createUrl) }>Craft</a>
+						<br/>
 						@ItemIcon(info.Item)
+						<br/>
+						Current count: { fmt.Sprintf("%d", itemCount) }
 					</td>
 					<td>
 						<form>
@@ -21,6 +24,18 @@ templ ItemPage(info *storage.RichItemInfo, createUrl string) {
 								hx-post={ fmt.Sprintf("/items/%s/sendToPlayer/", info.Item.UID) }
 								hx-include="[name='amount']"
 							>Send To Player</button>
+						</form>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						UID
+					</td>
+					<td>
+						<form hx-post={ fmt.Sprintf("/items/%s/", info.Item.UID) }>
+							<input name="newUid" value={ info.Item.UID }/>
+							<input name="displayName" value={ info.Item.DisplayName }/>
+							<input type="submit" value="Update"/>
 						</form>
 					</td>
 				</tr>

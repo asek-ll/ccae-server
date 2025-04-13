@@ -10,6 +10,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
+	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/modem"
 	"github.com/asek-ll/aecc-server/internal/services/player"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
@@ -59,6 +60,8 @@ func (s *ServerCommand) Execute(args []string) error {
 
 	storageService := storage.NewStorage(daos, storageAdapter)
 	playerManager := player.NewPlayerManager(daos, clientsManager, storageService)
+	itemManager := item.NewItemManager(daos)
+
 	plannerService := crafter.NewPlanner(daos, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)
 	workerFactory := crafter.NewWorkerFactory(storageService, daos)
@@ -98,6 +101,7 @@ func (s *ServerCommand) Execute(args []string) error {
 		StorageAdapter:             storageAdapter,
 		TransferTransactionManager: transferTransationManager,
 		ConfigLoader:               configLoader,
+		ItemManager:                itemManager,
 	}
 
 	mux, err := server.CreateMux(app)
