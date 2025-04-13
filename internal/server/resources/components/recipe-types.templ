@@ -43,13 +43,13 @@ templ RecipeTypesList(types []dao.RecipeType) {
 
 templ RecipeTypeSelector(types []dao.RecipeType, selected string) {
 	<select name="type">
-		<option name="">Shaped Crafting</option>
+		<option value="">Shaped Crafting</option>
 		for _, t := range types {
 			<option
 				if t.Name == selected {
 					selected
 				}
-				name={ t.Name }
+				value={ t.Name }
 			>{ t.Name }</option>
 		}
 	</select>
