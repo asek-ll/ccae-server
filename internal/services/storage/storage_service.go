@@ -37,56 +37,84 @@ type AggregateStacks struct {
 	Count int
 }
 
+type StackGroup struct {
+	Name   string
+	Stacks []AggregateStacks
+}
+
 func (s *Storage) GetItemsCount() (map[string]int, error) {
 	return s.combinedStore.GetItemsCount()
 }
 
-func (s *Storage) GetItems(filter string) ([]AggregateStacks, error) {
+func (s *Storage) GetItems(filter string) ([]StackGroup, error) {
 	log.Println("[INFO] Get items")
-	uniqueItems, err := s.combinedStore.GetItemsCount()
+	groups, err := s.combinedStore.GetItemsGroupsCount()
 	if err != nil {
 		return nil, err
 	}
 
-	uids := common.MapKeys(uniqueItems)
+	var uids []string
+	visitedUids := make(map[string]struct{})
+	for _, group := range groups {
+		for key := range group.Counts {
+			if _, e := visitedUids[key]; e {
+				continue
+			}
+			uids = append(uids, key)
+			visitedUids[key] = struct{}{}
+		}
+	}
 
 	items, err := s.daoProvider.Items.FindItemsByUids(uids)
 	if err != nil {
 		return nil, err
 	}
-
-	var stacks []AggregateStacks
+	itemsByUid := make(map[string]dao.Item)
+	for _, item := range items {
+		itemsByUid[item.UID] = item
+	}
 
 	filter = strings.ToLower(filter)
 
-	for _, item := range items {
-		if len(filter) == 0 || strings.Contains(strings.ToLower(item.DisplayName), filter) {
-			stacks = append(stacks, AggregateStacks{
-				Item:  item,
-				Count: uniqueItems[item.UID],
+	var resultGroups []StackGroup
+
+	for _, group := range groups {
+		var stacks []AggregateStacks
+		for uid, count := range group.Counts {
+			item := itemsByUid[uid]
+			if len(filter) == 0 || strings.Contains(strings.ToLower(item.DisplayName), filter) {
+				stacks = append(stacks, AggregateStacks{
+					Item:  item,
+					Count: count,
+				})
+			}
+		}
+		sort.Slice(stacks, func(a, b int) bool {
+			sa := stacks[a]
+			sb := stacks[b]
+
+			aisf := common.IsFluid(sa.Item.UID)
+			bisf := common.IsFluid(sb.Item.UID)
+
+			if aisf != bisf {
+				return aisf
+			}
+
+			if sa.Count == sb.Count {
+				return sa.Item.DisplayName < sb.Item.DisplayName
+			}
+
+			return stacks[a].Count > stacks[b].Count
+		})
+		if len(stacks) > 0 {
+			resultGroups = append(resultGroups, StackGroup{
+				Name:   group.Name,
+				Stacks: stacks,
 			})
 		}
 	}
 
-	sort.Slice(stacks, func(a, b int) bool {
-		sa := stacks[a]
-		sb := stacks[b]
-
-		aisf := common.IsFluid(sa.Item.UID)
-		bisf := common.IsFluid(sb.Item.UID)
-
-		if aisf != bisf {
-			return aisf
-		}
-
-		if sa.Count == sb.Count {
-			return sa.Item.DisplayName < sb.Item.DisplayName
-		}
-
-		return stacks[a].Count > stacks[b].Count
-	})
-
-	return stacks, nil
+	return resultGroups, nil
 }
 
 type RichItemInfo struct {

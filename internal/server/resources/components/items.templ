@@ -2,25 +2,28 @@ package components
 
 import "github.com/asek-ll/aecc-server/internal/services/storage"
 
-templ ItemsInventory(stacks []storage.AggregateStacks, width int) {
-	<section>
-		<table>
-			for _, row := range ToTable(stacks, width) {
-				<tr>
-					for i := 0; i < width; i++ {
-						<td>
-							if i < len(row) {
-								@ItemWithAmount(&row[i].Item, row[i].Count)
-							}
-						</td>
-					}
-				</tr>
-			}
-		</table>
-	</section>
+templ ItemsInventory(groups []storage.StackGroup, width int) {
+	for _, group := range groups {
+		<section>
+			<h2>{ group.Name }</h2>
+			<table>
+				for _, row := range ToTable(group.Stacks, width) {
+					<tr>
+						for i := 0; i < width; i++ {
+							<td>
+								if i < len(row) {
+									@ItemWithAmount(&row[i].Item, row[i].Count)
+								}
+							</td>
+						}
+					</tr>
+				}
+			</table>
+		</section>
+	}
 }
 
-templ ItemsInventoryPage(filter string, stacks []storage.AggregateStacks) {
+templ ItemsInventoryPage(filter string, stacks []storage.StackGroup) {
 	@Page("Items") {
 		@ItemsInventoryFilter(filter)
 		<div id="items-result">

@@ -145,3 +145,47 @@ func (s *CombinedStore) GetItemsCount() (map[string]int, error) {
 
 	return count, nil
 }
+
+type ItemGroup struct {
+	Name   string
+	Counts map[string]int
+}
+
+func (s *CombinedStore) GetItemsGroupsCount() ([]ItemGroup, error) {
+	var result []ItemGroup
+	count, err := s.coldStorage.GetItemsCount()
+	if err != nil {
+		return nil, err
+	}
+
+	result = append(result, ItemGroup{
+		Name:   "Cold Storage",
+		Counts: count,
+	})
+
+	warmCount, err := s.warmStorage.GetItemsCount()
+	if err != nil {
+		return nil, err
+	}
+
+	result = append(result, ItemGroup{
+		Name:   "Warm Storage",
+		Counts: warmCount,
+	})
+
+	fluidsCount, err := s.fluidStorage.GetFluidsAmount()
+	if err != nil {
+		return nil, err
+	}
+
+	fixedFluids := make(map[string]int)
+	for k, v := range fluidsCount {
+		fixedFluids["fluid:"+k] = v
+	}
+	result = append(result, ItemGroup{
+		Name:   "Fluid Storage",
+		Counts: fixedFluids,
+	})
+
+	return result, nil
+}
