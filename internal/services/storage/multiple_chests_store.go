@@ -201,3 +201,10 @@ func (s *MultipleChestsStore) GetItemsCount() (map[string]int, error) {
 
 	return common.CopyMap(s.itemStats), nil
 }
+
+func (s *MultipleChestsStore) GetStacks() (IndexedInventory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return common.CopyMap(s.stacksByUID), nil
+}

@@ -117,6 +117,10 @@ func (s *Storage) GetItems(filter string) ([]StackGroup, error) {
 	return resultGroups, nil
 }
 
+func (s *Storage) Optimize() error {
+	return s.combinedStore.Optimize()
+}
+
 type RichItemInfo struct {
 	Item            *dao.Item
 	Recipes         []*dao.Recipe

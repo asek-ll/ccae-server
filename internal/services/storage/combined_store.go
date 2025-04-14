@@ -151,6 +151,30 @@ type ItemGroup struct {
 	Counts map[string]int
 }
 
+func (s *CombinedStore) Optimize() error {
+	coldStacks, err := s.coldStorage.GetStacks()
+	if err != nil {
+		return err
+	}
+	warmStacks, err := s.warmStorage.GetStacks()
+	if err != nil {
+		return err
+	}
+
+	for uid, stacks := range warmStacks {
+		if _, e := coldStacks[uid]; e {
+			for slot, count := range stacks {
+				_, err := s.coldStorage.ImportStack(uid, slot.Inventory, slot.Slot, count)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return s.sync()
+}
+
 func (s *CombinedStore) GetItemsGroupsCount() ([]ItemGroup, error) {
 	var result []ItemGroup
 	count, err := s.coldStorage.GetItemsCount()

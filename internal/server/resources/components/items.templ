@@ -25,6 +25,7 @@ templ ItemsInventory(groups []storage.StackGroup, width int) {
 
 templ ItemsInventoryPage(filter string, stacks []storage.StackGroup) {
 	@Page("Items") {
+        <button hx-post="/storageItems/optimize/">Optimize</button>
 		@ItemsInventoryFilter(filter)
 		<div id="items-result">
 			@ItemsInventory(stacks, 9)

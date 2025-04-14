@@ -148,6 +148,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.ItemsInventoryPage(filter, items).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(common, "POST /storageItems/optimize/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		err := app.Storage.Optimize()
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/storageItems/"))
+		return nil
+	})
+
 	handleFuncWithError(common, "GET /items/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		view := r.URL.Query().Get("view")

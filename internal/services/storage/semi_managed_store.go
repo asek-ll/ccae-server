@@ -88,3 +88,10 @@ func (s *SemiManagedStore) GetItemsCount() (map[string]int, error) {
 
 	return common.CopyMap(s.itemStats), nil
 }
+
+func (s *SemiManagedStore) GetStacks() (IndexedInventory, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return common.CopyMap(s.StacksByUID), nil
+}
