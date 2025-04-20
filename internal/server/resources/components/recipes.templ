@@ -17,6 +17,13 @@ templ RecipesPage(filter string, recipes []*dao.Recipe) {
 
 templ RecipesGrid(recipe *dao.Recipe) {
 	<div class="recipe">
+        if len(recipe.Catalysts) > 0 {
+			<div class="recipe-row" style="display: flex">
+                for _, ing := range recipe.Catalysts {
+                    @ItemStack(ing.ItemUID, ing.Amount)
+                }
+			</div>
+        }
 		for _, row := range FormatIngredients(recipe) {
 			<div class="recipe-row" style="display: flex">
 				for _, item := range row {

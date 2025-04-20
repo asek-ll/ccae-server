@@ -825,6 +825,12 @@ func CreateMux(app *app.App) (http.Handler, error) {
 				Count:  ing.Amount,
 			})
 		}
+		for _, ing := range recipe.Catalysts {
+			stacks = append(stacks, &crafter.Stack{
+				ItemID: ing.ItemUID,
+				Count:  ing.Amount,
+			})
+		}
 		err = app.PlayerManager.SendItems(stacks)
 		if err != nil {
 			return err
