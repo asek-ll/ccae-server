@@ -3,6 +3,7 @@ package worker
 import (
 	"fmt"
 	"log"
+	"slices"
 
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/config"
@@ -36,53 +37,70 @@ func isMatch[T comparable](values []T, value T) bool {
 	if len(values) == 0 {
 		return true
 	}
-	for _, v := range values {
-		if v == value {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, value)
 }
 
-func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterConfig) error {
+func (w *ProcessingCrafterWorker) getItemsToPull(config config.ProcessCrafterConfig) ([]wsmethods.StackWithSlot, error) {
 	if config.ResultInventory == "" {
-		return nil
+		return nil, nil
 	}
 	items, err := w.storageAdapter.ListItems(config.ResultInventory)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+	var result []wsmethods.StackWithSlot
 	for _, item := range items {
 		uid := item.Item.GetUID()
 		if isMatch(config.ResultInventorySlots, item.Slot) && isMatch(config.ResultItems, uid) {
-			_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
-			if err != nil {
-				return err
-			}
+			result = append(result, item)
+		}
+	}
+
+	return result, nil
+}
+
+func (w *ProcessingCrafterWorker) pullItemsResults(config config.ProcessCrafterConfig, items []wsmethods.StackWithSlot) error {
+	for _, item := range items {
+		uid := item.Item.GetUID()
+		_, err := w.storage.ImportStack(uid, config.ResultInventory, item.Slot, item.Item.Count)
+		if err != nil {
+			return err
 		}
 	}
 
 	return nil
 }
 
-func (w *ProcessingCrafterWorker) pullFluidResults(config config.ProcessCrafterConfig) error {
+func (w *ProcessingCrafterWorker) getFluidsToPull(config config.ProcessCrafterConfig) ([]wsmethods.FluidTank, error) {
 	if config.ResultTank == "" {
-		return nil
+		return nil, nil
 	}
 	fluids, err := w.storageAdapter.GetTanks(config.ResultTank)
 
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	var result []wsmethods.FluidTank
 	for _, fluid := range fluids {
 		uid := fluid.Fluid.Name
 
 		if isMatch(config.ResultFluids, uid) {
-			_, err := w.storage.ImportFluid(uid, config.ResultTank, fluid.Fluid.Amount)
-			if err != nil {
-				return err
-			}
+			result = append(result, fluid)
+		}
+	}
+
+	return result, nil
+}
+
+func (w *ProcessingCrafterWorker) pullFluidResults(config config.ProcessCrafterConfig, fluids []wsmethods.FluidTank) error {
+	for _, fluid := range fluids {
+		uid := fluid.Fluid.Name
+
+		_, err := w.storage.ImportFluid(uid, config.ResultTank, fluid.Fluid.Amount)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -149,20 +167,52 @@ func (w *ProcessingCrafterWorker) canProcess(config config.ProcessCrafterConfig,
 
 func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 
-	checkNext := true
-
 	var err error
 
-	err = w.pullItemsResults(config)
+	waitCraftID, err := w.daos.WorkerState.GetWaitCraftID(config.WorkerKey)
+	if err != nil {
+		return err
+	}
+
+	itemsToPull, err := w.getItemsToPull(config)
+	if err != nil {
+		log.Printf("[WARN] %s Error on get pull items: %v", config.CraftType, err)
+		return err
+	}
+
+	tanksToPull, err := w.getFluidsToPull(config)
+	if err != nil {
+		log.Printf("[WARN] %s Error on get pull tanks: %v", config.CraftType, err)
+		return err
+	}
+	if waitCraftID != nil {
+		if len(itemsToPull) > 0 || len(tanksToPull) > 0 {
+			craft, err := w.daos.Crafts.FindById(*waitCraftID)
+			if err != nil {
+				return err
+			}
+			err = w.daos.WorkerState.CompleteWorkerWait(config.WorkerKey, craft)
+			if err != nil {
+				return err
+			}
+		} else if config.WaitResults {
+			return nil
+		}
+	}
+
+	err = w.pullItemsResults(config, itemsToPull)
 	if err != nil {
 		log.Printf("[WARN] %s Error on pull items: %v", config.CraftType, err)
+		return err
 	}
 
-	err = w.pullFluidResults(config)
+	err = w.pullFluidResults(config, tanksToPull)
 	if err != nil {
 		log.Printf("[WARN] %s Error on pull fluids: %v", config.CraftType, err)
+		return err
 	}
 
+	checkNext := true
 	for checkNext {
 		checkNext = false
 		crafts, err := w.daos.Crafts.FindNextByTypes([]string{config.CraftType}, "unknown")
@@ -249,12 +299,16 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 
 			defer tx.Rollback()
 
-			err = w.daos.Crafts.CommitCraftInOuterTx(tx.DBTx, craft, recipe, 1)
+			err = dao.CommitCraftInOuterTx(tx.DBTx, craft, recipe, 1)
 			if err != nil {
 				return err
 			}
 
-			err = w.daos.Crafts.CompleteCraftInOuterTx(tx.DBTx, craft)
+			if config.WaitResults {
+				err = dao.SetWorkerWaitCraftInOuterTx(tx.DBTx, config.WorkerKey, craft)
+			} else {
+				err = dao.CompleteCraftInOuterTx(tx.DBTx, craft)
+			}
 
 			if err != nil {
 				return err

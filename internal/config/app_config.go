@@ -22,11 +22,13 @@ type CraftersConfig struct {
 }
 
 type ProcessCrafterConfig struct {
+	WorkerKey      string `json:"workerKey"`
 	CraftType      string `json:"craftType"`
 	InputInventory string `json:"inputInventory"`
 	InputTank      string `json:"inputTank"`
 	ReagentMode    string `json:"reagentMode"`
 	Enabled        bool   `json:"enabled"`
+	WaitResults    bool   `json:"waitResult"`
 
 	ResultItems          []string `json:"resultItems"`
 	ResultInventory      string   `json:"resultInventory"`

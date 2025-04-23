@@ -156,31 +156,6 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 		}
 	}
 
-	for _, cat := range recipe.Catalysts {
-		amount := cat.Amount
-		res, err := tx.Exec(`
-		UPDATE plan_item_state
-		SET
-			amount = amount - ?,
-			required_amount = required_amount - ?
-		WHERE
-			item_uid = ? AND plan_id = ? AND amount >= ?`,
-			amount, amount, cat.ItemUID, planId, amount)
-		log.Printf("[INFO] Call query with amount: %v, uid: %v, planId: %v", amount, cat.ItemUID, planId)
-		if err != nil {
-			log.Printf("[ERROR] Plan item step: %v", err)
-			return err
-		}
-		afftected, err := res.RowsAffected()
-		if err != nil {
-			log.Printf("[ERROR] Affected rows: %v", err)
-			return err
-		}
-		if afftected == 0 {
-			return errors.New("can't acquire catalysts")
-		}
-	}
-
 	log.Printf("[INFO] Commit transaction INSERT")
 	err = tx.Commit()
 	if err != nil {
@@ -191,7 +166,7 @@ func (d *CraftsDao) InsertCraft(planId int, recipeType string, recipe *Recipe, r
 	return nil
 }
 
-func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recipe, repeats int) error {
+func CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recipe, repeats int) error {
 	res, err := tx.Exec(`
 	UPDATE craft
 	SET
@@ -220,13 +195,6 @@ func (d *CraftsDao) CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recip
 		}
 	}
 
-	for _, catalyst := range recipe.Catalysts {
-		err = ReleaseItems(tx, catalyst.ItemUID, catalyst.Amount)
-		if err != nil {
-			return err
-		}
-	}
-
 	craft.CommitRepeats = repeats
 
 	return nil
@@ -239,7 +207,7 @@ func (d *CraftsDao) CommitCraft(craft *Craft, recipe *Recipe, repeats int) error
 	}
 	defer tx.Rollback()
 
-	err = d.CommitCraftInOuterTx(tx, craft, recipe, repeats)
+	err = CommitCraftInOuterTx(tx, craft, recipe, repeats)
 	if err != nil {
 		return err
 	}
@@ -301,7 +269,7 @@ func (d *CraftsDao) FindCurrent(workerId string) (*Craft, error) {
 	return crafts[0], nil
 }
 
-func (d *CraftsDao) CompleteCraftInOuterTx(tx *sql.Tx, craft *Craft) error {
+func CompleteCraftInOuterTx(tx *sql.Tx, craft *Craft) error {
 	row := tx.QueryRow(`UPDATE craft SET
 	repeats = repeats - commit_repeats,
 	commit_repeats = 0,
@@ -341,7 +309,7 @@ func (d *CraftsDao) CompleteCraft(craft *Craft) error {
 
 	defer tx.Rollback()
 
-	err = d.CompleteCraftInOuterTx(tx, craft)
+	err = CompleteCraftInOuterTx(tx, craft)
 	if err != nil {
 		return err
 	}

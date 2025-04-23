@@ -59,11 +59,13 @@ func (w *WorkerManager) getRunner(worker *dao.Worker) func() error {
 	case dao.WORKER_TYPE_PROCESSING_CRAFTER:
 		cfg := worker.Config.ProcessingCrafter
 		workerConfig := config.ProcessCrafterConfig{
+			WorkerKey:      worker.Key,
 			CraftType:      cfg.CraftType,
 			InputInventory: cfg.InputInventory,
 			InputTank:      cfg.InputTank,
 			ReagentMode:    cfg.ReagentMode,
 			Enabled:        true,
+			WaitResults:    cfg.WaitResults && worker.Key != "",
 
 			ResultItems:          cfg.ResultItems,
 			ResultInventory:      cfg.ResultInventory,
