@@ -5,6 +5,7 @@ import (
 
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/modem"
@@ -31,4 +32,5 @@ type App struct {
 	TransferTransactionManager *storage.TransferTransactionManager
 	ConfigLoader               *config.ConfigLoader
 	ItemManager                *item.ItemManager
+	ScriptsManager             *clientscripts.ScriptsManager
 }

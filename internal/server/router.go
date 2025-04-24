@@ -1065,6 +1065,69 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.PeripheralsPage(peripherals).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(common, "GET /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		scripts, err := app.ScriptsManager.GetScripts()
+		if err != nil {
+			return err
+		}
+		return components.ClientsScriptsPage(scripts).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+		return components.ClientScriptPage(script).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "POST /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		role := r.PostForm.Get("role")
+		err = app.ScriptsManager.CreateScript(role)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/clients-scripts/%s/", role))
+		return nil
+	})
+
+	handleFuncWithError(common, "POST /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		newRole := r.PostForm.Get("role")
+		content := r.PostForm.Get("content")
+
+		err = app.ScriptsManager.UpdateScript(role, newRole, content)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/clients-scripts/%s/", newRole))
+		return nil
+	})
+
+	handleFuncWithError(common, "DELETE /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+		err := app.ScriptsManager.DeleteScript(role)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", "/clients-scripts/")
+		return nil
+	})
+
 	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

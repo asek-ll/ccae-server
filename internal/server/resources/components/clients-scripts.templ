@@ -1,0 +1,48 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ ClientsScriptsPage(scripts []*dao.ClientsScript) {
+	@Page("Scripts") {
+		<form hx-post="/clients-scripts/">
+			<input type="text" name="role" placeholder="Role"/>
+			<button type="submit">Add</button>
+		</form>
+		<section>
+			<table>
+				for _, script := range scripts {
+					<tr>
+						<td>
+							<a href={ templ.URL(fmt.Sprintf("/clients-scripts/%s/", script.Role)) }>
+								{ script.Role }
+							</a>
+						</td>
+						<td>
+							<button hx-delete={ fmt.Sprintf("/clients-scripts/%s/", script.Role) }>
+								Delete
+							</button>
+						</td>
+					</tr>
+				}
+			</table>
+		</section>
+	}
+}
+
+templ ClientScriptPage(script *dao.ClientsScript) {
+	@Page(fmt.Sprintf("Scripts - %s", script.Role)) {
+		<form hx-post={ fmt.Sprintf("/clients-scripts/%s/", script.Role) }>
+			<input type="text" name="role" placeholder="Role" value={ script.Role }/>
+			<label>
+				Content
+				<textarea name="content" rows="16" style="font-family: monospace;" spellcheck="false">
+					{ script.Content }
+				</textarea>
+			</label>
+			<button type="submit">Save</button>
+		</form>
+	}
+}
