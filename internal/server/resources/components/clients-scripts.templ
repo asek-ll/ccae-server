@@ -33,43 +33,28 @@ templ ClientsScriptsPage(scripts []*dao.ClientsScript) {
 }
 
 script initMonaco(content string) {
-	window.onload = function() {
-     	var editor = monaco.editor.create(document.getElementById('container'), {
-      		value: content,
-      		language: 'lua',
-            fontSize: 24,
-            wordWrap: 'on',
-            minimap: {
-              enabled: false
-            },
-            scrollbar: {
-              vertical: 'auto'
-            },
-     	});
-
-      const form = document.getElementById("script-edit");
-              form.addEventListener("formdata", e =>
-              {
-                console.log("Event formdata", editor.getModel().getValue())
-                  e.formData.append('content', editor.getModel().getValue());
-              });
-
-  	};
+    window.onload = function() {
+        const frame = document.getElementById('monacoFrame');
+        frame.contentWindow.setEditorValue(content);
+    };
+    document.body.addEventListener('htmx:configRequest', function (event) {
+        const frame = document.getElementById('monacoFrame');
+        const result = frame.contentWindow.getEditorValue();
+        console.log("Event formdata", result)
+        if (result !== undefined) {
+            event.detail.parameters.content = result;
+        }
+    });
 }
 
 templ ClientScriptPage(script *dao.ClientsScript) {
 	@Page(fmt.Sprintf("Scripts - %s", script.Role)) {
-		<form id="script-edit" hx-post={ fmt.Sprintf("/clients-scripts/%s/", script.Role) }>
+		<form hx-post={ fmt.Sprintf("/clients-scripts/%s/", script.Role) } hx-swap="none">
 			<input type="text" name="role" placeholder="Role" value={ script.Role }/>
 			<label>
 				Content
 			</label>
-			<div id="container" style="width: 800px; height: 600px; border: 1px solid grey"></div>
-			<script>
-				var require = { paths: { vs: '/static/monaco' } };
-			</script>
-			// <script src="/static/monaco/loader.js"></script>
-			<script src="/static/monaco/editor/editor.main.js"></script>
+			<iframe id="monacoFrame" src="/static/monaco/lua-editor.html" style="width:100%; height:400px;"></iframe>
 			@initMonaco(script.Content)
 			<button type="submit">Save</button>
 		</form>

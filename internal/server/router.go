@@ -1113,7 +1113,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 
-		w.Header().Add("HX-Location", fmt.Sprintf("/clients-scripts/%s/", newRole))
+		w.Header().Add("HX-Replace-Url", fmt.Sprintf("/clients-scripts/%s/", newRole))
 		return nil
 	})
 

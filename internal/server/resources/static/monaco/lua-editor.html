@@ -1,0 +1,59 @@
+<!doctype html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Monaco Iframe</title>
+        <style>
+            html,
+            body,
+            #container {
+                margin: 0;
+                height: 100%;
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="container"></div>
+        <div id="status"></div>
+        <script>
+            var require = {
+                paths: {
+                    vs: "/static/monaco/vs",
+                    "monaco-vim": "/static/monaco/vim/monaco-vim",
+                },
+            };
+        </script>
+        <script src="/static/monaco/loader.js"></script>
+        <script src="/static/monaco/vs/editor/editor.main.js"></script>
+        <script src="/static/monaco/vim/monaco-vim.js"></script>
+        <script>
+            require(["vs/editor/editor.main", "monaco-vim"], function (
+                monaco,
+                MonacoVim,
+            ) {
+                var editor = monaco.editor.create(
+                    document.getElementById("container"),
+                    {
+                        value: "",
+                        language: "lua",
+                        fontSize: 20,
+                        wordWrap: "on",
+                        minimap: {
+                            enabled: false,
+                        },
+                        scrollbar: {
+                            vertical: "auto",
+                        },
+                        autoIndent: true,
+                    },
+                );
+                var statusNode = document.getElementById("status");
+                var vimMode = MonacoVim.initVimMode(editor, statusNode);
+
+                window.getEditorValue = () => editor.getValue();
+                window.setEditorValue = (text) => editor.setValue(text);
+            });
+        </script>
+    </body>
+</html>
