@@ -32,16 +32,45 @@ templ ClientsScriptsPage(scripts []*dao.ClientsScript) {
 	}
 }
 
+script initMonaco(content string) {
+	window.onload = function() {
+     	var editor = monaco.editor.create(document.getElementById('container'), {
+      		value: content,
+      		language: 'lua',
+            fontSize: 24,
+            wordWrap: 'on',
+            minimap: {
+              enabled: false
+            },
+            scrollbar: {
+              vertical: 'auto'
+            },
+     	});
+
+      const form = document.getElementById("script-edit");
+              form.addEventListener("formdata", e =>
+              {
+                console.log("Event formdata", editor.getModel().getValue())
+                  e.formData.append('content', editor.getModel().getValue());
+              });
+
+  	};
+}
+
 templ ClientScriptPage(script *dao.ClientsScript) {
 	@Page(fmt.Sprintf("Scripts - %s", script.Role)) {
-		<form hx-post={ fmt.Sprintf("/clients-scripts/%s/", script.Role) }>
+		<form id="script-edit" hx-post={ fmt.Sprintf("/clients-scripts/%s/", script.Role) }>
 			<input type="text" name="role" placeholder="Role" value={ script.Role }/>
 			<label>
 				Content
-				<textarea name="content" rows="16" style="font-family: monospace;" spellcheck="false">
-					{ script.Content }
-				</textarea>
 			</label>
+			<div id="container" style="width: 800px; height: 600px; border: 1px solid grey"></div>
+			<script>
+				var require = { paths: { vs: '/static/monaco' } };
+			</script>
+			// <script src="/static/monaco/loader.js"></script>
+			<script src="/static/monaco/editor/editor.main.js"></script>
+			@initMonaco(script.Content)
 			<button type="submit">Save</button>
 		</form>
 	}
