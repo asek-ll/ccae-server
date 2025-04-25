@@ -1083,6 +1083,30 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.ClientScriptPage(script).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(common, "GET /clients-scripts/{role}/version/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintf(w, "%d", script.Version)
+		return err
+	})
+
+	handleFuncWithError(common, "GET /clients-scripts/{role}/content/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintf(w, script.Content)
+		return err
+	})
+
 	handleFuncWithError(common, "POST /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		err = r.ParseForm()
 		if err != nil {
