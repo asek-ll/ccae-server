@@ -1,3 +1,5 @@
+LD_FLAGS=-ldflags="-X github.com/asek-ll/aecc-server/internal/app.BuildTime=$(shell date '+%Y-%m-%dT%H:%M:%S')"
+
 
 .PHONY: run
 run: build
@@ -6,7 +8,7 @@ run: build
 
 .PHONY: build
 build: target templ
-	go build -o target/aecc-server cmd/main.go 
+	go build -o target/aecc-server  $(LD_FLAGS) cmd/main.go
 
 .PHONY: templ
 templ: 
@@ -20,11 +22,11 @@ target:
 
 .PHONY: build-amd64
 build-amd64: target
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -o target/aecc-server-amd64 cmd/main.go 
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -o target/aecc-server-amd64 $(LD_FLAGS) cmd/main.go 
 
 .PHONY: build-arm64
 build-arm64: target
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -o target/aecc-server-arm64 cmd/main.go
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -o target/aecc-server-arm64 $(LD_FLAGS) cmd/main.go
 
 target/ccemux: target
 	mkdir -p target/ccemux

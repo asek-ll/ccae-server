@@ -16,6 +16,8 @@ import (
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
+var BuildTime string
+
 type App struct {
 	Daos                       *dao.DaoProvider
 	Storage                    *storage.Storage
