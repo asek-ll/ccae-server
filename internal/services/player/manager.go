@@ -77,9 +77,9 @@ func (s *PlayerManager) RemoveItem(slot int) (int, error) {
 		return 0, err
 	}
 
-	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	bufferName, ok := playerClient.GetGenericClient().Props["buffer_name"].(string)
 	if !ok {
-		return 0, fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+		return 0, fmt.Errorf("invalid buffer_name: %v", playerClient.GetGenericClient().Props["buffer_name"])
 	}
 
 	log.Printf("[INFO] Drop items to buffer: '%s'", bufferName)
@@ -103,9 +103,9 @@ func (s *PlayerManager) RemoveItems(slots []int) error {
 		return err
 	}
 
-	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	bufferName, ok := playerClient.GetGenericClient().Props["buffer_name"].(string)
 	if !ok {
-		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetGenericClient().Props["buffer_name"])
 	}
 
 	log.Printf("[INFO] Drop items to buffer: '%s'", bufferName)
@@ -119,9 +119,9 @@ func (s *PlayerManager) SendItems(items []*crafter.Stack) error {
 		return err
 	}
 
-	bufferName, ok := playerClient.GetProps()["buffer_name"].(string)
+	bufferName, ok := playerClient.GetGenericClient().Props["buffer_name"].(string)
 	if !ok {
-		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetProps()["buffer_name"])
+		return fmt.Errorf("invalid buffer_name: %v", playerClient.GetGenericClient().Props["buffer_name"])
 	}
 	log.Printf("[INFO] Send items to buffer: '%s'", bufferName)
 

@@ -69,13 +69,14 @@ local function initLogic(wsClient)
     local m = loadfile 'init.lua'
     if m then
         local suc, logic = pcall(m)
-        if suc then
-            suc = pcall(logic.setup, methods, eventHandlers, wsClient)
+        if suc and logic['setup'] ~= nil then
+            suc = pcall(logic['setup'], methods, eventHandlers, wsClient)
             if not suc then
                 print 'init failed'
             end
         end
     end
+    return {}
 end
 
 local function listen(url, loginParams)
@@ -85,14 +86,19 @@ local function listen(url, loginParams)
 
     initLogic(wsClient)
 
-    methods['init'] = function(fileUrl)
-        download(fileUrl, 'init.lua')
-        initLogic(wsClient)
+    methods['init'] = function(content)
+        print 'init'
+        -- download(fileUrl, 'init.lua')
+        f = fs.open('init.lua', 'w')
+        f.write(content)
+        f.close()
+        return initLogic(wsClient)
     end
 
     methods['upgrade'] = function(fileUrl)
+        print('upgrade: ' .. fileUrl)
         download(fileUrl, 'startup')
-        os.reboot()
+        return {}
     end
 
     while true do
@@ -112,16 +118,19 @@ local function listen(url, loginParams)
                 else
                     wsClient:sendError(data['id'], -1, result)
                 end
+                if method == 'upgrade' then
+                    os.reboot()
+                end
             end
         elseif event == 'websocket_success' and eventData[2] == url then
-            wsClient.setWS(eventData[3])
-            wsClient:sendMethod('login', loginParams)
+            wsClient:setWS(eventData[3])
+            wsClient:sendMethod('login.v2', loginParams)
         elseif event == 'websocket_failure' and eventData[2] == url then
-            wsClient.setWS(nil)
+            wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)
         elseif event == 'websocket_closed' and eventData[2] == url then
-            wsClient.setWS(nil)
+            wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)
         elseif eventHandlers[event] ~= nil then
@@ -131,11 +140,12 @@ local function listen(url, loginParams)
     end
 end
 
-local function run(server, version)
+local function run(server, version, role)
     while true do
         local status, err = pcall(listen, server, {
             version = version,
             id = os.computerID(),
+            role = role,
         })
         if not status then
             print('Got error' .. err)
@@ -144,4 +154,4 @@ local function run(server, version)
     end
 end
 
-run('{{ .wsUrl }}', '{{ .version }}')
+run('{{ .wsUrl }}', '{{ .version }}', '{{ .role }}')

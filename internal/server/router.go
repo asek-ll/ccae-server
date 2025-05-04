@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/build"
 	cmn "github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
@@ -260,6 +261,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			"role":  role,
 			"wsUrl": app.ConfigLoader.Config.ClientServer.Url,
 			"id":    id,
+		})
+	})
+
+	anon.HandleFunc("GET /lua/v2/client/{role}/", func(w http.ResponseWriter, r *http.Request) {
+		role := r.PathValue("role")
+
+		tmpls.Render("client.lua", []string{"clientV3.lua.tmpl"}, w, map[string]any{
+			"wsUrl":   app.ConfigLoader.Config.ClientServer.Url,
+			"version": build.Time,
+			"role":    role,
 		})
 	})
 

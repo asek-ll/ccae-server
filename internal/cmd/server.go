@@ -56,13 +56,14 @@ func (s *ServerCommand) Execute(args []string) error {
 	wsServer := ws.NewServer(configLoader.Config.ClientServer.ListenAddr, 128, 1, time.Millisecond*1000)
 	rpcServer := wsrpc.NewServer(wsServer)
 
-	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader)
+	scriptsmanager := clientscripts.NewScriptsManager(daos)
+
+	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader, scriptsmanager)
 	storageAdapter := wsmethods.NewStorageAdapter(clientsManager)
 
 	storageService := storage.NewStorage(daos, storageAdapter)
 	playerManager := player.NewPlayerManager(daos, clientsManager, storageService)
 	itemManager := item.NewItemManager(daos)
-	scriptsmanager := clientscripts.NewScriptsManager(daos)
 
 	plannerService := crafter.NewPlanner(daos, storageService)
 	recipeManager := recipe.NewRecipeManager(daos)

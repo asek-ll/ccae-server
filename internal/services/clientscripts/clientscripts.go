@@ -2,16 +2,24 @@ package clientscripts
 
 import (
 	"github.com/asek-ll/aecc-server/internal/dao"
+	// "github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
+type OnUpdate func(role string, content string) error
+
 type ScriptsManager struct {
-	daos *dao.DaoProvider
+	daos     *dao.DaoProvider
+	onUpdate OnUpdate
 }
 
 func NewScriptsManager(daos *dao.DaoProvider) *ScriptsManager {
 	return &ScriptsManager{
 		daos: daos,
 	}
+}
+
+func (m *ScriptsManager) SetOnUpdate(f OnUpdate) {
+	m.onUpdate = f
 }
 
 func (m *ScriptsManager) CreateScript(role string) error {
@@ -27,6 +35,18 @@ func (m *ScriptsManager) UpdateScript(role string, newRole string, content strin
 		Role:    newRole,
 		Content: content,
 	})
+
+	if err != nil {
+		return err
+	}
+
+	if m.onUpdate != nil {
+		err = m.onUpdate(newRole, content)
+		if err != nil {
+			return err
+		}
+	}
+
 	return err
 }
 

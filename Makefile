@@ -1,4 +1,4 @@
-LD_FLAGS=-ldflags="-X github.com/asek-ll/aecc-server/internal/app.BuildTime=$(shell date '+%Y-%m-%dT%H:%M:%S')"
+LD_FLAGS=-ldflags="-X github.com/asek-ll/aecc-server/internal/build.Time=$(shell date '+%Y-%m-%dT%H:%M:%S')"
 
 
 .PHONY: run
@@ -38,7 +38,7 @@ target/ccemux.jar: target/ccemux/ccemux.json
 	curl https://github.com/asek-ll/ccemux-fork/releases/download/v0.0.2/CCEmuX-1.1.1-1.110.3-cct.jar  -o target/ccemux.jar -L
 
 target/ccemux-plugin.jar: target/ccemux/ccemux.json
-	curl https://github.com/asek-ll/ccemux-testnet-plugin/releases/download/v0.0.6/ccemux-testnet-plugin-1.0-SNAPSHOT.jar -o target/ccemux-plugin.jar -L
+	curl https://github.com/asek-ll/ccemux-testnet-plugin/releases/download/v0.0.7/ccemux-testnet-plugin-1.0-SNAPSHOT.jar -o target/ccemux-plugin.jar -L
 
 .PHONY: ccemux
 ccemux: target/ccemux.jar target/ccemux/ccemux.json target/ccemux-plugin.jar

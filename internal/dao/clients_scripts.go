@@ -55,13 +55,21 @@ func (d *ClientsScriptsDao) GetClientsScripts() ([]*ClientsScript, error) {
 }
 
 func (d *ClientsScriptsDao) GetClientScript(role string) (*ClientsScript, error) {
-	var script ClientsScript
-	err := d.db.QueryRow("SELECT content, version FROM clients_scripts WHERE role = ?", role).Scan(&script.Content, &script.Version)
+	rows, err := d.db.Query("SELECT role, content, version FROM clients_scripts WHERE role = ?", role)
 	if err != nil {
 		return nil, err
 	}
-	script.Role = role
-	return &script, nil
+	defer rows.Close()
+
+	for rows.Next() {
+		var script ClientsScript
+		if err := rows.Scan(&script.Role, &script.Content, &script.Version); err != nil {
+			return nil, err
+		}
+		return &script, nil
+	}
+
+	return nil, nil
 }
 
 func (d *ClientsScriptsDao) CreateClientScript(script *ClientsScript) error {
