@@ -1106,16 +1106,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return err
 	})
 
-	handleFuncWithError(common, "GET /clients-scripts/{role}/content/{$}", func(w http.ResponseWriter, r *http.Request) error {
+	anon.HandleFunc("GET /clients-scripts/{role}/content/{$}", func(w http.ResponseWriter, r *http.Request) {
 		role := r.PathValue("role")
 
 		script, err := app.ScriptsManager.GetScript(role)
-		if err != nil {
-			return err
+		var content string
+		if err == nil {
+			content = script.Content
 		}
 
-		_, err = fmt.Fprintf(w, script.Content)
-		return err
+		fmt.Fprintf(w, content)
 	})
 
 	handleFuncWithError(common, "POST /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {

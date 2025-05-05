@@ -1,10 +1,7 @@
 local M = {}
 
-M.setup = function()
-    print("setup 20 !!!")
-    return {}
+M.setup =  function()
+    print("test 1")
 end
-
-
 
 return M

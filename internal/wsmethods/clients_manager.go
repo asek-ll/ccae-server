@@ -119,7 +119,7 @@ func NewClientsManager(
 		if params.Version != build.Time {
 
 			url := fmt.Sprintf("%s/lua/v2/client/%s/", configLoader.Config.WebServer.Url, params.Role)
-			props := make(map[string]any)
+			var props any
 			err := server.SendRequestSync(ctx, clientId, "upgrade", url, &props)
 			if err != nil {
 				return nil, err
@@ -133,19 +133,19 @@ func NewClientsManager(
 			return nil, err
 		}
 
-		props := make(map[string]any)
-		err = server.SendRequestSync(ctx, clientId, "init", script.Content, &props)
-		// err = server.SendRequestSync(ctx, clientId, "init", map[string]any{
-		// 	"content": script.Content,
-		// 	"version": script.Version,
-		// }, &props)
+		var props any
+		contentUrl := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, params.Role)
+		err = server.SendRequestSync(ctx, clientId, "init", map[string]any{
+			"contentUrl": contentUrl,
+			"version":    script.Version,
+		}, &props)
 		log.Printf("[WARN] Client try register!!!")
 		if err != nil {
 			log.Printf("[ERROR] Can't init client: %v", err)
 			return nil, err
 		}
 
-		err = clientsManager.RegisterClient(clientId, fmt.Sprintf("%d", params.ID), params.Role, props)
+		err = clientsManager.RegisterClient(clientId, fmt.Sprintf("%d", params.ID), params.Role, nil)
 		if err != nil {
 			return nil, err
 		}

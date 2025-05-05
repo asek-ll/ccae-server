@@ -44,7 +44,7 @@ function WsClient:sendError(id, code, message)
     self:send { id = id, error = { code = code, message = message } }
 end
 
-function download(url, file)
+local function download(url, file)
     local content = http.get(url).readAll()
     if not content then
         error 'Could not connect to website'
@@ -54,45 +54,84 @@ function download(url, file)
     f.close()
 end
 
-local eventHandlers = {}
-local methods = {
-    eval = function(body)
-        local f, msg = load(body)
-        if f == nil then
-            print(msg)
-        end
-        return f()
-    end,
-}
+local function writeToFile(file, content)
+    local f = fs.open(file, 'w')
+    if f == nil then
+        return false
+    end
+    f.write(content)
+    f.close()
+    return true
+end
 
-local function initLogic(wsClient)
+local function readFromFile(file)
+    local f = io.open(file, 'rb')
+    if f == nil then
+        return false
+    end
+    local content = f:read '*all'
+    f:close()
+    return true, content
+end
+
+local eventHandlers = {}
+local methods = {}
+local wsClient = WsClient:new(nil)
+
+local function loadCurrentModule()
+    local suc, metaJson = readFromFile 'meta.json'
+    if not suc or metaJson == nil then
+        return false
+    end
+
+    local meta = textutils.unserialiseJSON(metaJson)
+    if meta == nil then
+        return false
+    end
+
     local m = loadfile 'init.lua'
-    if m then
-        local suc, logic = pcall(m)
-        if suc and logic['setup'] ~= nil then
-            suc = pcall(logic['setup'], methods, eventHandlers, wsClient)
-            if not suc then
-                print 'init failed'
-            end
+    if m == nil then
+        return false
+    end
+    local logic
+    suc, logic = pcall(m)
+    if not suc then
+        return false
+    end
+
+    if logic['setup'] ~= nil then
+        suc = pcall(logic['setup'], methods, eventHandlers, wsClient, meta.params)
+        if not suc then
+            return false
         end
     end
-    return {}
+
+    return true, meta
 end
 
 local function listen(url, loginParams)
-    local wsClient = WsClient:new(nil)
-
     http.websocketAsync(url)
 
-    initLogic(wsClient)
+    local _, meta = loadCurrentModule()
 
-    methods['init'] = function(content)
-        print 'init'
-        -- download(fileUrl, 'init.lua')
-        f = fs.open('init.lua', 'w')
-        f.write(content)
-        f.close()
-        return initLogic(wsClient)
+    methods['init'] = function(req)
+        print('init: ' .. textutils.serialiseJSON(req))
+        local version = req.version
+        if meta ~= nil and meta.version == version then
+            return false
+        end
+
+        download(req.contentUrl, 'init.lua')
+
+        local params = req.params
+        assert(writeToFile(
+            'meta.json',
+            textutils.serialiseJSON {
+                version = version,
+                params = params,
+            }
+        ))
+        return true
     end
 
     methods['upgrade'] = function(fileUrl)
@@ -107,19 +146,28 @@ local function listen(url, loginParams)
 
         if event == 'websocket_message' and eventData[2] == url then
             local data = textutils.unserializeJSON(eventData[3])
-            local method = data['method']
-            local params = data['params']
-            if methods[method] ~= nil then
-                local state, result = pcall(methods[method], params)
-                if state then
-                    if result ~= nil then
-                        wsClient:sendResult(data['id'], result)
+            if data ~= nil then
+                local method = data['method']
+                local params = data['params']
+
+                if methods[method] ~= nil then
+                    local state, result = pcall(methods[method], params)
+                    if state then
+                        if result ~= nil then
+                            wsClient:sendResult(data['id'], result)
+                        end
+                    else
+                        wsClient:sendError(data['id'], -1, result)
                     end
-                else
-                    wsClient:sendError(data['id'], -1, result)
-                end
-                if method == 'upgrade' then
-                    os.reboot()
+                    if method == 'upgrade' then
+                        print("reboot after upgrade")
+                        os.sleep(1)
+                        os.reboot()
+                    elseif method == 'init' and result then
+                        print("reboot after init", result)
+                        os.sleep(1)
+                        os.reboot()
+                    end
                 end
             end
         elseif event == 'websocket_success' and eventData[2] == url then
@@ -154,4 +202,4 @@ local function run(server, version, role)
     end
 end
 
-run('ws://localhost:12526', '2025-05-04T20:17:18', 'test')
+run('ws://localhost:12526', '2025-05-05T20:37:36', 'test')
