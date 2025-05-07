@@ -21,6 +21,7 @@ const CLIENT_ROLE_CRAFTER = "crafter"
 const CLIENT_ROLE_PROCESSING = "processing"
 const CLIENT_ROLE_PLAYER = "player"
 const CLIENT_ROLE_MODEM = "modem"
+const CLIENT_ROLE_COND = "cond"
 
 type Client interface {
 	GetGenericClient() *GenericClient
@@ -181,6 +182,8 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 		client = NewPlayerClient(genericClient)
 	case CLIENT_ROLE_MODEM:
 		client = NewModemClient(genericClient)
+	case CLIENT_ROLE_COND:
+		client = NewCondClient(genericClient)
 	default:
 		client = &genericClient
 	}

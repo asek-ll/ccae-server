@@ -66,6 +66,7 @@ func (w *WorkerManager) getRunner(worker *dao.Worker) func() error {
 			ReagentMode:    cfg.ReagentMode,
 			Enabled:        true,
 			WaitResults:    cfg.WaitResults && worker.Key != "",
+			CraftCondition: cfg.CraftCondition,
 
 			ResultItems:          cfg.ResultItems,
 			ResultInventory:      cfg.ResultInventory,

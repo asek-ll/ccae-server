@@ -10,6 +10,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
 	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
+	"github.com/asek-ll/aecc-server/internal/services/cond"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/modem"
@@ -78,7 +79,15 @@ func (s *ServerCommand) Execute(args []string) error {
 	exporterWorker := worker.NewExporterWorker(*storageService)
 	importerWorker := worker.NewImporterWorker(*storageService)
 	fluidImporterWorker := worker.NewFluidImporterWorker(*storageService, configLoader.Config.Importers.FluidImporters)
-	processingCrafterWorker := worker.NewProcessingCrafterWorker(daos, storageService, storageAdapter, transferTransationManager)
+
+	condService := cond.NewCondService(clientsManager)
+	processingCrafterWorker := worker.NewProcessingCrafterWorker(
+		daos,
+		storageService,
+		storageAdapter,
+		transferTransationManager,
+		condService,
+	)
 	workerManager := worker.NewWorkerManager(configLoader,
 		daos,
 		exporterWorker,

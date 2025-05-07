@@ -8,6 +8,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/cond"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 )
@@ -17,6 +18,7 @@ type ProcessingCrafterWorker struct {
 	storage        *storage.Storage
 	storageAdapter *wsmethods.StorageAdapter
 	tm             *storage.TransferTransactionManager
+	condService    *cond.CondService
 }
 
 func NewProcessingCrafterWorker(
@@ -24,12 +26,14 @@ func NewProcessingCrafterWorker(
 	storage *storage.Storage,
 	storageAdapter *wsmethods.StorageAdapter,
 	tm *storage.TransferTransactionManager,
+	condService *cond.CondService,
 ) *ProcessingCrafterWorker {
 	return &ProcessingCrafterWorker{
 		daos:           daos,
 		storage:        storage,
 		storageAdapter: storageAdapter,
 		tm:             tm,
+		condService:    condService,
 	}
 }
 
@@ -219,7 +223,18 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 		if err != nil {
 			return err
 		}
+
 		for _, craft := range crafts {
+
+			if config.CraftCondition != "" {
+				ready, err := w.condService.Check(config.CraftCondition, nil)
+				if err != nil {
+					return err
+				}
+				if !ready {
+					return nil
+				}
+			}
 
 			if config.ReagentMode == "block" {
 				if config.InputInventory != "" {
@@ -319,7 +334,12 @@ func (w *ProcessingCrafterWorker) do(config config.ProcessCrafterConfig) error {
 				return err
 			}
 
-			checkNext = true
+			if config.WaitResults {
+				checkNext = false
+				break
+			} else {
+				checkNext = true
+			}
 		}
 	}
 

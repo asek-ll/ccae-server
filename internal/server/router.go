@@ -1041,13 +1041,14 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
 		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
+			errorMessage := err.Error()
 			itemLoader := app.Daos.Items.NewDeferedLoader()
 			app.WorkerManager.AddWorkerItemUids(params, itemLoader)
 			ctx, err := itemLoader.ToContext(r.Context())
 			if err != nil {
 				return err
 			}
-			return components.EditWorkerPage(params).Render(ctx, w)
+			return components.EditWorkerPageContent(params, errorMessage).Render(ctx, w)
 		}
 		err = app.WorkerManager.UpdateWorker(key, worker)
 		if err != nil {

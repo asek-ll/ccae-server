@@ -46,7 +46,8 @@ type ProcessingCrafterWorkerConfig struct {
 	InputInventory string `json:"inputInventory"`
 	InputTank      string `json:"inputTank"`
 	ReagentMode    string `json:"reagentMode"`
-	WaitResults    bool `json:"waitResults"`
+	WaitResults    bool   `json:"waitResults"`
+	CraftCondition string `json:"craftCondition"`
 
 	ResultItems          []string `json:"resultItems"`
 	ResultInventory      string   `json:"resultInventory"`
