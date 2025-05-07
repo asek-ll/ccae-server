@@ -1,0 +1,205 @@
+local WsClient = {}
+
+function WsClient:new(ws)
+    local o = {
+        methodCounter = 1,
+        ws = ws,
+    }
+    setmetatable(o, { __index = self })
+    return o
+end
+
+function WsClient:setWS(ws)
+    self.ws = ws
+end
+
+function WsClient:send(data)
+    data['jsonrpc'] = '2.0'
+    local message = textutils.serializeJSON(data)
+    if self.ws == nil then
+        return false
+    end
+    local succ = pcall(self.ws.send, message)
+    if not succ then
+        self.ws.close()
+        self.ws = nil
+        return false
+    end
+    return true
+end
+
+function WsClient:sendMethod(method, params)
+    local id = self.methodCounter
+    self.methodCounter = id + 1
+
+    self:send { id = id, method = method, params = params }
+    return id
+end
+
+function WsClient:sendResult(id, result)
+    self:send { id = id, result = result }
+end
+
+function WsClient:sendError(id, code, message)
+    self:send { id = id, error = { code = code, message = message } }
+end
+
+local function download(url, file)
+    local content = http.get(url).readAll()
+    if not content then
+        error 'Could not connect to website'
+    end
+    f = fs.open(file, 'w')
+    f.write(content)
+    f.close()
+end
+
+local function writeToFile(file, content)
+    local f = fs.open(file, 'w')
+    if f == nil then
+        return false
+    end
+    f.write(content)
+    f.close()
+    return true
+end
+
+local function readFromFile(file)
+    local f = io.open(file, 'rb')
+    if f == nil then
+        return false
+    end
+    local content = f:read '*all'
+    f:close()
+    return true, content
+end
+
+local eventHandlers = {}
+local methods = {}
+local wsClient = WsClient:new(nil)
+
+local function loadCurrentModule()
+    local suc, metaJson = readFromFile 'meta.json'
+    if not suc or metaJson == nil then
+        return false
+    end
+
+    local meta = textutils.unserialiseJSON(metaJson)
+    if meta == nil then
+        return false
+    end
+
+    local m = loadfile 'init.lua'
+    if m == nil then
+        return false
+    end
+    local logic
+    suc, logic = pcall(m)
+    if not suc then
+        return false
+    end
+
+    if logic['setup'] ~= nil then
+        suc = pcall(logic['setup'], methods, eventHandlers, wsClient, meta.params)
+        if not suc then
+            return false
+        end
+    end
+
+    return true, meta
+end
+
+local function listen(url, loginParams)
+    http.websocketAsync(url)
+
+    local _, meta = loadCurrentModule()
+
+    methods['init'] = function(req)
+        print('init: ' .. textutils.serialiseJSON(req))
+        local version = req.version
+        if meta ~= nil and meta.version == version then
+            return false
+        end
+
+        download(req.contentUrl, 'init.lua')
+
+        local params = req.params
+        assert(writeToFile(
+            'meta.json',
+            textutils.serialiseJSON {
+                version = version,
+                params = params,
+            }
+        ))
+        return true
+    end
+
+    methods['upgrade'] = function(fileUrl)
+        print('upgrade: ' .. fileUrl)
+        download(fileUrl, 'startup')
+        return {}
+    end
+
+    while true do
+        local eventData = { os.pullEvent() }
+        local event = eventData[1]
+
+        if event == 'websocket_message' and eventData[2] == url then
+            local data = textutils.unserializeJSON(eventData[3])
+            if data ~= nil then
+                local method = data['method']
+                local params = data['params']
+
+                if methods[method] ~= nil then
+                    local state, result = pcall(methods[method], params)
+                    if state then
+                        if result ~= nil then
+                            wsClient:sendResult(data['id'], result)
+                        end
+                    else
+                        wsClient:sendError(data['id'], -1, result)
+                    end
+                    if method == 'upgrade' then
+                        print("reboot after upgrade")
+                        os.sleep(1)
+                        os.reboot()
+                    elseif method == 'init' and result then
+                        print("reboot after init", result)
+                        os.sleep(1)
+                        os.reboot()
+                    end
+                end
+            end
+        elseif event == 'websocket_success' and eventData[2] == url then
+            wsClient:setWS(eventData[3])
+            wsClient:sendMethod('login.v2', loginParams)
+        elseif event == 'websocket_failure' and eventData[2] == url then
+            wsClient:setWS(nil)
+            os.sleep(10)
+            http.websocketAsync(url)
+        elseif event == 'websocket_closed' and eventData[2] == url then
+            wsClient:setWS(nil)
+            os.sleep(10)
+            http.websocketAsync(url)
+        elseif eventHandlers[event] ~= nil then
+            local handler = eventHandlers[event]
+            pcall(handler, eventData)
+        end
+    end
+end
+
+local function run(server, version, role)
+    while true do
+        local status, err = pcall(listen, server, {
+            version = version,
+            id = os.computerID(),
+            role = role,
+        })
+        if not status then
+            print('Got error' .. err)
+            os.sleep(10)
+        end
+    end
+end
+
+run('ws://localhost:12526', '2025-05-05T20:37:36', 'test')

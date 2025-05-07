@@ -9,6 +9,8 @@ import (
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
+	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
+	"github.com/asek-ll/aecc-server/internal/services/cond"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/modem"
@@ -55,7 +57,9 @@ func (s *ServerCommand) Execute(args []string) error {
 	wsServer := ws.NewServer(configLoader.Config.ClientServer.ListenAddr, 128, 1, time.Millisecond*1000)
 	rpcServer := wsrpc.NewServer(wsServer)
 
-	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader)
+	scriptsmanager := clientscripts.NewScriptsManager(daos)
+
+	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader, scriptsmanager)
 	storageAdapter := wsmethods.NewStorageAdapter(clientsManager)
 
 	storageService := storage.NewStorage(daos, storageAdapter)
@@ -75,7 +79,15 @@ func (s *ServerCommand) Execute(args []string) error {
 	exporterWorker := worker.NewExporterWorker(*storageService)
 	importerWorker := worker.NewImporterWorker(*storageService)
 	fluidImporterWorker := worker.NewFluidImporterWorker(*storageService, configLoader.Config.Importers.FluidImporters)
-	processingCrafterWorker := worker.NewProcessingCrafterWorker(daos, storageService, storageAdapter, transferTransationManager)
+
+	condService := cond.NewCondService(clientsManager)
+	processingCrafterWorker := worker.NewProcessingCrafterWorker(
+		daos,
+		storageService,
+		storageAdapter,
+		transferTransationManager,
+		condService,
+	)
 	workerManager := worker.NewWorkerManager(configLoader,
 		daos,
 		exporterWorker,
@@ -102,6 +114,7 @@ func (s *ServerCommand) Execute(args []string) error {
 		TransferTransactionManager: transferTransationManager,
 		ConfigLoader:               configLoader,
 		ItemManager:                itemManager,
+		ScriptsManager:             scriptsmanager,
 	}
 
 	mux, err := server.CreateMux(app)

@@ -28,7 +28,8 @@ type ProcessCrafterConfig struct {
 	InputTank      string `json:"inputTank"`
 	ReagentMode    string `json:"reagentMode"`
 	Enabled        bool   `json:"enabled"`
-	WaitResults    bool   `json:"waitResult"`
+	WaitResults    bool   `json:"waitResults"`
+	CraftCondition string `json:"craftCondition"`
 
 	ResultItems          []string `json:"resultItems"`
 	ResultInventory      string   `json:"resultInventory"`

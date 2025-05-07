@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/asek-ll/aecc-server/internal/app"
+	"github.com/asek-ll/aecc-server/internal/build"
 	cmn "github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
@@ -260,6 +261,16 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			"role":  role,
 			"wsUrl": app.ConfigLoader.Config.ClientServer.Url,
 			"id":    id,
+		})
+	})
+
+	anon.HandleFunc("GET /lua/v2/client/{role}/", func(w http.ResponseWriter, r *http.Request) {
+		role := r.PathValue("role")
+
+		tmpls.Render("client.lua", []string{"clientV3.lua.tmpl"}, w, map[string]any{
+			"wsUrl":   app.ConfigLoader.Config.ClientServer.Url,
+			"version": build.Time,
+			"role":    role,
 		})
 	})
 
@@ -1030,13 +1041,14 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		params := app.WorkerManager.ParseWorkerParams(r.PostForm)
 		worker, err := app.WorkerManager.ParseWorker(params)
 		if err != nil {
+			errorMessage := err.Error()
 			itemLoader := app.Daos.Items.NewDeferedLoader()
 			app.WorkerManager.AddWorkerItemUids(params, itemLoader)
 			ctx, err := itemLoader.ToContext(r.Context())
 			if err != nil {
 				return err
 			}
-			return components.EditWorkerPage(params).Render(ctx, w)
+			return components.EditWorkerPageContent(params, errorMessage).Render(ctx, w)
 		}
 		err = app.WorkerManager.UpdateWorker(key, worker)
 		if err != nil {
@@ -1063,6 +1075,93 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 		return components.PeripheralsPage(peripherals).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		scripts, err := app.ScriptsManager.GetScripts()
+		if err != nil {
+			return err
+		}
+		return components.ClientsScriptsPage(scripts).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+		return components.ClientScriptPage(script).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /clients-scripts/{role}/version/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+
+		_, err = fmt.Fprintf(w, "%d", script.Version)
+		return err
+	})
+
+	anon.HandleFunc("GET /clients-scripts/{role}/content/{$}", func(w http.ResponseWriter, r *http.Request) {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		var content string
+		if err == nil {
+			content = script.Content
+		}
+
+		fmt.Fprintf(w, content)
+	})
+
+	handleFuncWithError(common, "POST /clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		role := r.PostForm.Get("role")
+		err = app.ScriptsManager.CreateScript(role)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", fmt.Sprintf("/clients-scripts/%s/", role))
+		return nil
+	})
+
+	handleFuncWithError(common, "POST /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		newRole := r.PostForm.Get("role")
+		content := r.PostForm.Get("content")
+
+		err = app.ScriptsManager.UpdateScript(role, newRole, content)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Replace-Url", fmt.Sprintf("/clients-scripts/%s/", newRole))
+		return nil
+	})
+
+	handleFuncWithError(common, "DELETE /clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+		err := app.ScriptsManager.DeleteScript(role)
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", "/clients-scripts/")
+		return nil
 	})
 
 	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))

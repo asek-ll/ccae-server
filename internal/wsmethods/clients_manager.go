@@ -8,9 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/asek-ll/aecc-server/internal/build"
 	"github.com/asek-ll/aecc-server/internal/common"
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
 
@@ -19,12 +21,10 @@ const CLIENT_ROLE_CRAFTER = "crafter"
 const CLIENT_ROLE_PROCESSING = "processing"
 const CLIENT_ROLE_PLAYER = "player"
 const CLIENT_ROLE_MODEM = "modem"
+const CLIENT_ROLE_COND = "cond"
 
 type Client interface {
-	GetID() string
-	GetRole() string
-	GetJoinTime() time.Time
-	GetProps() map[string]any
+	GetGenericClient() *GenericClient
 }
 
 type GenericClient struct {
@@ -35,20 +35,8 @@ type GenericClient struct {
 	WS       wsrpc.ClientWrapper
 }
 
-func (c *GenericClient) GetID() string {
-	return c.ID
-}
-
-func (c *GenericClient) GetRole() string {
-	return c.Role
-}
-
-func (c *GenericClient) GetJoinTime() time.Time {
-	return c.JoinTime
-}
-
-func (c *GenericClient) GetProps() map[string]any {
-	return c.Props
+func (c *GenericClient) GetGenericClient() *GenericClient {
+	return c
 }
 
 type ClientsManager struct {
@@ -62,7 +50,12 @@ type ClientsManager struct {
 	mu sync.RWMutex
 }
 
-func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao, configLoader *config.ConfigLoader) *ClientsManager {
+func NewClientsManager(
+	server *wsrpc.JsonRpcServer,
+	clientsDao *dao.ClientsDao,
+	configLoader *config.ConfigLoader,
+	scriptsManager *clientscripts.ScriptsManager,
+) *ClientsManager {
 	clientsManager := &ClientsManager{
 		server:         server,
 		clientsDao:     clientsDao,
@@ -73,6 +66,30 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao, 
 
 	server.SetDisconnectHandler(func(clientId uint) error {
 		return clientsManager.RemoveClient(clientId)
+	})
+
+	scriptsManager.SetOnUpdate(func(role string, content string) error {
+
+		log.Println("[WARN] ON UPDATE!!!", content)
+		log.Println("[WARN] check client", clientsManager.GetClients())
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+
+		for _, client := range clientsManager.GetClients() {
+			gc := client.GetGenericClient()
+			if gc.Role == role {
+				props := make(map[string]any)
+				err := gc.WS.SendRequestSync(ctx, "init", content, &props)
+				if err != nil {
+					return err
+				}
+				clientsManager.mu.Lock()
+				gc.Props = props
+				clientsManager.mu.Unlock()
+			}
+		}
+
+		return nil
 	})
 
 	server.AddMethod("login", wsrpc.Typed(func(clientId uint, params LoginParams) (any, error) {
@@ -89,6 +106,47 @@ func NewClientsManager(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao, 
 		}
 
 		err = clientsManager.RegisterClient(clientId, params.ID, params.Role, props)
+		if err != nil {
+			return nil, err
+		}
+
+		return "OK", nil
+	}))
+
+	server.AddMethod("login.v2", wsrpc.Typed(func(clientId uint, params LoginV2Params) (any, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+
+		if params.Version != build.Time {
+
+			url := fmt.Sprintf("%s/lua/v2/client/%s/", configLoader.Config.WebServer.Url, params.Role)
+			var props any
+			err := server.SendRequestSync(ctx, clientId, "upgrade", url, &props)
+			if err != nil {
+				return nil, err
+			}
+
+			return "OK", nil
+		}
+
+		script, err := scriptsManager.GetScript(params.Role)
+		if err != nil {
+			return nil, err
+		}
+
+		var props any
+		contentUrl := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, params.Role)
+		err = server.SendRequestSync(ctx, clientId, "init", map[string]any{
+			"contentUrl": contentUrl,
+			"version":    script.Version,
+		}, &props)
+		log.Printf("[WARN] Client try register!!!")
+		if err != nil {
+			log.Printf("[ERROR] Can't init client: %v", err)
+			return nil, err
+		}
+
+		err = clientsManager.RegisterClient(clientId, fmt.Sprintf("%d", params.ID), params.Role, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -124,6 +182,8 @@ func (c *ClientsManager) RegisterClient(webscoketClientId uint, id string, role 
 		client = NewPlayerClient(genericClient)
 	case CLIENT_ROLE_MODEM:
 		client = NewModemClient(genericClient)
+	case CLIENT_ROLE_COND:
+		client = NewCondClient(genericClient)
 	default:
 		client = &genericClient
 	}

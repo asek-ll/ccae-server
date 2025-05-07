@@ -90,6 +90,10 @@ func (d *RecipeTypesDao) DeleteRecipeType(typeName string) error {
 }
 
 func SetWorkerForRecipeType(tx *sql.Tx, craftType string, workerKey string) (bool, error) {
+	if craftType == "" {
+		return false, fmt.Errorf("Invalid craft type: %s", craftType)
+	}
+
 	res, err := tx.Exec("UPDATE recipe_types SET worker_id = ? WHERE name = ? AND worker_id = ''", workerKey, craftType)
 	if err != nil {
 		return false, err
@@ -102,6 +106,10 @@ func SetWorkerForRecipeType(tx *sql.Tx, craftType string, workerKey string) (boo
 }
 
 func UnSetWorkerForRecipeType(tx *sql.Tx, craftType string, workerKey string) (bool, error) {
+	if craftType == "" {
+		return true, nil
+	}
+
 	res, err := tx.Exec("UPDATE recipe_types SET worker_id = '' WHERE name = ? AND worker_id = ?", craftType, workerKey)
 	if err != nil {
 		return false, err

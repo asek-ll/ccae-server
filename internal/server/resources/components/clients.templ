@@ -11,11 +11,11 @@ templ ClientsPage(clients []wsmethods.Client) {
 			<table>
 				for _, client := range clients {
 					<tr>
-						<td>{ client.GetID() }</td>
-						<td>{ client.GetRole() }</td>
-						<td>{ client.GetJoinTime().String() }</td>
+						<td>{ client.GetGenericClient().ID }</td>
+						<td>{ client.GetGenericClient().Role }</td>
+						<td>{ client.GetGenericClient().JoinTime.String() }</td>
 						<td>
-							for k, v := range client.GetProps() {
+							for k, v := range client.GetGenericClient().Props {
 								<div>`{ k }` = `{ fmt.Sprintf("%v", v) }`</div>
 							}
 						</td>

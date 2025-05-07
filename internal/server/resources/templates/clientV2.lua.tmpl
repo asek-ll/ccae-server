@@ -1,0 +1,203 @@
+local WsClient = {}
+
+function WsClient:new(ws)
+    local o = {
+        methodCounter = 1,
+        ws = ws,
+    }
+    setmetatable(o, { __index = self })
+    return o
+end
+
+function WsClient:send(data)
+    data['jsonrpc'] = '2.0'
+    local message = textutils.serializeJSON(data)
+    self.ws.send(message)
+    print('Send message', message)
+end
+
+function WsClient:sendMethod(method, params)
+    local id = self.methodCounter
+    self.methodCounter = id + 1
+
+    self:send { id = id, method = method, params = params }
+    return id
+end
+
+function WsClient:sendResult(id, result)
+    self:send { id = id, result = result }
+end
+
+function WsClient:sendError(id, code, message)
+    self:send { id = id, error = { code = code, message = message } }
+end
+
+function download(url, file)
+    local content = http.get(url).readAll()
+    if not content then
+        error 'Could not connect to website'
+    end
+    f = fs.open(file, 'w')
+    f.write(content)
+    f.close()
+end
+
+local eventHandlers = {}
+local methods = {
+    eval = function(body)
+        local f, msg = load(body)
+        if f == nil then
+            print(msg)
+        end
+        return f()
+    end,
+}
+
+local WsHandle = {
+    url = '',
+    ws = nil,
+    state = 'disconnected',
+}
+
+function WsHandle:request(method, params)
+    if self.state ~= 'connected' then
+        coroutine.yield("webscoket")
+    end
+    local id = self.ws:sendMethod(method, params)
+    return coroutine.yield("res".. id)
+end
+
+function WsHandle:handleEvent(eventData, next)
+    if eventData[2] ~= self.url then
+        return next(eventData)
+    end
+
+    if eventData[1] == 'websocket_success' then
+        self.state = 'connected'
+        self.ws = eventData[3]
+        return { 'webscoket' }
+    end
+
+    if eventData[1] == 'websocket_failure' then
+        self.state = 'disconnected'
+        return nil
+    end
+
+    if eventData[1] == 'websocket_message' then
+        local data = textutils.unserializeJSON(eventData[3])
+        if data ~= nil then
+            local method = data['method']
+            if method ~= nil then
+                local params = data['params']
+                return { 'req' .. data['id'], data }
+            else
+                local result = data['result']
+                if result ~= nil then
+                    return { 'res' .. data['id'], data }
+                end
+                local error = data['error']
+                if error ~= nil then
+                    return { 'res' .. data['id'], data }
+                end
+                return nil
+            end
+        end
+        return nil
+    end
+
+    if eventData[1] == 'websocket_closed' then
+        self.state = 'disconnected'
+        return nil
+    end
+
+    return nil
+end
+
+local function main(url, loginParams)
+    local co = coroutine.create(f)
+    local chain = {}
+
+    local waited = coroutine.resume(co)
+    while true do
+        local status = coroutine.status(co)
+
+        if status == 'dead' then
+            os.sleep(10)
+            co = coroutine.create(f)
+            waited = coroutine.resume(co)
+        elseif status == 'suspended' and waited == nil then
+            os.sleep(10)
+            co = coroutine.create(f)
+            waited = coroutine.resume(co)
+        elseif status == 'suspended' then
+            while true do
+                local eventData = { os.pullEvent() }
+                local message = chain.next(eventData)
+                if message ~= nil and message[1] == waited then
+                    waited = coroutine.resume(co, message[2])
+                    break
+                end
+            end
+        else
+            os.sleep(10)
+        end
+    end
+
+    local wsClient = WsClient:new(ws)
+
+    methods['init'] = function(fileUrl)
+        download(fileUrl, 'init.lua')
+        local m = assert(loadfile 'init.lua')
+        local init = m()
+        return init(methods, eventHandlers, wsClient)
+    end
+
+    wsClient:sendMethod('login', loginParams)
+
+    while true do
+        local eventData = { os.pullEvent() }
+        local event = eventData[1]
+
+        if event == 'websocket_message' and eventData[2] == url then
+            print('Received message from ' .. eventData[2] .. ' with contents ' .. eventData[3])
+            local data = textutils.unserializeJSON(eventData[3])
+            local method = data['method']
+            local params = data['params']
+            if methods[method] ~= nil then
+                local state, result = pcall(methods[method], params)
+                if state then
+                    if result ~= nil then
+                        wsClient:sendResult(data['id'], result)
+                    end
+                else
+                    wsClient:sendError(data['id'], -1, result)
+                end
+            end
+        elseif event == 'websocket_failure' and eventData[2] == url then
+            print('Websocket failure from ' .. eventData[2] .. ' with contents ' .. eventData[3])
+            ws.close()
+            error(eventData[3])
+        elseif event == 'websocket_closed' and eventData[2] == url then
+            print('Websocket closed from ' .. eventData[2])
+            ws.close()
+            error(eventData[3])
+        elseif eventHandlers[event] ~= nil then
+            eventHandlers[event](eventData)
+        end
+    end
+end
+
+local function run(url, id, role)
+    while true do
+        local status, err = pcall(main, url, {
+            id = id,
+            role = role,
+        })
+        if not status then
+            print('Got error' .. err)
+            os.sleep(10)
+        end
+    end
+end
+
+run('{{ .wsUrl }}', '{{ .id }}', '{{ .role }}')
