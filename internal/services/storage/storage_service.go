@@ -81,7 +81,13 @@ func (s *Storage) GetItems(filter string) ([]StackGroup, error) {
 	for _, group := range groups {
 		var stacks []AggregateStacks
 		for uid, count := range group.Counts {
-			item := itemsByUid[uid]
+			item, ok := itemsByUid[uid]
+			if !ok {
+				item.ID = uid
+				item.UID = uid
+				item.DisplayName = uid
+				item.Icon = common.QuestMarkIcon
+			}
 			if len(filter) == 0 || strings.Contains(strings.ToLower(item.DisplayName), filter) {
 				stacks = append(stacks, AggregateStacks{
 					Item:  item,
