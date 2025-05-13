@@ -149,6 +149,9 @@ func (c *CraftWorker) Craft(craft *dao.Craft) (bool, error) {
 	if recipe.MaxRepeats != nil {
 		maxRepeats = *recipe.MaxRepeats
 	}
+	if len(recipe.Catalysts) > 0 {
+		maxRepeats = 1
+	}
 	repeats := min(craft.Repeats, maxRepeats)
 
 	err = c.trasferItems(recipe, repeats)
@@ -229,12 +232,27 @@ func (c *CraftWorker) process() error {
 }
 func (c *CraftWorker) trasferItems(recipe *dao.Recipe, repeats int) error {
 	log.Printf("[INFO] Transfer items for '%s' and recipe: %v", c.workerId, recipe)
+	usedSlots := make([]bool, 20)
 	for i, ing := range recipe.Ingredients {
 		slot := i + 1
 		if ing.Slot != nil {
 			slot = *ing.Slot
 		}
+		usedSlots[slot] = true
 		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), slot, ing.Amount*repeats)
+		if err != nil {
+			return err
+		}
+	}
+	fromSlot := 1
+	for _, ing := range recipe.Catalysts {
+		for fromSlot < len(usedSlots) && usedSlots[fromSlot] {
+			fromSlot += 1
+		}
+		if fromSlot < len(usedSlots) {
+			usedSlots[fromSlot] = true
+		}
+		_, err := c.storage.ExportStack(ing.ItemUID, c.client.BufferName(), fromSlot, ing.Amount*repeats)
 		if err != nil {
 			return err
 		}
