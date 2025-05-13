@@ -35,8 +35,13 @@ local function craft()
     turtle.select(13)
     local res, msg = turtle.craft()
     if res then
-        turtle.select(13)
-        turtle.drop()
+        for i = 1, 16 do
+            local cnt = turtle.getItemCount(i)
+            if cnt > 0 then
+                turtle.select(i)
+                turtle.drop(cnt)
+            end
+        end
     end
     return res
 end
