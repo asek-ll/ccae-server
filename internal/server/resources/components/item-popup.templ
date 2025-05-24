@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"github.com/asek-ll/aecc-server/internal/dao"
+    "net/url"
 )
 
 templ ItemPopup(params string) {
@@ -40,7 +41,7 @@ templ ItemPopupItems(items []dao.Item) {
 				<td>{ item.DisplayName }</td>
 				<td>
 					<button
-						hx-get={ fmt.Sprintf("/item-popup/%s", item.UID) }
+						hx-get={ fmt.Sprintf("/item-popup/%s/", url.QueryEscape(item.UID)) }
 						hx-target="#item-popup"
 						hx-swap="outerHTML"
 					>Select</button>
