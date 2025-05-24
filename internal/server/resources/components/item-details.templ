@@ -3,6 +3,7 @@ package components
 import (
 	"fmt"
 	"github.com/asek-ll/aecc-server/internal/services/storage"
+    "net/url"
 )
 
 templ ItemPage(info *storage.RichItemInfo, createUrl string, itemCount int) {
@@ -21,7 +22,7 @@ templ ItemPage(info *storage.RichItemInfo, createUrl string, itemCount int) {
 						<form>
 							<input name="amount" value="1"/>
 							<button
-								hx-post={ fmt.Sprintf("/items/%s/sendToPlayer/", info.Item.UID) }
+								hx-post={ fmt.Sprintf("/items/%s/sendToPlayer/", url.QueryEscape(info.Item.UID)) }
 								hx-include="[name='amount']"
 							>Send To Player</button>
 						</form>
@@ -32,7 +33,7 @@ templ ItemPage(info *storage.RichItemInfo, createUrl string, itemCount int) {
 						UID
 					</td>
 					<td>
-						<form hx-post={ fmt.Sprintf("/items/%s/", info.Item.UID) }>
+						<form hx-post={ fmt.Sprintf("/items/%s/", url.QueryEscape(info.Item.UID)) }>
 							<input name="newUid" value={ info.Item.UID }/>
 							<input name="displayName" value={ info.Item.DisplayName }/>
 							<input type="submit" value="Update"/>

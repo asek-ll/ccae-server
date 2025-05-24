@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"io"
+    "net/url"
 )
 
 func ItemIconByUID(itemUid string) templ.Component {
@@ -16,7 +17,7 @@ func ItemIconByUID(itemUid string) templ.Component {
 
 templ ItemIcon(item *dao.Item) {
 	<div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } class="item-stack">
-		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
+		<a href={ templ.URL(fmt.Sprintf("/items/%s/", url.QueryEscape(item.UID))) }>
 			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
 		</a>
 	</div>
@@ -24,7 +25,7 @@ templ ItemIcon(item *dao.Item) {
 
 templ ItemWithAmount(item *dao.Item, amount int) {
 	<div data-tooltip={ fmt.Sprintf("%s - %s", item.UID, item.DisplayName) } class="item-stack">
-		<a href={ templ.URL(fmt.Sprintf("/items/%s", item.UID)) }>
+		<a href={ templ.URL(fmt.Sprintf("/items/%s/", url.QueryEscape(item.UID))) }>
 			<img src={ "data:image/png;base64, " + item.Base64Icon() } style="width: 48px; height: 48px;"/>
 			if amount > 1 {
 				<span class="stack-count">{ formatStackAmount(amount, item.UID) }</span>
