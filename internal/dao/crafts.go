@@ -196,6 +196,10 @@ func CommitCraftInOuterTx(tx *sql.Tx, craft *Craft, recipe *Recipe, repeats int)
 	}
 
 	craft.CommitRepeats = repeats
+	err = DeleteWorkerStateInOuterTx(tx, craft.ID)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -241,6 +245,11 @@ func (d *CraftsDao) CancelCraft(craft *Craft, recipe *Recipe) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	err = DeleteWorkerStateInOuterTx(tx, craft.ID)
+	if err != nil {
+		return err
 	}
 
 	return tx.Commit()

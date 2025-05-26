@@ -82,3 +82,8 @@ func (w *WorkerStateDao) GetWaitCraftID(workerKey string) (*int, error) {
 
 	return &waitCraftID, nil
 }
+
+func DeleteWorkerStateInOuterTx(tx *sql.Tx, craftID int) error {
+	_, err := tx.Exec("DELETE FROM worker_state WHERE wait_craft_id = ?", craftID)
+	return err
+}
