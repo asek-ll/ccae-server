@@ -1164,6 +1164,35 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return nil
 	})
 
+	handleFuncWithError(common, "GET /item-reserves/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		reserves, err := app.Daos.ItemReserves.GetActualReserves()
+		if err != nil {
+			return err
+		}
+
+		itemLoader := app.Daos.Items.NewDeferedLoader()
+		for _, item := range reserves {
+			itemLoader.AddUid(item.ItemUID)
+		}
+
+		ctx, err := itemLoader.ToContext(r.Context())
+		if err != nil {
+			return err
+		}
+
+		return components.ItemReservesPage(reserves).Render(ctx, w)
+	})
+
+	handleFuncWithError(common, "POST /item-reserves/clear/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		err := app.Daos.ItemReserves.ClearActualReserves()
+		if err != nil {
+			return err
+		}
+
+		w.Header().Add("HX-Location", "/item-reserves/")
+		return nil
+	})
+
 	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {

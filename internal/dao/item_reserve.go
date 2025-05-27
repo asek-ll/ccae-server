@@ -154,3 +154,41 @@ func (d *ItemReserveDao) GetReserves() ([]ItemReserve, error) {
 
 	return result, nil
 }
+
+func (d *ItemReserveDao) GetActualReserves() ([]ItemReserve, error) {
+	rows, err := d.db.Query(`
+	SELECT item_uid, amount 
+	FROM item_reserve
+	WHERE amount <> 0`)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var result []ItemReserve
+
+	for rows.Next() {
+		var itemReserve ItemReserve
+		err := rows.Scan(&itemReserve.ItemUID, &itemReserve.Amount)
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, itemReserve)
+	}
+
+	return result, nil
+}
+
+func (d *ItemReserveDao) ClearActualReserves() error {
+	_, err := d.db.Exec(`
+	DELETE FROM item_reserve
+	WHERE amount <> 0`)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
