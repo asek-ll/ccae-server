@@ -133,7 +133,7 @@ func (h *JsonRpcServer) SendRequest(clientId uint, method string, params any) (u
 	}
 	h.reqSeqMu.Lock()
 	reqId := h.reqSeq
-	h.reqSeq = h.reqSeq % 1000000
+	h.reqSeq = (h.reqSeq + 1) % 1000000
 	h.reqSeqMu.Unlock()
 
 	request := Request{
@@ -163,7 +163,7 @@ func (h *JsonRpcServer) SendRequestSync(ctx context.Context, clientId uint, meth
 
 	h.reqSeqMu.Lock()
 	reqId := h.reqSeq
-	h.reqSeq++
+	h.reqSeq = (h.reqSeq + 1) % 1000000
 	h.pending[reqId] = done
 	h.reqSeqMu.Unlock()
 
