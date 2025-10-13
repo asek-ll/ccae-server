@@ -1,9 +1,11 @@
 module github.com/asek-ll/aecc-server
 
-go 1.22.2
+go 1.23.0
+
+toolchain go1.24.5
 
 require (
-	github.com/a-h/templ v0.2.793
+	github.com/a-h/templ v0.3.865
 	github.com/fatih/color v1.16.0
 	github.com/go-pkgz/auth v1.24.3-0.20241221172452-ba01339372ba
 	github.com/gobwas/ws v1.3.2
@@ -37,7 +39,7 @@ require (
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/image v0.23.0 // indirect
 	golang.org/x/oauth2 v0.24.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 )
