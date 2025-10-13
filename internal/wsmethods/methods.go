@@ -19,6 +19,12 @@ type LoginV2Params struct {
 	Role    string `json:"role"`
 }
 
+type LoginV3Params struct {
+	ID      int    `json:"id"`
+	Label   string `json:"label"`
+	Version string `json:"version"`
+}
+
 func withInnerId[T any](mapper *wsrpc.IdMapper, f func(id string, params T) (any, error)) wsrpc.RpcMethod {
 	return func(clientId uint, params []byte) (any, error) {
 		id, e := mapper.ToInner(clientId)

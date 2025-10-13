@@ -6,10 +6,12 @@ import (
 )
 
 type Client struct {
-	Id        string
-	Role      string
-	Online    bool
-	LastLogin time.Time
+	ID         int
+	Label      string
+	Role       string
+	Online     bool
+	LastLogin  time.Time
+	WSClientID uint
 }
 
 type ClientsDao struct {
@@ -21,8 +23,9 @@ func NewClientsDao(db *sql.DB) (*ClientsDao, error) {
 	sqlStmt := `
 
 	CREATE TABLE IF NOT EXISTS clients (
-		id string NOT NULL PRIMARY KEY,
-		role string NOT NULL,
+		id int NOT NULL PRIMARY KEY,
+		label string,
+		role string NULL,
 		online bool NOT NULL,
 		last_login timestamp,
 		wsclient_id integer
@@ -39,31 +42,40 @@ func NewClientsDao(db *sql.DB) (*ClientsDao, error) {
 }
 
 func (c *ClientsDao) GetClients() ([]Client, error) {
-	rows, err := c.db.Query("select id, role, online, last_login from clients")
+	rows, err := c.db.Query("select id, label, role, online, last_login, wsclient_id from clients")
 	if err != nil {
 		return nil, err
 	}
+
+	return readClients(rows)
+}
+
+func readClients(rows *sql.Rows) ([]Client, error) {
 	defer rows.Close()
 
 	var result []Client
 	for rows.Next() {
-		var id string
+		var id int
+		var label string
 		var role string
 		var online bool
 		var lastLogin time.Time
+		var wsClientID uint
 
-		err = rows.Scan(&id, &role, &online, &lastLogin)
+		err := rows.Scan(&id, &label, &role, &online, &lastLogin, &wsClientID)
 		if err != nil {
 			return nil, err
 		}
 		result = append(result, Client{
-			Id:        id,
-			Role:      role,
-			Online:    online,
-			LastLogin: lastLogin,
+			ID:         id,
+			Label:      label,
+			Role:       role,
+			Online:     online,
+			LastLogin:  lastLogin,
+			WSClientID: wsClientID,
 		})
 	}
-	err = rows.Err()
+	err := rows.Err()
 	if err != nil {
 		return nil, err
 	}
@@ -71,37 +83,58 @@ func (c *ClientsDao) GetClients() ([]Client, error) {
 	return result, nil
 }
 
-func (c *ClientsDao) GetOnlineClientIdOfType(clientType string) (uint, error) {
-	row := c.db.QueryRow("SELECT wsclient_id FROM clients WHERE online = true AND role = ?", clientType)
-	err := row.Err()
+// func (c *ClientsDao) GetOnlineClientIdOfType(clientType string) (uint, error) {
+// 	row := c.db.QueryRow("SELECT wsclient_id FROM clients WHERE online = true AND role = ?", clientType)
+// 	err := row.Err()
+// 	if err != nil {
+// 		return 0, err
+// 	}
+
+// 	var id int
+// 	row.Scan(&id)
+
+// 	return uint(id), nil
+// }
+
+func (c *ClientsDao) GetClientByID(id int) (*Client, error) {
+	rows, err := c.db.Query("SELECT id, label, role, online, last_login, wsclient_id FROM clients WHERE id = ?", id)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	var id int
-	row.Scan(&id)
+	clients, err := readClients(rows)
+	if err != nil {
+		return nil, err
+	}
 
-	return uint(id), nil
+	if len(clients) == 0 {
+		return nil, nil
+	}
+
+	return &clients[0], nil
 }
 
-func (c *ClientsDao) LoginClient(clientId string, role string, wsclientId uint) error {
-	stmt, err := c.db.Prepare("INSERT OR REPLACE INTO clients (id, role, online, last_login, wsclient_id) VALUES (?, ?, true, datetime(), ?)")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
-
-	_, err = stmt.Exec(clientId, role, wsclientId)
+func (c *ClientsDao) CreateClient(client *Client) error {
+	_, err := c.db.Exec(`
+		INSERT INTO clients (id, label, role, online, last_login, wsclient_id)
+		VALUES (?, ?, ?, ?, ?, ?)
+		`, client.ID, client.Label, client.Role, client.Online, client.LastLogin, client.WSClientID)
 	return err
 }
 
-func (c *ClientsDao) LogoutClient(clientId string) error {
-	stmt, err := c.db.Prepare("UPDATE clients SET online = false, wsclient_id = NULL WHERE id = ?")
-	if err != nil {
-		return err
-	}
-	defer stmt.Close()
+func (c *ClientsDao) LoginClient(client *Client, wsClientID uint) error {
+	client.Online = true
+	client.LastLogin = time.Now()
+	client.WSClientID = wsClientID
+	_, err := c.db.Exec(`
+		UPDATE clients
+		SET online = ?, last_login = ?, wsclient_id = ?
+		WHERE id = ?
+		`, client.Online, client.LastLogin, client.WSClientID, client.ID)
+	return err
+}
 
-	_, err = stmt.Exec(clientId)
+func (c *ClientsDao) LogoutClient(wsClientId uint) error {
+	_, err := c.db.Exec("UPDATE clients SET online = false, wsclient_id = NULL WHERE wsclient_id = ?", wsClientId)
 	return err
 }

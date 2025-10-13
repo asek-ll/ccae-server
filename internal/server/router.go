@@ -128,7 +128,32 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	})
 
 	common := root.Group().Use(logm).Use(am.Auth)
+
 	handleFuncWithError(common, "GET /clients/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		clients, err := app.Daos.Clients.GetClients()
+		if err != nil {
+			return err
+		}
+		return components.GenClientsPage(clients).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /clients/{clientID}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		rawClientID := r.PathValue("clientID")
+		clientID, err := strconv.Atoi(rawClientID)
+		if err != nil {
+			return err
+		}
+		client, err := app.Daos.Clients.GetClientByID(clientID)
+		if err != nil {
+			return err
+		}
+		if client == nil {
+			return fmt.Errorf("client not found")
+		}
+		return components.GenClientPage(client).Render(r.Context(), w)
+	})
+
+	handleFuncWithError(common, "GET /wsclients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients := app.ClientsManager.GetClients()
 		return components.ClientsPage(clients).Render(r.Context(), w)
 	})
@@ -274,6 +299,13 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		})
 	})
 
+	anon.HandleFunc("GET /lua/v3/client/", func(w http.ResponseWriter, r *http.Request) {
+		tmpls.Render("client.lua", []string{"clientV4.lua.tmpl"}, w, map[string]any{
+			"wsUrl":   app.ConfigLoader.Config.ClientServer.Url,
+			"version": build.Time,
+		})
+	})
+
 	handleFuncWithError(common, "GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		filter := r.URL.Query().Get("filter")
 		view := r.URL.Query().Get("view")
@@ -353,7 +385,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 		if len(recipes) == 0 {
-			return fmt.Errorf("Recipe with id '%d' not found", recipeId)
+			return fmt.Errorf("recipe with id '%d' not found", recipeId)
 		}
 
 		recipe := recipes[0]
@@ -434,7 +466,7 @@ func CreateMux(app *app.App) (http.Handler, error) {
 			return err
 		}
 		if len(recipes) == 0 {
-			return fmt.Errorf("Recipe with id '%d' not found", recipeId)
+			return fmt.Errorf("recipe with id '%d' not found", recipeId)
 		}
 
 		err = app.Daos.Recipes.DeleteRecipe(recipeId)

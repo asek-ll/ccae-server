@@ -1,0 +1,62 @@
+package components
+
+import (
+	"fmt"
+	"github.com/asek-ll/aecc-server/internal/dao"
+)
+
+templ GenClientsPage(clients []dao.Client) {
+	@Page("Clients") {
+		<section>
+			<table>
+				for _, client := range clients {
+					<tr>
+						<td>{ client.ID }</td>
+						<td>{ client.Label }</td>
+						<td>{ client.Role }</td>
+						<td>{ client.Online }</td>
+						<td>{ client.LastLogin.String() }</td>
+					</tr>
+				}
+			</table>
+		</section>
+	}
+}
+
+templ GenClientPage(client *dao.Client) {
+	@Page(fmt.Sprintf("Client - %s", client.Label)) {
+		<section>
+			<table>
+				<thead>
+					<tr>
+						<th>ID</th>
+						<th>Label</th>
+						<th>Role</th>
+						<th>Online</th>
+						<th>Last Login</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr>
+						<td>{ client.ID }</td>
+						<td>{ client.Label }</td>
+						<td>{ client.Role }</td>
+						<td>{ client.Online }</td>
+						<td>{ client.LastLogin.String() }</td>
+					</tr>
+				</tbody>
+			</table>
+		</section>
+		<form hx-post={ fmt.Sprintf("/clients/%d/update/", client.ID) }>
+			<label>
+				Role
+				<input name="role" value={ client.Role }/>
+			</label>
+			<label>
+				Label
+				<input name="label" value={ client.Label }/>
+			</label>
+			<input type="submit" value="Save"/>
+		</form>
+	}
+}

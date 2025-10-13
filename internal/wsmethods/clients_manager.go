@@ -154,6 +154,72 @@ func NewClientsManager(
 		return "OK", nil
 	}))
 
+	server.AddMethod("login.v3", wsrpc.Typed(func(wsClientId uint, params LoginV3Params) (any, error) {
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+		defer cancel()
+
+		if params.Version != build.Time {
+			url := fmt.Sprintf("%s/lua/v3/client/", configLoader.Config.WebServer.Url)
+			var props any
+			err := server.SendRequestSync(ctx, wsClientId, "upgrade", url, &props)
+			if err != nil {
+				return nil, err
+			}
+
+			return "OK", nil
+		}
+
+		client, err := clientsDao.GetClientByID(params.ID)
+		if err != nil {
+			return nil, err
+		}
+		if client == nil {
+			client = &dao.Client{
+				ID:         params.ID,
+				Label:      params.Label,
+				Role:       "",
+				Online:     true,
+				LastLogin:  time.Now(),
+				WSClientID: wsClientId,
+			}
+			err = clientsDao.CreateClient(client)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			err = clientsDao.LoginClient(client, wsClientId)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		if client.Role != "" {
+			script, err := scriptsManager.GetScript(client.Role)
+			if err != nil {
+				return nil, err
+			}
+
+			var props any
+			contentUrl := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, client.Role)
+			err = server.SendRequestSync(ctx, wsClientId, "init", map[string]any{
+				"contentUrl": contentUrl,
+				"version":    script.Version,
+			}, &props)
+			log.Printf("[WARN] Client try register!!!")
+			if err != nil {
+				log.Printf("[ERROR] Can't init client: %v", err)
+				return nil, err
+			}
+		}
+
+		err = clientsManager.RegisterClient(wsClientId, fmt.Sprintf("%d", params.ID), client.Role, nil)
+		if err != nil {
+			return nil, err
+		}
+
+		return "OK", nil
+	}))
+
 	return clientsManager
 }
 
