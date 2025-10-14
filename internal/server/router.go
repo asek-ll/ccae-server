@@ -137,7 +137,17 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	anon.HandleFunc("GET /ws/{$}", wsHandler)
+	anon.HandleFunc("GET /ws/{$}", func(w http.ResponseWriter, r *http.Request) {
+		clientSecret := r.Header.Get("X-Client-Secret")
+
+		client, err := app.ClientsService.GetClientBySecret(clientSecret)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusUnauthorized)
+			return
+		}
+
+		wsHandler(w, r, client.ID)
+	})
 
 	common := root.Group().Use(logm).Use(am.Auth)
 
@@ -146,15 +156,12 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 		if err != nil {
 			return err
 		}
-		return components.GenClientsPage(clients).Render(r.Context(), w)
+		code := fmt.Sprintf("wget %s/lua/v3/client/ startup", app.ConfigLoader.Config.WebServer.Url)
+		return components.GenClientsPage(clients, code).Render(r.Context(), w)
 	})
 
 	handleFuncWithError(common, "GET /clients/{clientID}/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		rawClientID := r.PathValue("clientID")
-		clientID, err := strconv.Atoi(rawClientID)
-		if err != nil {
-			return err
-		}
+		clientID := r.PathValue("clientID")
 		client, err := app.Daos.Clients.GetClientByID(clientID)
 		if err != nil {
 			return err
@@ -166,11 +173,7 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "POST /clients/{clientID}/{$}", func(w http.ResponseWriter, r *http.Request) error {
-		rawClientID := r.PathValue("clientID")
-		clientID, err := strconv.Atoi(rawClientID)
-		if err != nil {
-			return err
-		}
+		clientID := r.PathValue("clientID")
 		err = r.ParseForm()
 		if err != nil {
 			return err
@@ -194,15 +197,47 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 			client.Label = label
 		}
 
-		if client.Role == client.Role {
-			client.Role = role
-		}
-
 		err = app.Daos.Clients.UpdateClient(client)
 		if err != nil {
 			return err
 		}
 		return nil
+	})
+
+	handleFuncWithError(common, "POST /clients/{clientID}/authorize/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		clientID := r.PathValue("clientID")
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		client, err := app.Daos.Clients.GetClientByID(clientID)
+		if err != nil {
+			return err
+		}
+		if client == nil {
+			return fmt.Errorf("client not found")
+		}
+
+		return app.Daos.Clients.AuthorizeClient(client)
+	})
+
+	handleFuncWithError(common, "POST /clients/{clientID}/delete/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		clientID := r.PathValue("clientID")
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+
+		client, err := app.Daos.Clients.GetClientByID(clientID)
+		if err != nil {
+			return err
+		}
+		if client == nil {
+			return fmt.Errorf("client not found")
+		}
+
+		return app.Daos.Clients.DeleteClient(client)
 	})
 
 	handleFuncWithError(common, "GET /wsclients/{$}", func(w http.ResponseWriter, r *http.Request) error {
@@ -352,9 +387,14 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 	})
 
 	anon.HandleFunc("GET /lua/v3/client/", func(w http.ResponseWriter, r *http.Request) {
+		secret := r.URL.Query().Get("secret")
+		if secret == "" {
+			secret = uuid.NewString()
+		}
 		tmpls.Render("client.lua", []string{"clientV4.lua.tmpl"}, w, map[string]any{
 			"wsUrl":   app.ConfigLoader.Config.ClientServer.Url,
 			"version": build.Time,
+			"secret":  secret,
 		})
 	})
 

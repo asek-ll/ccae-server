@@ -109,8 +109,8 @@ local function loadCurrentModule()
     return true, meta
 end
 
-local function listen(url, loginParams)
-    http.websocketAsync(url)
+local function listen(url, loginParams, secret)
+    http.websocketAsync(url, { ["X-Client-Secret"] = secret })
 
     local _, meta = loadCurrentModule()
 
@@ -140,7 +140,7 @@ local function listen(url, loginParams)
 
     methods['upgrade'] = function(fileUrl)
         print('upgrade: ' .. fileUrl)
-        download(fileUrl, 'startup')
+        download(fileUrl .. "?secret=" .. secret, 'startup')
         return {}
     end
 
@@ -176,15 +176,17 @@ local function listen(url, loginParams)
             end
         elseif event == 'websocket_success' and eventData[2] == url then
             wsClient:setWS(eventData[3])
-            wsClient:sendMethod('login.v3', loginParams)
+            wsClient:sendMethod('login', loginParams)
         elseif event == 'websocket_failure' and eventData[2] == url then
+            print("websocket failure")
             wsClient:setWS(nil)
             os.sleep(10)
-            http.websocketAsync(url)
+            http.websocketAsync(url, { ["X-Client-Secret"] = secret })
         elseif event == 'websocket_closed' and eventData[2] == url then
+            print("websocket closed")
             wsClient:setWS(nil)
             os.sleep(10)
-            http.websocketAsync(url)
+            http.websocketAsync(url, { ["X-Client-Secret"] = secret })
         elseif eventHandlers[event] ~= nil then
             local handler = eventHandlers[event]
             pcall(handler, eventData)
@@ -192,13 +194,12 @@ local function listen(url, loginParams)
     end
 end
 
-local function run(server, version)
+local function run(server, version, secret)
     while true do
         local status, err = pcall(listen, server, {
             version = version,
-            id = os.computerID(),
             label = os.computerLabel(),
-        })
+        }, secret)
         if not status then
             print('Got error' .. err)
             os.sleep(10)
@@ -206,4 +207,4 @@ local function run(server, version)
     end
 end
 
-run('ws://localhost:3001/ws/', '2025-10-14T11:32:57')
+run('ws://localhost:3001/ws/', '2025-10-14T16:56:39', '1d523a08-96ae-48a1-a636-8a2f67dbef90')

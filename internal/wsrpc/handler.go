@@ -14,19 +14,19 @@ import (
 
 var _ ws.Handler = &JsonRpcServer{}
 
-func Typed[T any](f func(clientId uint, params T) (any, error)) RpcMethod {
-	return func(clientId uint, params []byte) (any, error) {
+func Typed[T any](f func(client *ws.Client, params T) (any, error)) RpcMethod {
+	return func(client *ws.Client, params []byte) (any, error) {
 		var ps T
 		err := json.Unmarshal(params, &ps)
 		if err != nil {
 			return nil, err
 		}
 
-		return f(clientId, ps)
+		return f(client, ps)
 	}
 }
 
-type RpcMethod = func(clientId uint, params []byte) (any, error)
+type RpcMethod = func(client *ws.Client, params []byte) (any, error)
 
 type ClientCtx struct {
 	WsConnectionId uint
@@ -40,7 +40,7 @@ type JsonRpcServer struct {
 	reqSeq            uint
 	pending           map[uint]chan *Message
 	pool              *gopool.Pool
-	disconnectHandler func(clientId uint) error
+	disconnectHandler func(*ws.Client) error
 }
 
 func NewServer(server *ws.Server) *JsonRpcServer {
@@ -56,7 +56,7 @@ func NewServer(server *ws.Server) *JsonRpcServer {
 	return rpcServer
 }
 
-func (h *JsonRpcServer) SetDisconnectHandler(handler func(clientId uint) error) {
+func (h *JsonRpcServer) SetDisconnectHandler(handler func(*ws.Client) error) {
 	h.disconnectHandler = handler
 }
 
@@ -80,7 +80,7 @@ func (h *JsonRpcServer) HandleMessage(content []byte, client *ws.Client) error {
 		}
 
 		h.pool.Schedule(func() {
-			res, err := m(client.ID(), msg.Params)
+			res, err := m(client, msg.Params)
 			var response *Response
 			if err != nil {
 				response = &Response{
@@ -208,9 +208,9 @@ func (h *JsonRpcServer) SendRequestSync(ctx context.Context, clientId uint, meth
 
 func (h *JsonRpcServer) HandleDisconnect(client *ws.Client) {
 	if h.disconnectHandler != nil {
-		err := h.disconnectHandler(client.ID())
+		err := h.disconnectHandler(client)
 		if err != nil {
-			log.Printf("Error on disconnect %d", client.ID())
+			log.Printf("Error on disconnect %d", client.ID)
 		}
 	}
 }

@@ -43,13 +43,13 @@ func (s *Server) SetHandler(handler Handler) {
 	s.handler.delegate = handler
 }
 
-func (s *Server) CreateHttpHandle() (func(http.ResponseWriter, *http.Request), error) {
+func (s *Server) CreateHttpHandle() (func(http.ResponseWriter, *http.Request, string), error) {
 	poller, err := netpoll.New(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	handle := func(w http.ResponseWriter, r *http.Request) {
+	handle := func(w http.ResponseWriter, r *http.Request, externalID string) {
 		conn, _, hs, err := ws.UpgradeHTTP(r, w)
 		if err != nil {
 			log.Printf("upgrade error: %v", err)
@@ -58,7 +58,7 @@ func (s *Server) CreateHttpHandle() (func(http.ResponseWriter, *http.Request), e
 		log.Printf("established websocket connection: %+v", hs)
 		safeConn := NewDeadliner(conn, s.ioTimeout)
 
-		client := s.register(safeConn)
+		client := s.register(safeConn, externalID)
 
 		desc := netpoll.Must(netpoll.HandleReadOnce(conn))
 
@@ -103,7 +103,7 @@ func (s *Server) Start(addr string) error {
 
 		log.Printf("%s: established websocket connection: %+v", nameConn(conn), hs)
 
-		client := s.register(safeConn)
+		client := s.register(safeConn, "unknown")
 
 		desc := netpoll.Must(netpoll.HandleReadOnce(conn))
 
@@ -187,15 +187,16 @@ func (s *Server) Start(addr string) error {
 	return nil
 }
 
-func (c *Server) register(conn net.Conn) *Client {
+func (c *Server) register(conn net.Conn, externalID string) *Client {
 	client := &Client{
 		conn:    conn,
 		handler: c.handler,
+		ExtID:   externalID,
 	}
 	c.clientsMu.Lock()
 	{
-		client.id = c.clientsSec
-		c.clients[client.id] = client
+		client.ID = c.clientsSec
+		c.clients[client.ID] = client
 		c.clientsSec++
 	}
 	c.clientsMu.Unlock()
@@ -205,7 +206,7 @@ func (c *Server) register(conn net.Conn) *Client {
 
 func (c *Server) remove(client *Client) {
 	c.clientsMu.Lock()
-	delete(c.clients, client.id)
+	delete(c.clients, client.ID)
 	c.clientsMu.Unlock()
 
 	c.handler.HandleDisconnect(client)

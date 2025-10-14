@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/asek-ll/aecc-server/internal/dao"
+	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 )
 
@@ -26,10 +27,10 @@ type LoginV3Params struct {
 }
 
 func withInnerId[T any](mapper *wsrpc.IdMapper, f func(id string, params T) (any, error)) wsrpc.RpcMethod {
-	return func(clientId uint, params []byte) (any, error) {
-		id, e := mapper.ToInner(clientId)
+	return func(client *ws.Client, params []byte) (any, error) {
+		id, e := mapper.ToInner(client.ID)
 		if !e {
-			return nil, fmt.Errorf("Can't find mapping for outer id: %d", clientId)
+			return nil, fmt.Errorf("Can't find mapping for outer id: %d", client.ID)
 		}
 
 		var ps T
@@ -46,7 +47,7 @@ func SetupMethods(server *wsrpc.JsonRpcServer, clientsDao *dao.ClientsDao) {
 
 	idMapper := wsrpc.NewIdMapper()
 
-	server.AddMethod("ping", func(clientId uint, params []byte) (any, error) {
+	server.AddMethod("ping", func(client *ws.Client, params []byte) (any, error) {
 		return "pong", nil
 	})
 

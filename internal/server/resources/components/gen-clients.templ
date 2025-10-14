@@ -5,17 +5,30 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
-templ GenClientsPage(clients []dao.Client) {
+templ GenClientsPage(clients []dao.Client, connectCode string) {
 	@Page("Clients") {
+		<pre>
+			{ connectCode }
+		</pre>
 		<section>
 			<table>
 				for _, client := range clients {
 					<tr>
-						<td><a href={ templ.URL(fmt.Sprintf("/clients/%d/", client.ID)) }>{ client.ID }</a></td>
+						<td><a href={ templ.URL(fmt.Sprintf("/clients/%s/", client.ID)) }># </a></td>
 						<td>{ client.Label }</td>
 						<td>{ client.Role }</td>
 						<td>{ client.Online }</td>
 						<td>{ client.LastLogin.String() }</td>
+						<td>
+							if !client.Authorized {
+								<button hx-post={ fmt.Sprintf("/clients/%s/authorize/", client.ID) }>Authorize</button>
+							} else {
+								Authorized
+							}
+						</td>
+						<td>
+							<button hx-post={ fmt.Sprintf("/clients/%s/delete/", client.ID) }>Delete</button>
+						</td>
 					</tr>
 				}
 			</table>
@@ -29,7 +42,6 @@ templ GenClientPage(client *dao.Client) {
 			<table>
 				<thead>
 					<tr>
-						<th>ID</th>
 						<th>Label</th>
 						<th>Role</th>
 						<th>Online</th>
@@ -38,7 +50,6 @@ templ GenClientPage(client *dao.Client) {
 				</thead>
 				<tbody>
 					<tr>
-						<td>{ client.ID }</td>
 						<td>{ client.Label }</td>
 						<td>{ client.Role }</td>
 						<td>{ client.Online }</td>
@@ -47,7 +58,7 @@ templ GenClientPage(client *dao.Client) {
 				</tbody>
 			</table>
 		</section>
-		<form hx-post={ fmt.Sprintf("/clients/%d/", client.ID) }>
+		<form hx-post={ fmt.Sprintf("/clients/%s/", client.ID) }>
 			<label>
 				Role
 				<input name="role" value={ client.Role }/>

@@ -9,6 +9,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/config"
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server"
+	"github.com/asek-ll/aecc-server/internal/services/clients"
 	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
 	"github.com/asek-ll/aecc-server/internal/services/cond"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
@@ -59,6 +60,7 @@ func (s *ServerCommand) Execute(args []string) error {
 	rpcServer := wsrpc.NewServer(wsServer)
 
 	scriptsmanager := clientscripts.NewScriptsManager(daos)
+	clientsService := clients.NewClientsService(daos.Clients)
 
 	clientsManager := wsmethods.NewClientsManager(rpcServer, daos.Clients, configLoader, scriptsmanager)
 	storageAdapter := wsmethods.NewStorageAdapter(clientsManager)
@@ -116,6 +118,7 @@ func (s *ServerCommand) Execute(args []string) error {
 		ConfigLoader:               configLoader,
 		ItemManager:                itemManager,
 		ScriptsManager:             scriptsmanager,
+		ClientsService:             clientsService,
 	}
 	mux, err := server.CreateMux(app, wsServer)
 	if err != nil {
@@ -129,10 +132,10 @@ func (s *ServerCommand) Execute(args []string) error {
 		return http.ListenAndServe(configLoader.Config.WebServer.ListenAddr, mux)
 	})
 
-	eg.Go(func() error {
-		l.Println("INFO Start websocket server")
-		return wsServer.Start(configLoader.Config.ClientServer.ListenAddr)
-	})
+	// eg.Go(func() error {
+	// 	l.Println("INFO Start websocket server")
+	// 	return wsServer.Start(configLoader.Config.ClientServer.ListenAddr)
+	// })
 
 	return eg.Wait()
 }

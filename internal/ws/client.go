@@ -11,15 +11,11 @@ import (
 )
 
 type Client struct {
+	ID      uint
 	conn    net.Conn
-	id      uint
 	io      sync.Mutex
 	handler Handler
-	context any
-}
-
-func (c *Client) ID() uint {
-	return c.id
+	ExtID   string
 }
 
 func (c *Client) Receive() error {
@@ -56,7 +52,7 @@ func (c *Client) readMessage() ([]byte, error) {
 	return data, nil
 }
 
-func (c *Client) WriteJSON(x interface{}) error {
+func (c *Client) WriteJSON(x any) error {
 	w := wsutil.NewWriter(c.conn, ws.StateServerSide, ws.OpText)
 	encoder := json.NewEncoder(w)
 
@@ -90,12 +86,4 @@ func (c *Client) writeRaw(p []byte) error {
 	_, err := c.conn.Write(p)
 
 	return err
-}
-
-func (c *Client) GetContext() any {
-	return c.context
-}
-
-func (c *Client) SetContext(ctx any) {
-	c.context = ctx
 }
