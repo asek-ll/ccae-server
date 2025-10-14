@@ -142,9 +142,12 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 
 		client, err := app.ClientsService.GetClientBySecret(clientSecret)
 		if err != nil {
+			log.Printf("[DEBUG] Client connect to WS error: %w", err)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
+		log.Printf("[DEBUG] Client connect to WS: %s", client)
+
 		if !client.Authorized {
 			http.Error(w, "Client is not authorized", http.StatusUnauthorized)
 			return
