@@ -145,6 +145,10 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
+		if !client.Authorized {
+			http.Error(w, "Client is not authorized", http.StatusUnauthorized)
+			return
+		}
 
 		wsHandler(w, r, client.ID)
 	})

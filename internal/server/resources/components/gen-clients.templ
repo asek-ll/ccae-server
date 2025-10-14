@@ -5,7 +5,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 )
 
-templ GenClientsPage(clients []dao.Client, connectCode string) {
+templ GenClientsPage(clients []*dao.Client, connectCode string) {
 	@Page("Clients") {
 		<pre>
 			{ connectCode }

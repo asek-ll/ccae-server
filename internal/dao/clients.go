@@ -43,7 +43,7 @@ func NewClientsDao(db *sql.DB) (*ClientsDao, error) {
 	return &ClientsDao{db: db}, nil
 }
 
-func (c *ClientsDao) GetClients() ([]Client, error) {
+func (c *ClientsDao) GetClients() ([]*Client, error) {
 	rows, err := c.db.Query("select id, label, role, online, last_login, wsclient_id, authorized from clients")
 	if err != nil {
 		return nil, err
@@ -52,10 +52,10 @@ func (c *ClientsDao) GetClients() ([]Client, error) {
 	return readClients(rows)
 }
 
-func readClients(rows *sql.Rows) ([]Client, error) {
+func readClients(rows *sql.Rows) ([]*Client, error) {
 	defer rows.Close()
 
-	var result []Client
+	var result []*Client
 	for rows.Next() {
 		var id string
 		var label string
@@ -69,7 +69,7 @@ func readClients(rows *sql.Rows) ([]Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, Client{
+		result = append(result, &Client{
 			ID:         id,
 			Label:      label,
 			Role:       role,
@@ -102,7 +102,7 @@ func (c *ClientsDao) GetClientByID(id string) (*Client, error) {
 		return nil, nil
 	}
 
-	return &clients[0], nil
+	return clients[0], nil
 }
 
 func (c *ClientsDao) CreateClient(client *Client) error {
@@ -152,4 +152,18 @@ func (c *ClientsDao) AuthorizeClient(client *Client) error {
 func (c *ClientsDao) DeleteClient(client *Client) error {
 	_, err := c.db.Exec("DELETE FROM clients WHERE id = ?", client.ID)
 	return err
+}
+
+func (c *ClientsDao) GetActiveClientsByRole(role string) ([]*Client, error) {
+	rows, err := c.db.Query("SELECT id, label, role, online, last_login, wsclient_id, authorized FROM clients WHERE role = ? AND online = true", role)
+	if err != nil {
+		return nil, err
+	}
+
+	clients, err := readClients(rows)
+	if err != nil {
+		return nil, err
+	}
+
+	return clients, nil
 }

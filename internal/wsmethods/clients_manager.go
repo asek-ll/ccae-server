@@ -45,6 +45,7 @@ type ClientsManager struct {
 	clientsDao     *dao.ClientsDao
 	clients        map[uint]Client
 	clientListener ClientListener
+	configLoader   *config.ConfigLoader
 
 	clientIdByType map[string]uint
 
@@ -63,6 +64,7 @@ func NewClientsManager(
 		clients:        make(map[uint]Client),
 		clientListener: DumpCycleListener{},
 		clientIdByType: make(map[string]uint),
+		configLoader:   configLoader,
 	}
 
 	server.SetDisconnectHandler(func(client *ws.Client) error {
@@ -70,31 +72,7 @@ func NewClientsManager(
 	})
 
 	scriptsManager.SetOnUpdate(func(script *dao.ClientsScript) error {
-
-		log.Println("[WARN] ON UPDATE!!!", script.Role)
-		log.Println("[WARN] check client", clientsManager.GetClients())
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
-		defer cancel()
-
-		url := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, script.Role)
-		for _, client := range clientsManager.GetClients() {
-			gc := client.GetGenericClient()
-			if gc.Role == script.Role {
-				props := make(map[string]any)
-				err := gc.WS.SendRequestSync(ctx, "init", map[string]any{
-					"version":    script.Version,
-					"contentUrl": url,
-				}, &props)
-				if err != nil {
-					return err
-				}
-				clientsManager.mu.Lock()
-				gc.Props = props
-				clientsManager.mu.Unlock()
-			}
-		}
-
-		return nil
+		return clientsManager.OnUpdateScript(script)
 	})
 
 	server.AddMethod("login", wsrpc.Typed(func(wsClient *ws.Client, params LoginV3Params) (any, error) {
@@ -244,4 +222,43 @@ func (c *ClientsManager) GetClients() []Client {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return common.MapValues(c.clients)
+}
+
+func (c *ClientsManager) OnUpdateScript(script *dao.ClientsScript) error {
+	log.Println("[WARN] ON UPDATE!!!", script.Role)
+	log.Println("[WARN] check client", c.GetClients())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	url := fmt.Sprintf("%s/clients-scripts/%s/content/", c.configLoader.Config.WebServer.Url, script.Role)
+	clients, err := c.clientsDao.GetActiveClientsByRole(script.Role)
+	if err != nil {
+		return err
+	}
+
+	for _, client := range clients {
+		if client.WSClientID == nil {
+			continue
+		}
+
+		wsClientWrapper, ok := c.clients[*client.WSClientID]
+		if !ok {
+			continue
+		}
+		gc := wsClientWrapper.GetGenericClient()
+
+		props := make(map[string]any)
+		err := gc.WS.SendRequestSync(ctx, "init", map[string]any{
+			"version":    script.Version,
+			"contentUrl": url,
+		}, &props)
+		if err != nil {
+			return err
+		}
+		c.mu.Lock()
+		gc.Props = props
+		c.mu.Unlock()
+	}
+
+	return nil
 }
