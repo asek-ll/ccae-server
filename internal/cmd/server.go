@@ -22,6 +22,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/wsmethods"
 	"github.com/asek-ll/aecc-server/internal/wsrpc"
 	"github.com/jessevdk/go-flags"
+	"golang.org/x/sync/errgroup"
 )
 
 var _ flags.Commander = &ServerCommand{}
@@ -54,7 +55,7 @@ func (s *ServerCommand) Execute(args []string) error {
 		return err
 	}
 
-	wsServer := ws.NewServer(configLoader.Config.ClientServer.ListenAddr, 128, 1, time.Millisecond*1000)
+	wsServer := ws.NewServer(128, 1, time.Millisecond*1000)
 	rpcServer := wsrpc.NewServer(wsServer)
 
 	scriptsmanager := clientscripts.NewScriptsManager(daos)
@@ -116,39 +117,22 @@ func (s *ServerCommand) Execute(args []string) error {
 		ItemManager:                itemManager,
 		ScriptsManager:             scriptsmanager,
 	}
-
-	mux, err := server.CreateMux(app)
+	mux, err := server.CreateMux(app, wsServer)
 	if err != nil {
 		return err
 	}
 
-	errors := make(chan error)
-	done := make(chan struct{})
+	eg := new(errgroup.Group)
 
-	go func() {
+	eg.Go(func() error {
 		l.Println("INFO Start http server")
-		err := http.ListenAndServe(configLoader.Config.WebServer.ListenAddr, mux)
-		if err != nil {
-			errors <- err
-		} else {
-			done <- struct{}{}
-		}
-	}()
+		return http.ListenAndServe(configLoader.Config.WebServer.ListenAddr, mux)
+	})
 
-	go func() {
+	eg.Go(func() error {
 		l.Println("INFO Start websocket server")
-		err := wsServer.Start()
-		if err != nil {
-			errors <- err
-		} else {
-			done <- struct{}{}
-		}
-	}()
+		return wsServer.Start(configLoader.Config.ClientServer.ListenAddr)
+	})
 
-	select {
-	case errors <- err:
-		return err
-	case <-done:
-		return nil
-	}
+	return eg.Wait()
 }

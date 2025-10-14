@@ -3,6 +3,7 @@ package ws
 import (
 	"log"
 	"net"
+	"net/http"
 	"sync"
 	"time"
 
@@ -12,7 +13,6 @@ import (
 )
 
 type Server struct {
-	addr string
 	pool *gopool.Pool
 
 	clients    map[uint]*Client
@@ -25,13 +25,12 @@ type Server struct {
 	handler *delegateHandler
 }
 
-func NewServer(addr string, workers int, queue int, ioTimeout time.Duration) *Server {
+func NewServer(workers int, queue int, ioTimeout time.Duration) *Server {
 	pool := gopool.NewPool(workers, queue, 1)
 	handler := delegateHandler{}
 	exit := make(chan struct{})
 
 	return &Server{
-		addr:      addr,
 		pool:      pool,
 		clients:   make(map[uint]*Client),
 		exit:      exit,
@@ -44,7 +43,49 @@ func (s *Server) SetHandler(handler Handler) {
 	s.handler.delegate = handler
 }
 
-func (s *Server) Start() error {
+func (s *Server) CreateHttpHandle() (func(http.ResponseWriter, *http.Request), error) {
+	poller, err := netpoll.New(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	handle := func(w http.ResponseWriter, r *http.Request) {
+		conn, _, hs, err := ws.UpgradeHTTP(r, w)
+		if err != nil {
+			log.Printf("upgrade error: %v", err)
+			return
+		}
+		log.Printf("established websocket connection: %+v", hs)
+		safeConn := NewDeadliner(conn, s.ioTimeout)
+
+		client := s.register(safeConn)
+
+		desc := netpoll.Must(netpoll.HandleReadOnce(conn))
+
+		poller.Start(desc, func(ev netpoll.Event) {
+			if ev&(netpoll.EventReadHup|netpoll.EventHup) != 0 {
+				poller.Stop(desc)
+				s.remove(client)
+				return
+			}
+			s.pool.Schedule(func() {
+				if err := client.Receive(); err != nil {
+					// When receive failed, we can only disconnect broken
+					// connection and stop to receive events about it.
+					poller.Stop(desc)
+					s.remove(client)
+				} else {
+					poller.Resume(desc)
+				}
+			})
+		})
+
+	}
+
+	return handle, nil
+}
+
+func (s *Server) Start(addr string) error {
 	poller, err := netpoll.New(nil)
 	if err != nil {
 		return err
@@ -86,7 +127,7 @@ func (s *Server) Start() error {
 	}
 
 	// Create incoming connections listener.
-	ln, err := net.Listen("tcp", s.addr)
+	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
@@ -164,9 +205,7 @@ func (c *Server) register(conn net.Conn) *Client {
 
 func (c *Server) remove(client *Client) {
 	c.clientsMu.Lock()
-	if _, e := c.clients[client.id]; e {
-		delete(c.clients, client.id)
-	}
+	delete(c.clients, client.id)
 	c.clientsMu.Unlock()
 
 	c.handler.HandleDisconnect(client)

@@ -178,12 +178,10 @@ local function listen(url, loginParams)
             wsClient:setWS(eventData[3])
             wsClient:sendMethod('login.v3', loginParams)
         elseif event == 'websocket_failure' and eventData[2] == url then
-            wsClient.ws.close()
             wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)
         elseif event == 'websocket_closed' and eventData[2] == url then
-            wsClient.ws.close()
             wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)

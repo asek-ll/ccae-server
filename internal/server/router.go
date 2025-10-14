@@ -1,11 +1,13 @@
 package server
 
 import (
+	"bufio"
 	"embed"
 	"encoding/json"
 	"fmt"
 	"io/fs"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"slices"
@@ -21,6 +23,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
+	"github.com/asek-ll/aecc-server/internal/ws"
 	"github.com/asek-ll/aecc-server/pkg/template"
 	"github.com/fatih/color"
 	"github.com/go-pkgz/auth"
@@ -62,6 +65,10 @@ func (w *rwWithStatus) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 
+func (w *rwWithStatus) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	return w.ResponseWriter.(http.Hijacker).Hijack()
+}
+
 func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -78,7 +85,7 @@ func loggingMiddleware(log *log.Logger) func(http.Handler) http.Handler {
 	}
 }
 
-func CreateMux(app *app.App) (http.Handler, error) {
+func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 
 	authService := auth.NewService(auth.Opts{
 		SecretReader: token.SecretFunc(func(id string) (string, error) {
@@ -126,6 +133,11 @@ func CreateMux(app *app.App) (http.Handler, error) {
 	anon.HandleFunc("GET /{$}", func(w http.ResponseWriter, r *http.Request) {
 		components.Page("INDEX").Render(r.Context(), w)
 	})
+	wsHandler, err := wsServer.CreateHttpHandle()
+	if err != nil {
+		return nil, err
+	}
+	anon.HandleFunc("GET /ws/{$}", wsHandler)
 
 	common := root.Group().Use(logm).Use(am.Auth)
 

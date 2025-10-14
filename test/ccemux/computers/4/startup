@@ -178,12 +178,10 @@ local function listen(url, loginParams)
             wsClient:setWS(eventData[3])
             wsClient:sendMethod('login.v3', loginParams)
         elseif event == 'websocket_failure' and eventData[2] == url then
-            wsClient.ws.close()
             wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)
         elseif event == 'websocket_closed' and eventData[2] == url then
-            wsClient.ws.close()
             wsClient:setWS(nil)
             os.sleep(10)
             http.websocketAsync(url)
@@ -208,4 +206,4 @@ local function run(server, version)
     end
 end
 
-run('ws://localhost:12526', '2025-10-14T04:09:03')
+run('ws://localhost:3001/ws/', '2025-10-14T11:32:57')
