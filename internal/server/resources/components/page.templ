@@ -12,7 +12,7 @@ templ Page(title string, content ...templ.Component) {
 			<link rel="stylesheet" href="/static/css/pico.min.css"/>
 			<link rel="stylesheet" href="/static/css/app.css"/>
 		</head>
-		<body hx-headers='js:{"X-XSRF-TOKEN": document.cookie.split("=")[1]}'>
+		<body hx-headers='js:{"X-XSRF-TOKEN": document.cookie.split("; ").filter(x=>x.startsWith("XSRF-TOKEN")).map(x=>x.substring(11))[0]}'>
 			<!-- Header -->
 			<header class="container">
 				<nav>

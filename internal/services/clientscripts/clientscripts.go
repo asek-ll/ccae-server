@@ -5,7 +5,7 @@ import (
 	// "github.com/asek-ll/aecc-server/internal/wsmethods"
 )
 
-type OnUpdate func(role string, content string) error
+type OnUpdate func(*dao.ClientsScript) error
 
 type ScriptsManager struct {
 	daos     *dao.DaoProvider
@@ -41,7 +41,11 @@ func (m *ScriptsManager) UpdateScript(role string, newRole string, content strin
 	}
 
 	if m.onUpdate != nil {
-		err = m.onUpdate(newRole, content)
+		script, err := m.daos.ClientsScripts.GetClientScript(role)
+		if err != nil {
+			return err
+		}
+		err = m.onUpdate(script)
 		if err != nil {
 			return err
 		}

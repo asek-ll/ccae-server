@@ -122,6 +122,15 @@ func (c *ClientsDao) CreateClient(client *Client) error {
 	return err
 }
 
+func (c *ClientsDao) UpdateClient(client *Client) error {
+	_, err := c.db.Exec(`
+		UPDATE clients
+		SET label = ?, role = ?
+		WHERE id = ?
+		`, client.Label, client.Role, client.ID)
+	return err
+}
+
 func (c *ClientsDao) LoginClient(client *Client, wsClientID uint) error {
 	client.Online = true
 	client.LastLogin = time.Now()

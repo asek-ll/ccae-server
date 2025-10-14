@@ -68,18 +68,22 @@ func NewClientsManager(
 		return clientsManager.RemoveClient(clientId)
 	})
 
-	scriptsManager.SetOnUpdate(func(role string, content string) error {
+	scriptsManager.SetOnUpdate(func(script *dao.ClientsScript) error {
 
-		log.Println("[WARN] ON UPDATE!!!", content)
+		log.Println("[WARN] ON UPDATE!!!", script.Role)
 		log.Println("[WARN] check client", clientsManager.GetClients())
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 		defer cancel()
 
+		url := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, script.Role)
 		for _, client := range clientsManager.GetClients() {
 			gc := client.GetGenericClient()
-			if gc.Role == role {
+			if gc.Role == script.Role {
 				props := make(map[string]any)
-				err := gc.WS.SendRequestSync(ctx, "init", content, &props)
+				err := gc.WS.SendRequestSync(ctx, "init", map[string]any{
+					"version":    script.Version,
+					"contentUrl": url,
+				}, &props)
 				if err != nil {
 					return err
 				}
@@ -199,16 +203,18 @@ func NewClientsManager(
 				return nil, err
 			}
 
-			var props any
-			contentUrl := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, client.Role)
-			err = server.SendRequestSync(ctx, wsClientId, "init", map[string]any{
-				"contentUrl": contentUrl,
-				"version":    script.Version,
-			}, &props)
-			log.Printf("[WARN] Client try register!!!")
-			if err != nil {
-				log.Printf("[ERROR] Can't init client: %v", err)
-				return nil, err
+			if script != nil {
+				var props any
+				contentUrl := fmt.Sprintf("%s/clients-scripts/%s/content/", configLoader.Config.WebServer.Url, client.Role)
+				err = server.SendRequestSync(ctx, wsClientId, "init", map[string]any{
+					"contentUrl": contentUrl,
+					"version":    script.Version,
+				}, &props)
+				log.Printf("[WARN] Client try register!!!")
+				if err != nil {
+					log.Printf("[ERROR] Can't init client: %v", err)
+					return nil, err
+				}
 			}
 		}
 

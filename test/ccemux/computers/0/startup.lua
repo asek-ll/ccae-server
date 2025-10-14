@@ -16,10 +16,10 @@ local network = 'net1'
 
 -- setup_storage(network, 1)
 -- setup_crafter(network, 2)
-setup_v2(network, 3)
+-- setup_v2(network, 3)
 
 -- local m1 = testnet.createModem(network)
--- ccemux.openEmu(3)
+ccemux.openEmu(4)
 -- testnet.attachPeripheral('top', m1, 3)
 
 ccemux.closeEmu()

@@ -153,6 +153,46 @@ func CreateMux(app *app.App) (http.Handler, error) {
 		return components.GenClientPage(client).Render(r.Context(), w)
 	})
 
+	handleFuncWithError(common, "POST /clients/{clientID}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		rawClientID := r.PathValue("clientID")
+		clientID, err := strconv.Atoi(rawClientID)
+		if err != nil {
+			return err
+		}
+		err = r.ParseForm()
+		if err != nil {
+			return err
+		}
+		role := r.FormValue("role")
+		label := r.FormValue("label")
+
+		client, err := app.Daos.Clients.GetClientByID(clientID)
+		if err != nil {
+			return err
+		}
+		if client == nil {
+			return fmt.Errorf("client not found")
+		}
+
+		if role != client.Role {
+			client.Role = role
+		}
+
+		if label != client.Label {
+			client.Label = label
+		}
+
+		if client.Role == client.Role {
+			client.Role = role
+		}
+
+		err = app.Daos.Clients.UpdateClient(client)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
 	handleFuncWithError(common, "GET /wsclients/{$}", func(w http.ResponseWriter, r *http.Request) error {
 		clients := app.ClientsManager.GetClients()
 		return components.ClientsPage(clients).Render(r.Context(), w)

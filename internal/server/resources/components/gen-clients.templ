@@ -11,7 +11,7 @@ templ GenClientsPage(clients []dao.Client) {
 			<table>
 				for _, client := range clients {
 					<tr>
-						<td>{ client.ID }</td>
+						<td><a href={ templ.URL(fmt.Sprintf("/clients/%d/", client.ID)) }>{ client.ID }</a></td>
 						<td>{ client.Label }</td>
 						<td>{ client.Role }</td>
 						<td>{ client.Online }</td>
@@ -47,7 +47,7 @@ templ GenClientPage(client *dao.Client) {
 				</tbody>
 			</table>
 		</section>
-		<form hx-post={ fmt.Sprintf("/clients/%d/update/", client.ID) }>
+		<form hx-post={ fmt.Sprintf("/clients/%d/", client.ID) }>
 			<label>
 				Role
 				<input name="role" value={ client.Role }/>

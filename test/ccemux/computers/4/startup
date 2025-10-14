@@ -208,4 +208,4 @@ local function run(server, version)
     end
 end
 
-run('{{ .wsUrl }}', '{{ .version }}')
+run('ws://localhost:12526', '2025-10-14T04:09:03')
