@@ -61,7 +61,7 @@ func (d *ClientsScriptsDao) GetClientScript(role string) (*ClientsScript, error)
 	}
 	defer rows.Close()
 
-	for rows.Next() {
+	if rows.Next() {
 		var script ClientsScript
 		if err := rows.Scan(&script.Role, &script.Content, &script.Version); err != nil {
 			return nil, err

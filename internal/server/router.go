@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"time"
 
+	tmpl "text/template"
+
 	"github.com/asek-ll/aecc-server/internal/app"
 	"github.com/asek-ll/aecc-server/internal/build"
 	cmn "github.com/asek-ll/aecc-server/internal/common"
@@ -398,11 +400,22 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 		if secret == "" {
 			secret = uuid.NewString()
 		}
-		tmpls.Render("client.lua", []string{"clientV4.lua.tmpl"}, w, map[string]any{
+		params := map[string]any{
 			"wsUrl":   app.ConfigLoader.Config.ClientServer.Url,
 			"version": build.Time,
 			"secret":  secret,
-		})
+		}
+
+		script, err := app.Daos.ClientsScripts.GetClientScript("bootstrap")
+		if err == nil && script != nil {
+			bootstrapTemplate, err := tmpl.New("bootstrap").Parse(script.Content)
+			if err == nil {
+				bootstrapTemplate.Execute(w, params)
+				return
+			}
+		}
+
+		tmpls.Render("client.lua", []string{"clientV4.lua.tmpl"}, w, params)
 	})
 
 	handleFuncWithError(common, "GET /recipes/{$}", func(w http.ResponseWriter, r *http.Request) error {
