@@ -99,20 +99,20 @@ local function loadCurrentModule()
         return false
     end
 
-    if type(logic) == 'table' and logic['setup'] ~= nil then
-        suc = pcall(logic['setup'], methods, eventHandlers, wsClient, meta.params)
-        if not suc then
-            return false
-        end
-    end
+    -- if type(logic) == 'table' and logic['setup'] ~= nil then
+    --     suc = pcall(logic['setup'], methods, eventHandlers, wsClient, meta.params)
+    --     if not suc then
+    --         return false
+    --     end
+    -- end
 
-    return true, meta
+    return true, meta, logic
 end
 
 local function listen(url, loginParams, secret)
     http.websocketAsync(url, { ["X-Client-Secret"] = secret })
 
-    local _, meta = loadCurrentModule()
+    local _, meta, logic = loadCurrentModule()
 
     methods['init'] = function(req)
         print('init: ' .. textutils.serialiseJSON(req))
@@ -144,11 +144,19 @@ local function listen(url, loginParams, secret)
         return {}
     end
 
+    local initTimerId
+    if logic ~= nil and type(logic) == 'table' and logic['setup'] ~= nil then
+        initTimerId = os.startTimer(1)
+    end
+
     while true do
         local eventData = { os.pullEvent() }
         local event = eventData[1]
 
-        if event == 'websocket_message' and eventData[2] == url then
+        if event == "timer" and eventData[2] == initTimerId then
+            local initRes = pcall(logic['setup'], methods, eventHandlers, wsClient, meta.params)
+            print("Initialization result:", initRes)
+        elseif event == 'websocket_message' and eventData[2] == url then
             local data = textutils.unserializeJSON(eventData[3])
             if data ~= nil then
                 local method = data['method']
