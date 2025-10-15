@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -22,6 +23,7 @@ import (
 	"github.com/asek-ll/aecc-server/internal/dao"
 	"github.com/asek-ll/aecc-server/internal/server/handlers"
 	"github.com/asek-ll/aecc-server/internal/server/resources/components"
+	"github.com/asek-ll/aecc-server/internal/services/clientscripts"
 	"github.com/asek-ll/aecc-server/internal/services/crafter"
 	"github.com/asek-ll/aecc-server/internal/services/item"
 	"github.com/asek-ll/aecc-server/internal/services/recipe"
@@ -103,6 +105,7 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 		}),
 		XSRFIgnoreMethods: []string{"GET"},
 		Logger:            lg.Func(func(format string, args ...any) { app.Logger.Printf(format, args...) }),
+		AdminPasswd:       app.ConfigLoader.Config.WebServer.Auth.AdminPassword,
 	})
 	authService.AddProvider("yandex", app.ConfigLoader.Config.WebServer.Auth.OAuthClient, app.ConfigLoader.Config.WebServer.Auth.OAuthSecret)
 
@@ -408,9 +411,13 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 
 		script, err := app.Daos.ClientsScripts.GetClientScript("bootstrap")
 		if err == nil && script != nil {
+			params["version"] = strconv.Itoa(script.Version)
 			bootstrapTemplate, err := tmpl.New("bootstrap").Parse(script.Content)
 			if err == nil {
-				bootstrapTemplate.Execute(w, params)
+				err = bootstrapTemplate.Execute(w, params)
+				if err != nil {
+					w.Write([]byte("ERROR: " + err.Error()))
+				}
 				return
 			}
 		}
@@ -1269,7 +1276,7 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 			return err
 		}
 		role := r.PostForm.Get("role")
-		err = app.ScriptsManager.CreateScript(role)
+		err = app.ScriptsManager.CreateScript(&dao.ClientsScript{Role: role})
 		if err != nil {
 			return err
 		}
@@ -1338,6 +1345,83 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 	})
 
 	handleFuncWithError(common, "GET /item-suggest/{$}", handlers.ItemSuggest(app.Daos.Items))
+
+	handleFuncWithError(common, "GET /api/v1/clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		scripts, err := app.ScriptsManager.GetScripts()
+		if err != nil {
+			return err
+		}
+		var views []*clientscripts.ScriptJsonView
+		for _, script := range scripts {
+			views = append(views, clientscripts.NewScriptJsonView(script))
+		}
+		encoder := json.NewEncoder(w)
+		return encoder.Encode(views)
+	})
+
+	handleFuncWithError(common, "GET /api/v1/clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+
+		script, err := app.ScriptsManager.GetScript(role)
+		if err != nil {
+			return err
+		}
+		if script == nil {
+			return errors.New("script not found")
+		}
+		encoder := json.NewEncoder(w)
+		return encoder.Encode(clientscripts.NewScriptJsonView(script))
+	})
+
+	handleFuncWithError(common, "POST /api/v1/clients-scripts/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		defer r.Body.Close()
+		decoder := json.NewDecoder(r.Body)
+
+		var scriptView clientscripts.ScriptJsonView
+		err := decoder.Decode(&scriptView)
+		if err != nil {
+			return err
+		}
+
+		err = app.ScriptsManager.CreateScript(scriptView.ToScript())
+		if err != nil {
+			return err
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		return nil
+	})
+
+	handleFuncWithError(common, "POST /api/v1/clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+		defer r.Body.Close()
+		decoder := json.NewDecoder(r.Body)
+
+		var scriptView clientscripts.ScriptJsonView
+		err := decoder.Decode(&scriptView)
+		if err != nil {
+			return err
+		}
+
+		err = app.ScriptsManager.UpdateScript(role, scriptView.Role, scriptView.Content)
+		if err != nil {
+			return err
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		return nil
+	})
+
+	handleFuncWithError(common, "DELETE /api/v1/clients-scripts/{role}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+		err := app.ScriptsManager.DeleteScript(role)
+		if err != nil {
+			return err
+		}
+
+		w.WriteHeader(http.StatusOK)
+		return nil
+	})
 
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)

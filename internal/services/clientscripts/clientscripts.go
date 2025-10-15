@@ -7,6 +7,28 @@ import (
 
 type OnUpdate func(*dao.ClientsScript) error
 
+type ScriptJsonView struct {
+	Role    string `json:"role"`
+	Content string `json:"content"`
+	Version int    `json:"version"`
+}
+
+func (sjv *ScriptJsonView) ToScript() *dao.ClientsScript {
+	return &dao.ClientsScript{
+		Role:    sjv.Role,
+		Content: sjv.Content,
+		Version: sjv.Version,
+	}
+}
+
+func NewScriptJsonView(script *dao.ClientsScript) *ScriptJsonView {
+	return &ScriptJsonView{
+		Role:    script.Role,
+		Content: script.Content,
+		Version: script.Version,
+	}
+}
+
 type ScriptsManager struct {
 	daos     *dao.DaoProvider
 	onUpdate OnUpdate
@@ -22,11 +44,8 @@ func (m *ScriptsManager) SetOnUpdate(f OnUpdate) {
 	m.onUpdate = f
 }
 
-func (m *ScriptsManager) CreateScript(role string) error {
-	err := m.daos.ClientsScripts.CreateClientScript(&dao.ClientsScript{
-		Role:    role,
-		Content: "",
-	})
+func (m *ScriptsManager) CreateScript(script *dao.ClientsScript) error {
+	err := m.daos.ClientsScripts.CreateClientScript(script)
 	return err
 }
 
