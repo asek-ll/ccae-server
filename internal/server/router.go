@@ -100,7 +100,7 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 			return claims.User != nil && slices.Contains(app.ConfigLoader.Config.WebServer.Auth.Admins, claims.User.Name)
 		}),
 		XSRFIgnoreMethods: []string{"GET"},
-		Logger:            lg.Func(func(format string, args ...interface{}) { app.Logger.Printf(format, args...) }),
+		Logger:            lg.Func(func(format string, args ...any) { app.Logger.Printf(format, args...) }),
 	})
 	authService.AddProvider("yandex", app.ConfigLoader.Config.WebServer.Auth.OAuthClient, app.ConfigLoader.Config.WebServer.Auth.OAuthSecret)
 
@@ -142,11 +142,11 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 
 		client, err := app.ClientsService.GetClientBySecret(clientSecret)
 		if err != nil {
-			log.Printf("[DEBUG] Client connect to WS error: %w", err)
+			log.Printf("[DEBUG] Client connect to WS error: %v", err)
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
-		log.Printf("[DEBUG] Client connect to WS: %s", client)
+		log.Printf("[DEBUG] Client connect to WS: %v", client)
 
 		if !client.Authorized {
 			http.Error(w, "Client is not authorized", http.StatusUnauthorized)
@@ -274,7 +274,7 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 			return err
 		}
 
-		w.Header().Add("HX-Location", fmt.Sprintf("/storageItems/"))
+		w.Header().Add("HX-Location", "/storageItems/")
 		return nil
 	})
 
