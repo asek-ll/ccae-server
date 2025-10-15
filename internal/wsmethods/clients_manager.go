@@ -88,7 +88,17 @@ func NewClientsManager(
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
 		defer cancel()
 
-		if params.Version != build.Time {
+		script, err := scriptsManager.GetScript("bootstrap")
+		if err != nil {
+			return nil, err
+		}
+
+		targetVersion := build.Time
+		if script != nil {
+			targetVersion = fmt.Sprintf("%d", script.Version)
+		}
+
+		if params.Version != targetVersion {
 			url := fmt.Sprintf("%s/lua/v3/client/", configLoader.Config.WebServer.Url)
 			var props any
 			err := server.SendRequestSync(ctx, wsClient.ID, "upgrade", url, &props)
