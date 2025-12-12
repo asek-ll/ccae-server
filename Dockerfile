@@ -13,7 +13,7 @@ COPY internal /src/internal
 COPY go.mod /src/go.mod
 COPY go.sum /src/go.sum
 
-RUN go install github.com/a-h/templ/cmd/templ@v0.2.793
+RUN go install github.com/a-h/templ/cmd/templ@v0.3.865
 RUN /src/bin/templ generate
 
 RUN CGO_ENABLED=1 go build -o aecc-server -ldflags="-X github.com/asek-ll/aecc-server/internal/build.Time=$VERSION" cmd/main.go

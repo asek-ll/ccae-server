@@ -272,3 +272,34 @@ func (c *ClientsManager) OnUpdateScript(script *dao.ClientsScript) error {
 
 	return nil
 }
+
+func (c *ClientsManager) CallMethod(role string, method string, params map[string]any) (any, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*20)
+	defer cancel()
+
+	clients, err := c.clientsDao.GetActiveClientsByRole(role)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(clients) == 0 {
+		return nil, errors.New("no clients founded")
+	}
+
+	client := clients[0]
+
+	if client.WSClientID == nil {
+		return nil, errors.New("client has no WSClientID")
+	}
+
+	wsClientWrapper, ok := c.clients[*client.WSClientID]
+	if !ok {
+		return nil, errors.New("no client wrapper")
+	}
+	gc := wsClientWrapper.GetGenericClient()
+
+	var result any
+	err = gc.WS.SendRequestSync(ctx, method, params, &result)
+
+	return result, err
+}

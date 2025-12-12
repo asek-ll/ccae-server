@@ -1423,6 +1423,27 @@ func CreateMux(app *app.App, wsServer *ws.Server) (http.Handler, error) {
 		return nil
 	})
 
+	handleFuncWithError(common, "POST /api/v1/client/{role}/call/{method}/{$}", func(w http.ResponseWriter, r *http.Request) error {
+		role := r.PathValue("role")
+		method := r.PathValue("method")
+		defer r.Body.Close()
+		decoder := json.NewDecoder(r.Body)
+
+		var params map[string]any
+		err := decoder.Decode(&params)
+		if err != nil {
+			return err
+		}
+
+		result, err := app.ClientsManager.CallMethod(role, method, params)
+		if err != nil {
+			return err
+		}
+
+		encoder := json.NewEncoder(w)
+		return encoder.Encode(result)
+	})
+
 	handleFuncWithError(common, "/", func(w http.ResponseWriter, r *http.Request) error {
 		w.WriteHeader(http.StatusNotFound)
 		return components.Page("Not found").Render(r.Context(), w)
